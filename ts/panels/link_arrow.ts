@@ -2,7 +2,7 @@
 // Owns a single SVG arrow group and its hover tooltip.
 // Extracted from LinkOverlay so metadata-aware rendering can live here.
 
-import { HandleSide, LinkRecord, SignalKind, DriveSignal } from './link_types';
+import { HandleSide, LinkRecord, SignalKind, DriveSignal, SIGNAL_KIND_ICON } from './link_types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -50,29 +50,37 @@ function makeArrowhead(tip: { x: number; y: number }, side: HandleSide): SVGPoly
   return poly;
 }
 
-function makeDeleteButton(
-  center: { x: number; y: number },
-  linkId: string,
-  onDelete: (id: string) => void
-): SVGForeignObjectElement {
-  const size = 20;
-  const fo = document.createElementNS(SVG_NS, 'foreignObject') as SVGForeignObjectElement;
-  fo.setAttribute('x', String(center.x - size / 2));
-  fo.setAttribute('y', String(center.y - size / 2));
-  fo.setAttribute('width', String(size));
-  fo.setAttribute('height', String(size));
-  fo.setAttribute('class', 'link-delete-btn-fo');
+function buildIconBadges(
+  mid: { x: number; y: number },
+  matchedKinds: SignalKind[]
+): SVGGElement {
+  const g = document.createElementNS(SVG_NS, 'g') as SVGGElement;
+  g.setAttribute('class', 'link-arrow-icons');
+  const n = matchedKinds.length;
+  const w = n * 18 + 8;
+  const h = 18;
 
-  const btn = document.createElement('button');
-  btn.className = 'link-delete-btn';
-  btn.textContent = '×';
-  btn.title = 'Remove link';
-  btn.addEventListener('mousedown', (e) => {
-    e.stopPropagation();
-    onDelete(linkId);
-  });
-  fo.appendChild(btn);
-  return fo;
+  const bg = document.createElementNS(SVG_NS, 'rect') as SVGRectElement;
+  bg.setAttribute('x', String(mid.x - w / 2));
+  bg.setAttribute('y', String(mid.y - h / 2));
+  bg.setAttribute('width', String(w));
+  bg.setAttribute('height', String(h));
+  bg.setAttribute('rx', '4');
+  bg.setAttribute('class', 'link-arrow-icon-bg');
+  g.appendChild(bg);
+
+  for (let i = 0; i < n; i++) {
+    const offsetX = (i - (n - 1) / 2) * 18;
+    const text = document.createElementNS(SVG_NS, 'text') as SVGTextElement;
+    text.setAttribute('x', String(mid.x + offsetX));
+    text.setAttribute('y', String(mid.y));
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dominant-baseline', 'central');
+    text.setAttribute('class', 'link-arrow-icon');
+    text.textContent = SIGNAL_KIND_ICON[matchedKinds[i]];
+    g.appendChild(text);
+  }
+  return g;
 }
 
 // ─── Tooltip helpers ──────────────────────────────────────────────────────────
@@ -91,9 +99,20 @@ function signalDisplayValue(signals: DriveSignal[], kind: SignalKind): string | 
 export class LinkArrow {
   readonly svgGroup: SVGGElement;
   private tooltip: HTMLElement;
+  private tooltipContent: HTMLDivElement;
   private getMeta: () => ArrowMeta;
-  private src: { x: number; y: number };
-  private sourceHandle: HandleSide;
+  private mid: { x: number; y: number };
+  private linkId: string;
+  private onDelete: (id: string) => void;
+  private hideTimer: ReturnType<typeof setTimeout> | null = null;
+  private onDocMouseMove = (e: MouseEvent): void => {
+    if (!this.tooltip.classList.contains('is-visible')) return;
+    const r = this.tooltip.getBoundingClientRect();
+    if (e.clientX >= r.left && e.clientX <= r.right &&
+        e.clientY >= r.top  && e.clientY <= r.bottom) {
+      this.cancelHide();
+    }
+  };
 
   constructor(
     link: LinkRecord,
@@ -105,13 +124,13 @@ export class LinkArrow {
     onDelete: (id: string) => void
   ) {
     this.getMeta = getMeta;
-    this.src = src;
-    this.sourceHandle = link.sourceHandle;
+    this.linkId  = link.id;
+    this.onDelete = onDelete;
 
     const cp1 = controlPoint(src, link.sourceHandle);
     const cp2 = controlPoint(tgt, link.targetHandle);
-    const mid = bezierMidpoint(src, cp1, cp2, tgt);
-    const d = `M${src.x},${src.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tgt.x},${tgt.y}`;
+    this.mid   = bezierMidpoint(src, cp1, cp2, tgt);
+    const d    = `M${src.x},${src.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tgt.x},${tgt.y}`;
 
     // ── SVG group ────────────────────────────────────────────────────────────
     const g = document.createElementNS(SVG_NS, 'g') as SVGGElement;
@@ -125,12 +144,17 @@ export class LinkArrow {
 
     g.appendChild(makeArrowhead(tgt, link.targetHandle));
 
+    // Persistent icon badges for matched signals (between path and hit area)
+    const { emittedKinds, acceptedKinds } = getMeta();
+    const matched = emittedKinds.filter(k => acceptedKinds.includes(k));
+    if (matched.length > 0) {
+      g.appendChild(buildIconBadges(this.mid, matched));
+    }
+
     const hitPath = document.createElementNS(SVG_NS, 'path') as SVGPathElement;
     hitPath.setAttribute('d', d);
     hitPath.setAttribute('class', 'link-arrow-hit');
     g.appendChild(hitPath);
-
-    g.appendChild(makeDeleteButton(mid, link.id, onDelete));
 
     this.svgGroup = g;
     svg.appendChild(g);
@@ -138,10 +162,41 @@ export class LinkArrow {
     // ── Tooltip ──────────────────────────────────────────────────────────────
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'link-signal-tooltip';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'link-signal-close-btn';
+    closeBtn.textContent = '×';
+    closeBtn.title = 'Remove link';
+    closeBtn.addEventListener('mousedown', (e) => {
+      e.stopPropagation();
+      this.cancelHide();
+      this.tooltip.classList.remove('is-visible');
+      this.onDelete(this.linkId);
+    });
+    this.tooltip.appendChild(closeBtn);
+
+    this.tooltipContent = document.createElement('div');
+    this.tooltipContent.className = 'link-signal-content';
+    this.tooltip.appendChild(this.tooltipContent);
+
     container.appendChild(this.tooltip);
 
-    g.addEventListener('mouseenter', () => this.showTooltip());
-    g.addEventListener('mouseleave', () => this.hideTooltip());
+    g.addEventListener('mouseenter', () => { this.cancelHide(); this.showTooltip(); });
+    g.addEventListener('mouseleave', () => this.scheduleHide());
+    document.addEventListener('mousemove', this.onDocMouseMove);
+  }
+
+  // ── Hide timer helpers ────────────────────────────────────────────────────
+
+  private scheduleHide(): void {
+    this.hideTimer = setTimeout(() => {
+      this.hideTimer = null;
+      this.tooltip.classList.remove('is-visible');
+    }, 150);
+  }
+
+  private cancelHide(): void {
+    if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
   }
 
   // ── Tooltip rendering ─────────────────────────────────────────────────────
@@ -154,24 +209,14 @@ export class LinkArrow {
   }
 
   private positionTooltip(): void {
-    const { x, y } = this.src;
-    this.tooltip.style.left = `${x}px`;
-    this.tooltip.style.top  = `${y}px`;
-    switch (this.sourceHandle) {
-      case 'right':  this.tooltip.style.transform = 'translateY(-50%)'; break;
-      case 'left':   this.tooltip.style.transform = 'translate(-100%, -50%)'; break;
-      case 'top':    this.tooltip.style.transform = 'translate(-50%, -100%)'; break;
-      case 'bottom': this.tooltip.style.transform = 'translateX(-50%)'; break;
-    }
-  }
-
-  private hideTooltip(): void {
-    this.tooltip.classList.remove('is-visible');
+    this.tooltip.style.left = `${this.mid.x}px`;
+    this.tooltip.style.top  = `${this.mid.y}px`;
+    this.tooltip.style.transform = 'translate(-50%, -50%)';
   }
 
   private renderContent(): void {
     const { emittedKinds, acceptedKinds, lastSignals } = this.getMeta();
-    this.tooltip.innerHTML = '';
+    this.tooltipContent.innerHTML = '';
 
     const matched      = emittedKinds.filter(k => acceptedKinds.includes(k));
     const emittedOnly  = emittedKinds.filter(k => !acceptedKinds.includes(k));
@@ -181,36 +226,40 @@ export class LinkArrow {
       const value = signalDisplayValue(lastSignals, kind);
       const row = document.createElement('div');
       row.className = 'link-signal-row link-signal-matched';
-      row.textContent = value ? `${kind} → ${value}` : `${kind} →`;
-      this.tooltip.appendChild(row);
+      row.textContent = value
+        ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${value}`
+        : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+      this.tooltipContent.appendChild(row);
     }
 
     if (DEBUG_SHOW_ALL_SIGNAL_KINDS) {
       for (const kind of emittedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-emitted-only';
-        row.textContent = `${kind} →`;
-        this.tooltip.appendChild(row);
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        this.tooltipContent.appendChild(row);
       }
       for (const kind of acceptedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-accepted-only';
-        row.textContent = `→ ${kind}`;
-        this.tooltip.appendChild(row);
+        row.textContent = `→ ${SIGNAL_KIND_ICON[kind]} ${kind}`;
+        this.tooltipContent.appendChild(row);
       }
     }
 
-    if (this.tooltip.children.length === 0) {
+    if (this.tooltipContent.children.length === 0) {
       const row = document.createElement('div');
       row.className = 'link-signal-row link-signal-no-data';
       row.textContent = 'No signals';
-      this.tooltip.appendChild(row);
+      this.tooltipContent.appendChild(row);
     }
   }
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
 
   destroy(): void {
+    this.cancelHide();
+    document.removeEventListener('mousemove', this.onDocMouseMove);
     this.svgGroup.remove();
     this.tooltip.remove();
   }

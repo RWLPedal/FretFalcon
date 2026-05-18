@@ -22,6 +22,13 @@ export enum SignalKind {
   Feature = 'Feature',
 }
 
+export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
+  [SignalKind.Chord]:   '♫',
+  [SignalKind.Key]:     '♭',
+  [SignalKind.Tempo]:   '♩',
+  [SignalKind.Feature]: '◈',
+};
+
 // A generic chord signal — different targets interpret it differently:
 //   MultiSelectFretboard: drives a "Driven" layer's chord tones or scale root note
 //   ChordFeature:         drives the displayed chord diagram

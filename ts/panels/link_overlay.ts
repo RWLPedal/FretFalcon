@@ -79,13 +79,7 @@ export class LinkOverlay {
 
     const containerRect = this.container.getBoundingClientRect();
 
-    // Draw handles for all registered wrappers
-    this.wrapperEls.forEach((wrapperEl, instanceId) => {
-      const isHovered = instanceId === this.hoveredInstanceId;
-      this.drawHandles(wrapperEl, instanceId, containerRect, isHovered);
-    });
-
-    // Create arrows
+    // Create arrows first so handles are painted on top and receive events
     for (const link of links) {
       const sourceEl = getEl(link.sourceInstanceId);
       const targetEl = getEl(link.targetInstanceId);
@@ -104,6 +98,12 @@ export class LinkOverlay {
       );
       this.arrows.push(arrow);
     }
+
+    // Draw handles after arrows so they sit on top in z-order
+    this.wrapperEls.forEach((wrapperEl, instanceId) => {
+      const isHovered = instanceId === this.hoveredInstanceId;
+      this.drawHandles(wrapperEl, instanceId, containerRect, isHovered);
+    });
 
     // Re-add provisional line if mid-drag
     if (this.provisionalLine) this.svg.appendChild(this.provisionalLine);

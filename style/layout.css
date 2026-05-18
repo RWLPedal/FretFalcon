@@ -567,34 +567,27 @@ body.is-zen-mode .config-compact {
   fill: var(--accent);
 }
 
-/* Delete button (foreignObject) */
-.link-delete-btn-fo {
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.12s 0.08s; /* brief fade-out delay avoids flicker when moving to button */
+/* Persistent matched-signal icons on the arrow */
+.link-arrow-icon-bg {
+  fill: var(--panel-bg, #fff);
+  stroke: var(--accent, #2C4A7C);
+  stroke-width: 0.75;
+  opacity: 0.9;
 }
-.link-arrow-group:hover .link-delete-btn-fo,
-.link-delete-btn-fo:has(:hover) {
-  pointer-events: auto;
-  opacity: 1;
+.link-arrow-group:hover .link-arrow-icon-bg {
+  opacity: 0.95;
   transition: opacity 0.10s;
 }
-.link-delete-btn {
-  width: 20px; height: 20px;
-  border-radius: 50%;
-  border: 1.5px solid var(--danger, #C0392B);
-  background: var(--panel-bg, #fff);
-  color: var(--danger, #C0392B);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  padding: 0;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+.link-arrow-icon {
+  font-size: 12px;
+  fill: var(--accent, #2C4A7C);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
 }
-.link-delete-btn:hover {
-  background: var(--danger, #C0392B);
-  color: var(--panel-bg, #fff);
+.link-arrow-group:hover .link-arrow-icon {
+  opacity: 0.65;
+  transition: opacity 0.10s;
 }
 
 /* Signal tooltip shown on arrow hover */
@@ -607,7 +600,7 @@ body.is-zen-mode .config-compact {
   background: var(--clr-bg, #F8F9FA);
   border: 1px solid var(--clr-border, #D0D7E0);
   border-radius: 6px;
-  padding: 6px 10px;
+  padding: 6px 28px 6px 10px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
   font-size: 0.75rem;
   white-space: nowrap;
@@ -615,6 +608,31 @@ body.is-zen-mode .config-compact {
 }
 .link-signal-tooltip.is-visible {
   display: flex;
+}
+
+/* Delete/close button inside the signal tooltip */
+.link-signal-close-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--danger, #C0392B);
+  background: transparent;
+  color: var(--danger, #C0392B);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.link-signal-close-btn:hover {
+  background: var(--danger, #C0392B);
+  color: #fff;
 }
 .link-signal-row {
   color: var(--clr-text-muted, #888);
