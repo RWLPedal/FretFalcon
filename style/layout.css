@@ -472,7 +472,7 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
 
 .floating-view-content {
   padding: 5px;
-  overflow: auto;
+  overflow: hidden;
   flex-grow: 1;
 }
 

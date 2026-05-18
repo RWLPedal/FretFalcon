@@ -7,7 +7,7 @@ import {
   ConfigurationSchemaArg,
   ArgType,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
 import { AppSettings } from "../../settings";
 import { AudioController } from "../../audio_controller";
 // Import generic and specific interval settings types
@@ -24,6 +24,8 @@ import {
 } from "../instrument_utils";
 import { FretboardColorScheme } from "../colors";
 import { FretboardView } from "../views/fretboard_view";
+import { planSingleFretboard } from "../fretboard_layout";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
 
 /** A guitar feature for displaying all notes on the fretboard using FretboardView. */
 export class NotesFeature extends InstrumentFeature {
@@ -40,22 +42,26 @@ export class NotesFeature extends InstrumentFeature {
   private fretboardViewInstance: FretboardView;
 
   constructor(
-    config: ReadonlyArray<string>, // Should be empty now for NotesFeature specific args
+    config: ReadonlyArray<string>,
     settings: AppSettings,
-    rootNoteName: string | null, // Pass the parsed rootNoteName
-    intervalSettings: InstrumentIntervalSettings, // Constructor expects specific type
+    rootNoteName: string | null,
+    intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight); // Pass specific type
+    const availW = peekPendingCanvasWidth();
+    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.rootNoteName = rootNoteName;
     const fretCount = 18;
 
-    // Create FretboardView instance (Metronome is handled by base class)
-    this.fretboardViewInstance = new FretboardView(
-      this.fretboardConfig,
-      fretCount
+    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
+      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    this.fretboardConfig = planSingleFretboard(
+      this.fretboardConfig, availW, maxCanvasHeight,
+      guitarSettings.zoomMultiplier ?? 1.2, fretCount
     );
+
+    this.fretboardViewInstance = new FretboardView(this.fretboardConfig, fretCount);
     this._views.push(this.fretboardViewInstance);
 
     this.calculateAndSetNotes(fretCount);

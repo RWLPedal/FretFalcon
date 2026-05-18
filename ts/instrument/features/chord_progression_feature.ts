@@ -8,7 +8,6 @@ import {
   UiComponentType,
 } from "../../feature";
 import { InstrumentFeature } from "../instrument_base";
-import { FretboardConfig } from "../fretboard";
 import { Chord, chord_library, getChordLibraryForInstrument } from "../chords";
 import { AppSettings } from "../../settings";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
@@ -26,6 +25,7 @@ import { KeyType, getChordInKey } from "../progressions";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { getEasiestMoveableShape } from "../moveable_shapes";
 import { peekPendingCanvasWidth } from "../instrument_base";
+import { planChordDiagramGrid } from "../fretboard_layout";
 
 /** Displays chord diagrams for a Roman numeral progression in a given key. */
 export class ChordProgressionFeature extends InstrumentFeature {
@@ -74,51 +74,12 @@ export class ChordProgressionFeature extends InstrumentFeature {
     const rootNoteIndex = getKeyIndex(this.rootNoteName);
     const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
 
-    // Override fretboardConfig to give each chord its proportional share of available space.
-    if (totalWidth !== undefined && totalWidth > 0 && progression.length > 0) {
-      const fretCount = 5;
-      const sf = this.fretboardConfig.scaleFactor;
-      const baseW = this.fretboardConfig.getRequiredWidth(fretCount) / sf;
-      const baseH = this.fretboardConfig.getRequiredHeight(fretCount) / sf;
-      // Reserve height for the feature's main title header.
-      const MAIN_HEADER_H = 32;
-      const usableH = Math.max(50, (maxCanvasHeight ?? 600) - MAIN_HEADER_H);
-      const MAX_CHORD_WIDTH_PX = 350;
-      // Per-chord overhead not captured by the canvas itself.
-      const PER_CHORD_OVERHEAD_H = 50; // title div + notes list + 5px top/bottom wrapper padding
-      const CHORD_WRAPPER_HPAD   = 10; // 5px left + 5px right padding on each wrapperDiv
-      // Find the column count that maximises canvas scale while accounting for both
-      // per-chord overheads so the chosen layout fits without scrolling.
-      const minColsForCap = Math.min(
-        progression.length,
-        Math.ceil(totalWidth / (MAX_CHORD_WIDTH_PX + CHORD_WRAPPER_HPAD))
+    if (progression.length > 0) {
+      const { config } = planChordDiagramGrid(
+        this.fretboardConfig, totalWidth, maxCanvasHeight,
+        progression.length, guitarSettings.zoomMultiplier ?? 1.2
       );
-      let bestScale = 0;
-      let bestCols = minColsForCap;
-      for (let c = minColsForCap; c <= progression.length; c++) {
-        const rows    = Math.ceil(progression.length / c);
-        const canvasW = Math.max(0, totalWidth / c - CHORD_WRAPPER_HPAD);
-        const canvasH = Math.max(0, usableH / rows - PER_CHORD_OVERHEAD_H);
-        const s = Math.min(canvasW / baseW, canvasH / baseH);
-        if (s > bestScale) { bestScale = s; bestCols = c; }
-      }
-      const bestRows = Math.ceil(progression.length / bestCols);
-      // Subtract wrapper padding so canvas_width + HPAD fits within totalWidth / bestCols.
-      const perChordWidth  = Math.min(MAX_CHORD_WIDTH_PX, Math.floor(totalWidth / bestCols) - CHORD_WRAPPER_HPAD);
-      const perChordHeight = Math.max(50, Math.floor(usableH / bestRows) - PER_CHORD_OVERHEAD_H);
-      this.fretboardConfig = new FretboardConfig(
-        this.fretboardConfig.tuning,
-        this.fretboardConfig.handedness,
-        this.fretboardConfig.orientation,
-        this.fretboardConfig.colorScheme,
-        this.fretboardConfig.markerDots,
-        this.fretboardConfig.sideNumbers,
-        this.fretboardConfig.stringWidths,
-        perChordHeight,
-        perChordWidth,
-        guitarSettings.zoomMultiplier ?? 1.2,
-        fretCount
-      );
+      this.fretboardConfig = config;
     }
 
     if (rootNoteIndex !== -1) {

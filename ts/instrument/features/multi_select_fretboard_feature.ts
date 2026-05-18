@@ -1,7 +1,9 @@
 ﻿// ts/instrument/features/multi_select_fretboard_feature.ts
 
 import { Feature, ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
+import { planSingleFretboard } from "../fretboard_layout";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
 import { AppSettings } from "../../settings";
 import { AudioController } from "../../audio_controller";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
@@ -127,8 +129,16 @@ export class MultiSelectFretboardFeature extends InstrumentFeature {
     audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
+    const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.layers = layers;
+
+    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
+      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    this.fretboardConfig = planSingleFretboard(
+      this.fretboardConfig, availW, maxCanvasHeight,
+      guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
+    );
 
     this.fretboardViewInstance = new FretboardView(
       this.fretboardConfig,

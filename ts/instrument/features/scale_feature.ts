@@ -21,6 +21,9 @@ import {
   clearAllChildren,
 } from "../instrument_utils"; // getNotesInScale removed
 import { FretboardView } from "../views/fretboard_view";
+import { peekPendingCanvasWidth } from "../instrument_base";
+import { planSingleFretboard } from "../fretboard_layout";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
 // Color for non-highlighted scale notes when highlighting is active
 const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC"; // Lighter grey for contrast
 const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B"; // Muted red for out-of-scale highlights
@@ -43,9 +46,6 @@ export class ScaleFeature extends InstrumentFeature {
   private fretboardViewInstance: FretboardView;
   private fretCount: number;
 
-  // Height reserved for the feature title row rendered above the fretboard canvas.
-  private static readonly HEADER_H = 32;
-
   constructor(
     config: ReadonlyArray<string>, // [ScaleName, RootNote, ...HighlightNotes]
     scale: Scale,
@@ -58,17 +58,21 @@ export class ScaleFeature extends InstrumentFeature {
     audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
-    // Reserve space for the title row so the canvas doesn't overflow the wrapper.
-    const canvasHeight = maxCanvasHeight !== undefined
-      ? Math.max(50, maxCanvasHeight - ScaleFeature.HEADER_H)
-      : undefined;
-    super(config, settings, intervalSettings, audioController, canvasHeight);
+    const availW = peekPendingCanvasWidth();
+    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.scale = scale;
     this.keyIndex = keyIndex;
     this.rootNoteName = rootNoteName;
     this.highlightNotes = highlightNotes;
     this.headerText = headerText;
     this.fretCount = 18;
+
+    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
+      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    this.fretboardConfig = planSingleFretboard(
+      this.fretboardConfig, availW, maxCanvasHeight,
+      guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
+    );
 
     this.fretboardViewInstance = new FretboardView(
       this.fretboardConfig,

@@ -21,9 +21,10 @@ import type { NoteName } from "../music_types";
 import { AppSettings } from "../../settings";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { MoveableToggleView } from "../views/moveable_toggle_view";
-import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape } from "../moveable_shapes";
-import { AVAILABLE_TUNINGS, STANDARD_TUNING, FretboardConfig } from "../fretboard";
-import { peekPendingCanvasWidth, optimalColumns } from "../instrument_base";
+import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../moveable_shapes";
+import { AVAILABLE_TUNINGS, STANDARD_TUNING } from "../fretboard";
+import { peekPendingCanvasWidth } from "../instrument_base";
+import { planChordDiagramGrid } from "../fretboard_layout";
 import { addHeader, clearAllChildren } from "../instrument_utils";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
 // Import generic and specific interval settings types
@@ -69,37 +70,21 @@ export class ChordFeature extends InstrumentFeature {
     this.chords = chords;
     this.isMoveable = localStorage.getItem(ChordFeature.MOVEABLE_PREF_KEY) === "true";
 
-    // Override fretboardConfig to give each chord its proportional share of available space.
-    if (totalWidth !== undefined && totalWidth > 0 && chords.length > 0) {
+    if (chords.length > 0) {
       const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
-      const fretCount = 5;
-      const sf = this.fretboardConfig.scaleFactor;
-      const baseW = this.fretboardConfig.getRequiredWidth(fretCount) / sf;
-      const baseH = this.fretboardConfig.getRequiredHeight(fretCount) / sf;
-      // Reserve height for the feature's main title header.
-      const MAIN_HEADER_H = 32;
-      const usableH = Math.max(50, (maxCanvasHeight ?? 600) - MAIN_HEADER_H);
-      const MAX_CHORD_WIDTH_PX = 350;
-      // Per-chord overhead not captured by the canvas itself.
-      const PER_CHORD_OVERHEAD_H = 50; // title div + notes list + 5px top/bottom wrapper padding
-      const CHORD_WRAPPER_HPAD   = 10; // 5px left + 5px right padding on each wrapperDiv
-      const bestCols = optimalColumns(chords.length, totalWidth, usableH, baseW, baseH);
-      const bestRows = Math.ceil(chords.length / bestCols);
-      const perChordWidth  = Math.min(MAX_CHORD_WIDTH_PX, Math.floor(totalWidth / bestCols) - CHORD_WRAPPER_HPAD);
-      const perChordHeight = Math.max(1, Math.floor(usableH / bestRows) - PER_CHORD_OVERHEAD_H);
-      this.fretboardConfig = new FretboardConfig(
-        this.fretboardConfig.tuning,
-        this.fretboardConfig.handedness,
-        this.fretboardConfig.orientation,
-        this.fretboardConfig.colorScheme,
-        this.fretboardConfig.markerDots,
-        this.fretboardConfig.sideNumbers,
-        this.fretboardConfig.stringWidths,
-        perChordHeight,
-        perChordWidth,
-        guitarSettings.zoomMultiplier ?? 1.2,
-        fretCount
+      let diagramCount = chords.length;
+      if (this.isMoveable && guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES) {
+        const moveableCount = chords.reduce(
+          (sum, chord) => sum + getMoveableShapes(guitarSettings.instrument, chord.name, this.fretboardConfig.tuning, chord.chordType).length,
+          0
+        );
+        diagramCount += moveableCount;
+      }
+      const { config } = planChordDiagramGrid(
+        this.fretboardConfig, totalWidth, maxCanvasHeight,
+        diagramCount, guitarSettings.zoomMultiplier ?? 1.2
       );
+      this.fretboardConfig = config;
     }
 
     const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;

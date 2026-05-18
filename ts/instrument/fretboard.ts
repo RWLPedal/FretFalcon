@@ -233,6 +233,10 @@ export class FretboardConfig {
     const bottomClearance = this.noteRadiusPx + 5 * this.scaleFactor;
     return scaledStartPx + openNoteClearance + fretboardLength + bottomClearance + scaledStartPx;
   }
+
+  getAspectRatio(fretCount: number): number {
+    return this.getRequiredWidth(fretCount) / this.getRequiredHeight(fretCount);
+  }
 }
 
 // --- Tuning Definitions ---

@@ -14,31 +14,6 @@ export function peekPendingCanvasWidth(): number | undefined {
   return _pendingConstraints.maxWidth;
 }
 
-/**
- * Finds the column count (1..maxCols) that maximises the uniform scale at which
- * `maxCols` items of base dimensions (baseW × baseH at scale=1) can fill a
- * container of (totalW × totalH). Items that don't fit in one row wrap to
- * additional rows. Returns the best column count.
- */
-export function optimalColumns(
-  maxCols: number,
-  totalW: number,
-  totalH: number,
-  baseW: number,
-  baseH: number
-): number {
-  let bestScale = 0;
-  let bestCols = 1;
-  for (let c = 1; c <= maxCols; c++) {
-    const rows = Math.ceil(maxCols / c);
-    const s = Math.min((totalW / c) / baseW, (totalH / rows) / baseH);
-    if (s > bestScale) {
-      bestScale = s;
-      bestCols = c;
-    }
-  }
-  return bestCols;
-}
 // --- End pending render constraints ---
 import { View } from "../view";
 import { MetronomeView } from "./views/metronome_view";

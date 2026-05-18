@@ -4,6 +4,31 @@
    feature-title helpers.
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* ─── Layout sizing tokens ───────────────────────────────────────────────── */
+/* Read by layout_specs.ts for canvas layout math. Keep in sync with the     */
+/* element styles below so sizing calculations match rendered dimensions.     */
+:root {
+  /* Height of one .feature-subtitle row including its top+bottom margin.    */
+  /* Used by TriadFeature to reserve space for per-quality-row headers.       */
+  --layout-feature-subtitle-h: 38px;
+
+  /* Vertical overhead per chord card not captured by the canvas itself:      */
+  /* chord title div + notes list + wrapper top/bottom padding (5px each).   */
+  --layout-chord-card-overhead-h: 50px;
+
+  /* Total horizontal padding on each chord card wrapper (5px left + right). */
+  --layout-chord-card-hpad: 10px;
+
+  /* Maximum width of a single chord diagram canvas.                          */
+  --layout-chord-canvas-max-w: 350px;
+
+  /* Gap between fretboard items in the TriadFeature diagrams flex container. */
+  --layout-fretboard-grid-gap: 4px;
+
+  /* Bottom margin on each TriadFeature quality row container.                */
+  --layout-triad-row-margin: 10px;
+}
+
 /* ─── Feature Title Helpers ─────────────────────────────────────────────── */
 .feature-main-title {
   font-size: 0.9rem !important;

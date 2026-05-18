@@ -22,7 +22,8 @@ import {
   addHeader,
   clearAllChildren,
 } from "../instrument_utils";
-import { peekPendingCanvasWidth, optimalColumns } from "../instrument_base";
+import { peekPendingCanvasWidth } from "../instrument_base";
+import { planMultiFretboardGrid } from "../fretboard_layout";
 import { TriadQuality, getTriadNotesAndLinesForGroup } from "../triads";
 import { FretboardView } from "../views/fretboard_view";
 import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "../instrument_settings";
@@ -121,13 +122,20 @@ export class TriadFeature extends InstrumentFeature {
   static readonly typeName = "Triad Shapes";
   static readonly displayName = "Triad Shapes (3-String Sets)";
   static readonly requiredInstruments = ["Guitar"] as const;
+  static readonly defaultWidth = 415;
+  static readonly defaultHeight = 685;
   static readonly description =
     "Displays triad shapes for selected qualities (Major, Minor, etc.) across all positions for each 3-string set.";
 
   readonly typeName = TriadFeature.typeName;
   private readonly mainHeaderText: string;
 
-  private readonly rowViews: TriadQualityRowView[] = [];
+  // Stored for deferred layout when dimensions aren't known at construction time.
+  private readonly _qualities: TriadQuality[];
+  private readonly _rootNoteName: string;
+  private readonly _zoomMultiplier: number;
+
+  private rowViews: TriadQualityRowView[] = [];
 
   constructor(
     config: ReadonlyArray<string>,
@@ -146,7 +154,7 @@ export class TriadFeature extends InstrumentFeature {
       (settings.instrumentSettings as InstrumentSettings | undefined) ??
       DEFAULT_INSTRUMENT_SETTINGS;
 
-    // Reference config at default scale — used to compute base dimensions for optimalColumns.
+    // Reference config at default scale — base dimensions for the layout algorithm.
     const baseFretboardConfig = new FretboardConfig(
       AVAILABLE_TUNINGS[guitarGlobalSettings.tuning] ?? STANDARD_TUNING,
       guitarGlobalSettings.handedness,
@@ -158,51 +166,30 @@ export class TriadFeature extends InstrumentFeature {
       maxCanvasHeight
     );
 
-    let perFretboardWidth: number | undefined;
-    let perFretboardHeight: number | undefined;
-    let fretboardScaleMultiplier = qualities.length === 1 ? 0.65 : 0.5;
-
-    if (totalWidth !== undefined && totalWidth > 0) {
-      const fretCount = 15;
-      const sf = baseFretboardConfig.scaleFactor;
-      const baseW = baseFretboardConfig.getRequiredWidth(fretCount) / sf;
-      const baseH = baseFretboardConfig.getRequiredHeight(fretCount) / sf;
-      // Reserve height for the main title and per-quality-row subtitle+margin.
-      const MAIN_HEADER_H = 32;
-      const ROW_HEADER_H = 38;
-      const usableH = Math.max(50, (maxCanvasHeight ?? 600) - MAIN_HEADER_H - qualities.length * ROW_HEADER_H);
-      const perQualityH = Math.floor(usableH / qualities.length);
-      const bestCols = optimalColumns(4, totalWidth, perQualityH, baseW, baseH);
-      const bestRows = Math.ceil(4 / bestCols);
-      perFretboardWidth  = Math.floor(totalWidth / bestCols);
-      perFretboardHeight = Math.floor(perQualityH / bestRows);
-      fretboardScaleMultiplier = guitarGlobalSettings.zoomMultiplier ?? 1.2;
-    }
-
-    const featureFretboardConfig = new FretboardConfig(
-      baseFretboardConfig.tuning,
-      baseFretboardConfig.handedness,
-      baseFretboardConfig.orientation,
-      baseFretboardConfig.colorScheme,
-      baseFretboardConfig.markerDots,
-      baseFretboardConfig.sideNumbers,
-      baseFretboardConfig.stringWidths,
-      perFretboardHeight ?? maxCanvasHeight,
-      perFretboardWidth,
-      fretboardScaleMultiplier,
-      15
+    const { config: featureFretboardConfig } = planMultiFretboardGrid(
+      baseFretboardConfig, totalWidth, maxCanvasHeight,
+      4, qualities.length, guitarGlobalSettings.zoomMultiplier ?? 1.2, 15
     );
 
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.fretboardConfig = featureFretboardConfig;
     this.mainHeaderText = mainHeaderText;
+    this._qualities = [...qualities];
+    this._rootNoteName = rootNoteName;
+    this._zoomMultiplier = guitarGlobalSettings.zoomMultiplier ?? 1.2;
 
-    // Create and store the row views internally.
-    qualities.forEach((quality) => {
-      this.rowViews.push(
-        new TriadQualityRowView(quality, rootNoteName, this.fretboardConfig)
-      );
-    });
+    // Build views immediately when dimensions were available; otherwise defer to render().
+    if (totalWidth && maxCanvasHeight) {
+      this._buildRowViews(this.fretboardConfig);
+    }
+  }
+
+  private _buildRowViews(config: FretboardConfig): void {
+    this.rowViews.forEach(v => v.destroy());
+    this.rowViews = this._qualities.map(
+      quality => new TriadQualityRowView(quality, this._rootNoteName, config)
+    );
+    this.fretboardConfig = config;
   }
 
   static getTitle(partialConfig: readonly string[]): string {
@@ -289,16 +276,31 @@ export class TriadFeature extends InstrumentFeature {
   }
 
   render(container: HTMLElement): void {
+    // Lazily build row views when dimensions weren't available at construction time.
+    if (this.rowViews.length === 0) {
+      // Subtract computed padding so canvas widths match the actual flex layout space.
+      const cs = getComputedStyle(container);
+      const w = (container.clientWidth || container.offsetWidth)
+        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const h = (container.clientHeight || container.offsetHeight)
+        - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      if (w > 0 && h > 0) {
+        const { config } = planMultiFretboardGrid(
+          this.fretboardConfig, w, h,
+          4, this._qualities.length, this._zoomMultiplier, 15
+        );
+        this._buildRowViews(config);
+      }
+    }
+
     clearAllChildren(container);
     const mainHeader = addHeader(container, this.mainHeaderText);
     mainHeader.classList.add('feature-main-title');
 
-    // Explicitly render our internal row views.
     this.rowViews.forEach((view) => {
       view.render(container);
     });
 
-    // Also render any views managed by the base class (like the metronome).
     this._views.forEach((view) => {
       view.render(container);
     });

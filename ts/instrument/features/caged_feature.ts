@@ -7,7 +7,9 @@ import {
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
+import { planSingleFretboard } from "../fretboard_layout";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
 import { Scale, scales, scale_names } from "../scales";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
@@ -259,6 +261,7 @@ export class CagedFeature extends InstrumentFeature {
     audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
+    const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.keyIndex = keyIndex;
     this.rootNoteName = rootNoteName;
@@ -266,6 +269,13 @@ export class CagedFeature extends InstrumentFeature {
     this.scale = scale;
     this.labelDisplay = labelDisplay;
     this.fretCount = 18;
+
+    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
+      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    this.fretboardConfig = planSingleFretboard(
+      this.fretboardConfig, availW, maxCanvasHeight,
+      guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
+    );
 
     for (const shape of initialSelectedShapes) {
       this._selectedShapes.add(shape);

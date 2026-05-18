@@ -3,6 +3,7 @@ import { FloatingViewManager } from '../floating_views/floating_view_manager';
 import { AppSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
 import { ThemeManager, Theme } from "../theme_manager";
 import { instrumentCategory } from "../instrument/instrument_category";
+import { TriadFeature } from "../instrument/features/triad_feature";
 import { SettingsManager } from "../settings_manager";
 import { LinkManager } from '../floating_views/link_manager';
 import '../floating_views/drive_slots'; // registers all drive sources/targets as a side effect
@@ -75,10 +76,14 @@ class ReferencePage {
             ? (featureDescriptor?.displayName ?? featureTypeName)
             : undefined;
 
-        const viewState = {
-            featureTypeName: featureTypeName
-        };
-        this.floatingViewManager.spawnView(viewId, { viewState: viewState, title: title });
+        const viewState = { featureTypeName };
+
+        // Feature-specific default window size (used only on first spawn; saved state takes precedence).
+        const size = featureTypeName === TriadFeature.typeName
+            ? { width: TriadFeature.defaultWidth, height: TriadFeature.defaultHeight }
+            : undefined;
+
+        this.floatingViewManager.spawnView(viewId, { viewState, title, size });
     }
 
     private saveSettings(newSettings: AppSettings): void {
