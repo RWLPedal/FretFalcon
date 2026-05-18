@@ -76,7 +76,7 @@ function findBestGridLayout(
 
 /**
  * Returns a FretboardConfig sized to fill the full available space.
- * Used by single-fretboard features (Scale, Notes, CAGED, MultiSelectFretboard).
+ * Used by single-fretboard features (Scale, Notes, CAGED, MultiLayerFretboard).
  * The main feature title is hidden in floating views so no overhead is deducted.
  *
  * @param baseConfig         Source of instrument settings (tuning, handedness, etc.)

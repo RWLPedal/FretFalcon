@@ -171,6 +171,8 @@ export class BackingTrackView extends BaseView {
   // Drum playback state
   private bpm: number = 120;
   private steps: number = 16;
+  private swingAmount: number = 0; // 0.0–0.5 fraction of stepMs to delay odd steps
+  private stepMs: number = 0;
   private tracks: TrackData[] = [];
   private bassTrack: BassStep[] = [];
   private selectedSound: DrumSoundId | null = 'kick';
@@ -198,6 +200,8 @@ export class BackingTrackView extends BaseView {
   private playBtn: HTMLButtonElement | null = null;
   private bpmSliderEl: HTMLInputElement | null = null;
   private bpmDisplayEl: HTMLElement | null = null;
+  private swingSliderEl: HTMLInputElement | null = null;
+  private swingDisplayEl: HTMLElement | null = null;
   private soundPaletteBtns: Map<DrumSoundId, HTMLButtonElement> = new Map();
   private barsBtns: Map<number, HTMLButtonElement> = new Map();
   private bassToolSelectEl: HTMLSelectElement | null = null;
@@ -210,6 +214,7 @@ export class BackingTrackView extends BaseView {
     super();
     this.bpm          = initialState?.bpm          ?? 120;
     this.steps        = initialState?.steps        ?? 16;
+    this.swingAmount  = Math.min(0.5, Math.max(0, initialState?.swingAmount ?? 0));
     this.progRootNote = initialState?.progRootNote ?? 'C';
     this.progKeyType  = initialState?.progKeyType  ?? 'Major';
     const nm = initialState?.numMeasures;
@@ -274,6 +279,8 @@ export class BackingTrackView extends BaseView {
     this.playBtn             = null;
     this.bpmSliderEl         = null;
     this.bpmDisplayEl        = null;
+    this.swingSliderEl       = null;
+    this.swingDisplayEl      = null;
     this.soundPaletteBtns.clear();
     this.barsBtns.clear();
     this.bassToolSelectEl    = null;
@@ -328,6 +335,32 @@ export class BackingTrackView extends BaseView {
 
       group.appendChild(this.bpmSliderEl);
       group.appendChild(this.bpmDisplayEl);
+      return group;
+    }));
+
+    // Swing
+    row.appendChild(this.buildLabeledControl('Swing', () => {
+      const group = document.createElement('div');
+      group.classList.add('dm-bpm-group');
+
+      this.swingSliderEl = document.createElement('input');
+      this.swingSliderEl.type = 'range';
+      this.swingSliderEl.min = '0';
+      this.swingSliderEl.max = '50';
+      this.swingSliderEl.value = String(Math.round(this.swingAmount * 100));
+      this.swingSliderEl.classList.add('dm-bpm-slider');
+      this.swingSliderEl.addEventListener('input', () => {
+        this.swingAmount = parseInt(this.swingSliderEl!.value, 10) / 100;
+        if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${this.swingSliderEl!.value}%`;
+        this.dispatchStateChange();
+      });
+
+      this.swingDisplayEl = document.createElement('span');
+      this.swingDisplayEl.classList.add('dm-bpm-display');
+      this.swingDisplayEl.textContent = `${Math.round(this.swingAmount * 100)}%`;
+
+      group.appendChild(this.swingSliderEl);
+      group.appendChild(this.swingDisplayEl);
       return group;
     }));
 
@@ -872,6 +905,9 @@ export class BackingTrackView extends BaseView {
 
     this.bpm          = state.bpm          ?? this.bpm;
     this.steps        = state.steps        ?? this.steps;
+    if (typeof state.swingAmount === 'number') {
+      this.swingAmount = Math.min(0.5, Math.max(0, state.swingAmount));
+    }
     this.progRootNote = state.progRootNote ?? this.progRootNote;
     this.progKeyType  = state.progKeyType  ?? this.progKeyType;
     const nm = state.numMeasures;
@@ -887,6 +923,9 @@ export class BackingTrackView extends BaseView {
 
     if (this.bpmSliderEl)      this.bpmSliderEl.value = String(this.bpm);
     if (this.bpmDisplayEl)     this.bpmDisplayEl.textContent = String(this.bpm);
+    const swingPct = Math.round(this.swingAmount * 100);
+    if (this.swingSliderEl)    this.swingSliderEl.value = String(swingPct);
+    if (this.swingDisplayEl)   this.swingDisplayEl.textContent = `${swingPct}%`;
     if (this.progRootSelectEl) this.progRootSelectEl.value = this.progRootNote;
     if (this.progKeyTypeBtn)   this.progKeyTypeBtn.textContent = this.progKeyType;
     this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === this.numMeasures));
@@ -940,8 +979,8 @@ export class BackingTrackView extends BaseView {
 
   private startInterval(): void {
     if (this.intervalId !== null) return;
-    const stepMs = (60000 * 4) / this.bpm / this.steps;
-    this.intervalId = window.setInterval(() => this.tick(), stepMs);
+    this.stepMs = (60000 * 4) / this.bpm / this.steps;
+    this.intervalId = window.setInterval(() => this.tick(), this.stepMs);
   }
 
   private stopInterval(): void {
@@ -953,15 +992,25 @@ export class BackingTrackView extends BaseView {
     this.currentStep = (this.currentStep + 1) % this.steps;
     this.highlightStep(this.currentStep);
 
-    // Drum hits
-    for (let t = 0; t < NUM_TRACKS; t++) {
-      const sound = this.tracks[t][this.currentStep];
-      if (sound) playDrumSound(sound);
-    }
+    const swingDelay = (this.currentStep % 4 === 2 && this.swingAmount > 0)
+      ? this.stepMs * this.swingAmount
+      : 0;
 
-    // Bass hit
-    const bassDegree = this.bassTrack[this.currentStep];
-    if (bassDegree !== null) this.playBassStep(bassDegree);
+    const step = this.currentStep;
+    const playHits = () => {
+      for (let t = 0; t < NUM_TRACKS; t++) {
+        const sound = this.tracks[t][step];
+        if (sound) playDrumSound(sound);
+      }
+      const bassDegree = this.bassTrack[step];
+      if (bassDegree !== null) this.playBassStep(bassDegree);
+    };
+
+    if (swingDelay > 0) {
+      setTimeout(playHits, swingDelay);
+    } else {
+      playHits();
+    }
 
     // Advance measure at the start of each drum loop
     if (this.currentStep === 0) {
@@ -1131,6 +1180,7 @@ export class BackingTrackView extends BaseView {
     return {
       bpm:           this.bpm,
       steps:         this.steps,
+      swingAmount:   this.swingAmount,
       tracks:        this.tracks,
       bassTrack:     this.bassTrack,
       progRootNote:  this.progRootNote,

@@ -229,6 +229,9 @@ export class ConfigView {
 
             const field = document.createElement('div');
             field.classList.add('field');
+            if (arg.uiComponentType === UiComponentType.LayerList) {
+                field.classList.add('is-layer-list-field');
+            }
             field.dataset.argIndex = String(index);
             field.dataset.argName = arg.name;
 

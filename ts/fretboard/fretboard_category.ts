@@ -26,7 +26,7 @@ import {
 import { INSTRUMENT_TUNINGS, InstrumentName } from "./fretboard";
 import { FretboardColorScheme } from "./colors";
 import { CagedFeature } from "./features/caged_feature";
-import { MultiSelectFretboardFeature } from "./features/multi_select_fretboard_feature";
+import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
 
 // Helper function to generate UI Schema
 function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
@@ -118,8 +118,8 @@ export class InstrumentCategory implements Category {
         MetronomeFeature as unknown as FeatureTypeDescriptor,
       ],
       [
-        MultiSelectFretboardFeature.typeName,
-        MultiSelectFretboardFeature as unknown as FeatureTypeDescriptor,
+        MultiLayerFretboardFeature.typeName,
+        MultiLayerFretboardFeature as unknown as FeatureTypeDescriptor,
       ],
     ]);
   }

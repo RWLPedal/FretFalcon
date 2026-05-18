@@ -30,6 +30,15 @@
   gap: 5px;
   margin-bottom: 0;
 }
+.config-compact .field.is-layer-list-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+}
+.config-compact .field.is-layer-list-field .control {
+  width: 100%;
+}
 .config-compact .config-label {
   font-size: 0.65rem;
   font-weight: 700;

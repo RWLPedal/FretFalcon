@@ -319,7 +319,7 @@ function populateArgsFromSchema(
       inputsContainer.appendChild(cbLabel);
       // valueIndex intentionally NOT incremented
     } else if (uiType === UiComponentType.LayerList) {
-      // --- Layer List (MultiSelectFretboard) ---
+      // --- Layer List (MultiLayerFretboard) ---
       label.textContent = labelText;
       const variadicValues = currentValues.slice(valueIndex);
       createLayerListInput(inputsContainer, arg, variadicValues);

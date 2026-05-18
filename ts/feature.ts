@@ -123,7 +123,7 @@ export interface ConfigurationSchemaArg {
     minorButtonLabels?: string[];
     /** Advanced labels used when Key type is Minor. */
     minorAdvancedButtonLabels?: string[];
-    /** Layer list data for MultiSelectFretboard feature. */
+    /** Layer list data for MultiLayerFretboard feature. */
     scaleNames?: string[];
     rootNoteOptions?: string[];
     chordEntries?: { key: string; label: string }[];

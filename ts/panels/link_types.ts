@@ -30,7 +30,7 @@ export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
 };
 
 // A generic chord signal — different targets interpret it differently:
-//   MultiSelectFretboard: drives a "Driven" layer's chord tones or scale root note
+//   MultiLayerFretboard: drives a "Driven" layer's chord tones or scale root note
 //   ChordFeature:         drives the displayed chord diagram
 // The signal carries enough context for any consumer to use whatever it needs.
 export interface ChordSignal {
@@ -43,7 +43,7 @@ export interface ChordSignal {
 
 // A key signal — carries the progression key (root + modality).
 //   ScaleFeature:         drives ScaleName and Root Note
-//   MultiSelectFretboard: drives a "driven|scale" layer
+//   MultiLayerFretboard: drives a "driven|scale" layer
 export interface KeySignal {
   kind: SignalKind.Key;
   rootNote: string;              // e.g. "C"

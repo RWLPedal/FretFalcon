@@ -85,6 +85,7 @@ export class FloatingViewWrapper {
   private titleTextEl: HTMLElement;
   private zoomButtonEl: HTMLButtonElement | null = null;
   private configToggleButtonEl: HTMLButtonElement | null = null;
+  private collapseButtonEl: HTMLButtonElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private _resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
   /** True while _autoSizeToContent or _adjustHeightToContent is setting element styles,
@@ -203,6 +204,17 @@ export class FloatingViewWrapper {
       this.zoomButtonEl = zoomButton;
     }
 
+    const collapseButton = document.createElement("button");
+    collapseButton.classList.add("floating-view-collapse");
+    collapseButton.innerHTML = '<span class="material-icons">expand_less</span>';
+    collapseButton.title = "Collapse";
+    collapseButton.onclick = (e) => {
+      e.stopPropagation();
+      this._toggleCollapse();
+    };
+    buttonGroup.appendChild(collapseButton);
+    this.collapseButtonEl = collapseButton;
+
     const closeButton = document.createElement("button");
     closeButton.classList.add("floating-view-close");
     closeButton.innerHTML = '<span class="material-icons">close</span>';
@@ -296,6 +308,9 @@ export class FloatingViewWrapper {
       const h = bo ? Math.round(bo.blockSize) : Math.round(entry.contentRect.height);
       if (w <= 0 || h <= 0) return;
 
+      // Don't overwrite the saved pre-collapse size while the panel is collapsed.
+      if (this.state.collapsed) return;
+
       const isFirst = this._firstResizeObserverFire;
       this._firstResizeObserverFire = false;
       const wasProgrammatic = this._isProgrammaticResize;
@@ -337,6 +352,35 @@ export class FloatingViewWrapper {
       }, 150);
     });
     this.resizeObserver.observe(this.element);
+
+    // Apply saved collapsed state immediately (element isn't in DOM yet so no ResizeObserver fire).
+    if (state.collapsed) {
+      this.element.classList.add('is-panel-collapsed');
+      this.element.style.height = '';
+      this._updateCollapseButton(true);
+    }
+  }
+
+  private _updateCollapseButton(collapsed: boolean): void {
+    if (!this.collapseButtonEl) return;
+    this.collapseButtonEl.innerHTML = collapsed
+      ? '<span class="material-icons">expand_more</span>'
+      : '<span class="material-icons">expand_less</span>';
+    this.collapseButtonEl.title = collapsed ? 'Expand' : 'Collapse';
+  }
+
+  private _toggleCollapse(): void {
+    const collapsed = !this.state.collapsed;
+    this.state.collapsed = collapsed;
+    if (collapsed) {
+      this.element.classList.add('is-panel-collapsed');
+      this.element.style.height = '';
+    } else {
+      this.element.classList.remove('is-panel-collapsed');
+      if (this.state.size) this.element.style.height = `${this.state.size.height}px`;
+    }
+    this._updateCollapseButton(collapsed);
+    this.onSaveCallback();
   }
 
   public get instanceId(): string {

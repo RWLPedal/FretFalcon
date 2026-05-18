@@ -1,4 +1,4 @@
-﻿// ts/instrument/features/multi_select_fretboard_feature.ts
+﻿// ts/fretboard/features/multi_layer_fretboard_feature.ts
 
 import { Feature, ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../../feature";
 import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
@@ -105,13 +105,13 @@ function resolveCssColor(color: string): string {
 
 // --- Feature Class ---
 
-export class MultiSelectFretboardFeature extends InstrumentFeature {
-  static readonly typeName = "MultiSelectFretboard";
+export class MultiLayerFretboardFeature extends InstrumentFeature {
+  static readonly typeName = "MultiLayerFretboard";
   static readonly displayName = "Multi-Layer Fretboard";
   static readonly description =
     "Overlay multiple scales, chord tones, note sets, or CAGED patterns on a single fretboard. Each layer has its own color; layers listed first take precedence.";
 
-  readonly typeName = MultiSelectFretboardFeature.typeName;
+  readonly typeName = MultiLayerFretboardFeature.typeName;
   private readonly layers: LayerSpec[];
   // Last signals received — used to resolve "driven" sentinel in layer fields
   private lastChordSignal: ChordSignal | null = null;
@@ -180,7 +180,7 @@ export class MultiSelectFretboardFeature extends InstrumentFeature {
         this.calculateAndSetNotes();
         container.dispatchEvent(new CustomEvent('feature-signal-relay', {
           bubbles: true,
-          detail: { featureTypeName: MultiSelectFretboardFeature.typeName, signal },
+          detail: { featureTypeName: MultiLayerFretboardFeature.typeName, signal },
         }));
       }
     };
@@ -239,7 +239,7 @@ export class MultiSelectFretboardFeature extends InstrumentFeature {
       const parsed = parseLayerString(layerStr);
       if (parsed) layers.push(parsed);
     }
-    return new MultiSelectFretboardFeature(
+    return new MultiLayerFretboardFeature(
       config,
       layers,
       settings,

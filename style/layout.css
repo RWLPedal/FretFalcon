@@ -418,6 +418,8 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
   width: 250px;
 }
 .floating-view-wrapper.is-dragging { opacity: 0.85; }
+.floating-view-wrapper.is-panel-collapsed { min-height: 0; resize: none; }
+.floating-view-wrapper.is-panel-collapsed .floating-view-content { display: none; }
 
 .floating-view-titlebar {
   background-color: transparent;
@@ -448,6 +450,7 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
 .floating-view-rotate,
 .floating-view-config-toggle,
 .floating-view-zoom,
+.floating-view-collapse,
 .floating-view-close {
   background: none;
   border: none;
@@ -462,10 +465,12 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
 .floating-view-rotate .material-icons,
 .floating-view-config-toggle .material-icons,
 .floating-view-zoom .material-icons,
+.floating-view-collapse .material-icons,
 .floating-view-close .material-icons { font-size: 14px; }
 .floating-view-rotate:hover,
 .floating-view-config-toggle:hover,
-.floating-view-zoom:hover { color: var(--text-primary, var(--clr-text)); }
+.floating-view-zoom:hover,
+.floating-view-collapse:hover { color: var(--text-primary, var(--clr-text)); }
 .floating-view-config-toggle.is-active,
 .floating-view-zoom.is-active { color: var(--accent, var(--clr-link)); }
 .floating-view-close:hover { color: var(--clr-danger); }

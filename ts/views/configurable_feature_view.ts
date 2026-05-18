@@ -214,7 +214,7 @@ export class ConfigurableFeatureView extends BaseView {
             }
 
             // Forward to featureContainer so features that self-handle drive signals
-            // (e.g. MultiSelectFretboardFeature) can receive the event — the event was
+            // (e.g. MultiLayerFretboardFeature) can receive the event — the event was
             // dispatched on this container (parent) and does not bubble down into children.
             this.featureContainer?.dispatchEvent(new CustomEvent('drive-signal', {
                 bubbles: false,

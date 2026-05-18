@@ -99,7 +99,7 @@ export class LinkManager {
       this.routeSignals(instanceId, signals);
     });
 
-    // Relay signals forwarded by features (e.g. MultiSelectFretboard driven update → ChordDiagram)
+    // Relay signals forwarded by features (e.g. MultiLayerFretboard driven update → ChordDiagram)
     viewAreaEl.addEventListener('feature-signal-relay', (e: Event) => {
       const detail = (e as CustomEvent<{ featureTypeName?: string; signal?: DriveSignal }>).detail;
       if (!detail?.signal) return;

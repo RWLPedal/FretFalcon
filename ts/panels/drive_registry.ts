@@ -3,20 +3,20 @@ import { DriveSignal, SignalKind } from './link_types';
 
 export interface DriveSourceDescriptor {
   viewId: string;
-  featureTypeName?: string; // set for configurable features e.g. 'MultiSelectFretboard'
+  featureTypeName?: string; // set for configurable features e.g. 'MultiLayerFretboard'
   /** Declarative list of SignalKinds this source can emit. Used for arrow tooltip display. */
   emittedKinds: SignalKind[];
   /**
    * Returns an ordered array of signals from this source's current state.
    * Index matters: signals[i] is routed to the i-th outgoing link.
    * BackingTrack returns a single-element array.
-   * MultiSelectFretboard returns one ChordSignal per chord/driven layer in order.
+   * MultiLayerFretboard returns one ChordSignal per chord/driven layer in order.
    */
   extractSignals(eventDetail: any): DriveSignal[];
 }
 
 export interface DriveTargetSlot {
-  featureTypeName: string;  // e.g. 'Chord', 'MultiSelectFretboard'
+  featureTypeName: string;  // e.g. 'Chord', 'MultiLayerFretboard'
   /** For standalone (non-configurable) view targets, the floating view's viewId. */
   viewId?: string;
   argName: string;          // config arg name this slot can drive

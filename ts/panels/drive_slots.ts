@@ -61,12 +61,12 @@ registerDriveSource({
   },
 });
 
-// ─── MultiSelectFretboard as source ──────────────────────────────────────────
+// ─── MultiLayerFretboard as source ──────────────────────────────────────────
 // When the fretboard's config changes, emit one ChordSignal per chord layer.
 
 registerDriveSource({
   viewId: 'configurable_instrument_feature',
-  featureTypeName: 'MultiSelectFretboard',
+  featureTypeName: 'MultiLayerFretboard',
   emittedKinds: [SignalKind.Chord],
   extractSignals(detail: any): ChordSignal[] {
     const config: string[] = detail?.config ?? [];
@@ -149,20 +149,20 @@ registerDriveTarget({
   },
 });
 
-// ─── MultiSelectFretboard as target ──────────────────────────────────────────
+// ─── MultiLayerFretboard as target ──────────────────────────────────────────
 // The 'Layers' arg uses a layer_list — driven layers are handled directly by
-// MultiSelectFretboardFeature listening for 'drive-signal' on its container.
+// MultiLayerFretboardFeature listening for 'drive-signal' on its container.
 // This target slot is a placeholder so ConfigurableFeatureView knows to show
-// 'Driven' options when a link points to a MultiSelectFretboard window.
+// 'Driven' options when a link points to a MultiLayerFretboard window.
 // (The actual driven-layer resolution is done inside the feature itself.)
 
 registerDriveTarget({
-  featureTypeName: 'MultiSelectFretboard',
+  featureTypeName: 'MultiLayerFretboard',
   argName: 'Layers',
   label: 'Driven layer (from linked source)',
   acceptedKinds: [SignalKind.Chord, SignalKind.Key],
   resolveValue(_signal: DriveSignal): string | null {
-    // Resolution is delegated to MultiSelectFretboardFeature; return null here
+    // Resolution is delegated to MultiLayerFretboardFeature; return null here
     // so ConfigurableFeatureView does not rebuild unnecessarily.
     return null;
   },
@@ -170,7 +170,7 @@ registerDriveTarget({
 
 // ─── ScaleFeature as target ───────────────────────────────────────────────────
 // A KeySignal drives both the scale name (Major / Natural Minor) and root note.
-// A ChordSignal also drives both, enabling MultiSelectFretboard → Scale links.
+// A ChordSignal also drives both, enabling MultiLayerFretboard → Scale links.
 // When BackingTrack drives Scale both signals arrive; KeySignal (sent last) wins.
 
 registerDriveTarget({

@@ -38,18 +38,11 @@ export class DragDropManager {
       "dragleave",
       this._handleDragLeave.bind(this)
     );
-    console.log("DnD Manager Initialized.");
   }
 
   private _handleDragStart(e: DragEvent): void {
     const originalTarget = e.target as HTMLElement;
-
-    // *** ADD DEBUG LOGGING HERE ***
-    console.log("[DEBUG] DragStart Event Target:", originalTarget);
     const dragHandle = originalTarget.closest('.drag-handle-cell');
-    console.log("[DEBUG] Found Drag Handle (.closest('.drag-handle-cell')):", dragHandle);
-    // *** END DEBUG LOGGING ***
-
 
     // Check if the drag started on the handle
     if (!dragHandle) {
@@ -59,7 +52,6 @@ export class DragDropManager {
             return;
         }
         e.preventDefault();
-        console.log("DragStart prevented: Not initiated on drag handle.");
         return;
     }
 
@@ -80,13 +72,11 @@ export class DragDropManager {
           this.draggedElements.push(rowToDrag);
       }
       this.draggedElements.forEach((el) => el.classList.add("dragging-selected"));
-      console.log(`Drag Start: Multi-drag initiated with ${this.draggedElements.length} elements.`);
       e.dataTransfer.setData("application/x-schedule-multidrag", "true");
     } else {
       this.selectionManager.selectSingleRow(rowToDrag);
       this.draggedElements = [rowToDrag];
       rowToDrag.classList.add("dragging");
-      console.log("Drag Start: Single element drag initiated via handle.");
     }
 
     e.dataTransfer.effectAllowed = "move";
@@ -103,7 +93,6 @@ export class DragDropManager {
     this._clearDragOverStyles();
     this.draggedElements = [];
     this.isMultiDrag = false;
-    console.log("Drag End.");
   }
 
   private _handleDragOver(e: DragEvent): void {
@@ -120,11 +109,6 @@ export class DragDropManager {
     this._clearDragOverStyles();
     if (this.draggedElements.length === 0) return;
     const afterElement = this._getDragAfterElement(e.clientY);
-    console.log(
-      `Drop: Moving ${this.draggedElements.length} elements ${
-        afterElement ? "before target" : "to the end"
-      }.`
-    );
     this.draggedElements.forEach((el) => {
       let currentTarget = afterElement;
       while (currentTarget && this.draggedElements.includes(currentTarget)) {

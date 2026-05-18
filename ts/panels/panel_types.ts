@@ -55,6 +55,8 @@ export interface FloatingViewInstanceState {
   orientationOverride?: "vertical" | "horizontal";
   /** Whether this instance is currently in the zoomed state. */
   zoomActive?: boolean;
+  /** Whether this panel is collapsed to its title bar. */
+  collapsed?: boolean;
 }
 
 // Structure for saving state to localStorage.

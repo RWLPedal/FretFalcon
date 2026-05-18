@@ -115,7 +115,7 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       gridSize: { cols: 82, rows: 34 },
       zIndex: 121,
       viewState: {
-        featureTypeName: "MultiSelectFretboard",
+        featureTypeName: "MultiLayerFretboard",
         config: ["chord|driven|var(--dm-palette-2)", "scale|driven|driven|var(--dm-palette-3)"],
       },
     },

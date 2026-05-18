@@ -432,7 +432,7 @@ export function clearAllChildren(element: HTMLElement): void {
   }
 }
 
-// --- Layer List UI (for MultiSelectFretboard feature) ---
+// --- Layer List UI (for MultiLayerFretboard feature) ---
 
 interface ChordEntry { key: string; label: string; }
 
@@ -594,7 +594,10 @@ function buildLayerFields(
     // Scale name dropdown — value may be "driven" when restored from a linked save
     const scaleNames = data.scaleNames ?? [];
     const scaleWrapper = document.createElement("div");
-    scaleWrapper.classList.add("select", "is-small");
+    scaleWrapper.classList.add("select", "is-small", "is-fullwidth");
+    scaleWrapper.style.flex = "1";
+    scaleWrapper.style.minWidth = "0";
+    scaleWrapper.style.maxWidth = "200px";
     const scaleSelect = document.createElement("select");
     scaleSelect.dataset.field = "scaleName";
     if (initialFields[0] === "driven") {
@@ -618,6 +621,8 @@ function buildLayerFields(
     const rootNotes = data.rootNoteOptions ?? [];
     const rootWrapper = document.createElement("div");
     rootWrapper.classList.add("select", "is-small");
+    rootWrapper.style.flexShrink = "0";
+    rootWrapper.style.width = "80px";
     const rootSelect = document.createElement("select");
     rootSelect.dataset.field = "rootNote";
     if (initialFields[1] === "driven") {
@@ -641,7 +646,10 @@ function buildLayerFields(
     // Chord key dropdown — value may be "driven" when restored from a linked save
     const entries = data.chordEntries ?? [];
     const chordWrapper = document.createElement("div");
-    chordWrapper.classList.add("select", "is-small");
+    chordWrapper.classList.add("select", "is-small", "is-fullwidth");
+    chordWrapper.style.flex = "1";
+    chordWrapper.style.minWidth = "0";
+    chordWrapper.style.maxWidth = "200px";
     const chordSelect = document.createElement("select");
     chordSelect.dataset.field = "chordKey";
     if (initialFields[0] === "driven") {
@@ -672,6 +680,7 @@ function buildLayerFields(
     toggleContainer.style.display = "flex";
     toggleContainer.style.flexWrap = "wrap";
     toggleContainer.style.gap = "3px";
+    toggleContainer.style.flex = "1";
     noteNames.forEach((note) => {
       const btn = document.createElement("button");
       btn.type = "button";
@@ -692,7 +701,7 @@ function buildLayerFields(
 }
 
 /**
- * Creates a draggable layer list input component for the MultiSelectFretboard feature.
+ * Creates a draggable layer list input component for the MultiLayerFretboard feature.
  * Each row encodes one layer as a pipe-delimited string.
  * @param onChange - Optional callback invoked whenever the layer list is modified.
  */
@@ -814,6 +823,7 @@ export function createLayerListInput(
     const typeWrapper = document.createElement("div");
     typeWrapper.classList.add("select", "is-small");
     typeWrapper.style.flexShrink = "0";
+    typeWrapper.style.minWidth = "105px";
     const typeSelect = document.createElement("select");
     typeSelect.classList.add("layer-type-select");
     (Object.keys(LAYER_TYPE_LABELS) as UiLayerType[]).forEach((t) => {

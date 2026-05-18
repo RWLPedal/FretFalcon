@@ -6,8 +6,7 @@ import { HandleSide, LinkRecord, SignalKind, DriveSignal, SIGNAL_KIND_ICON } fro
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-// When true, non-matching signal kinds are shown dim alongside the bold matched ones.
-const DEBUG_SHOW_ALL_SIGNAL_KINDS = true;
+const DEBUG_SHOW_ALL_SIGNAL_KINDS = false;
 
 export interface ArrowMeta {
   emittedKinds: SignalKind[];
