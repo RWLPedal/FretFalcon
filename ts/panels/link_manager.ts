@@ -1,4 +1,4 @@
-// ts/floating_views/link_manager.ts
+// ts/panels/link_manager.ts
 import { HandleSide, LinkRecord, DriveSignal } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';

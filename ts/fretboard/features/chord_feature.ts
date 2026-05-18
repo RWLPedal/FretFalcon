@@ -7,7 +7,7 @@ import {
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature } from "../fretboard_base";
 import {
   Chord,
   ChordType,
@@ -23,13 +23,13 @@ import { ChordDiagramView } from "../views/chord_diagram_view";
 import { MoveableToggleView } from "../views/moveable_toggle_view";
 import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../moveable_shapes";
 import { AVAILABLE_TUNINGS, STANDARD_TUNING } from "../fretboard";
-import { peekPendingCanvasWidth } from "../instrument_base";
+import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
-import { addHeader, clearAllChildren } from "../instrument_utils";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { addHeader, clearAllChildren } from "../fretboard_utils";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 // Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 
 /** A feature for displaying mulitple chord diagrams and a metronome. */
 export class ChordFeature extends InstrumentFeature {

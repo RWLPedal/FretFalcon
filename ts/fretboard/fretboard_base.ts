@@ -26,15 +26,15 @@ import { AppSettings } from "../settings";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
-} from "./instrument_settings";
-import { InstrumentIntervalSettings } from "./instrument_interval_settings";
+} from "./fretboard_settings";
+import { InstrumentIntervalSettings } from "./fretboard_interval_settings";
 import { AudioController } from "../audio_controller";
 import {
   clearAllChildren,
   addHeader,
   addCanvas,
   START_PX,
-} from "./instrument_utils";
+} from "./fretboard_utils";
 import { IntervalSettings } from "../schedule/editor/interval/types";
 
 /**

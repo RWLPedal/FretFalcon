@@ -3,7 +3,7 @@ import { Chord } from "../chords";
 import { FretboardConfig, InstrumentName } from "../fretboard";
 import { ChordDiagramView } from "./chord_diagram_view";
 import { getMoveableShapes } from "../moveable_shapes";
-import { clearAllChildren } from "../instrument_utils";
+import { clearAllChildren } from "../fretboard_utils";
 
 /**
  * Renders either static chord diagrams or moveable barre-chord shapes depending

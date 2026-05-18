@@ -1,4 +1,4 @@
-// ts/floating_views/link_overlay.ts
+// ts/panels/link_overlay.ts
 // Renders connection-point handles as SVG elements and manages arrow instances.
 
 import { HandleSide, LinkRecord } from './link_types';

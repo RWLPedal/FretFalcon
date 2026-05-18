@@ -12,7 +12,7 @@ import { SelectionManager } from "./selection_manager";
 import { applyIndentation, extractLayerListValues } from "./interval/common_ui_elements";
 import { UiComponentType } from "../../feature";
 import { getFeatureTypeDescriptor } from "../../feature_registry";
-import { instrumentCategory } from "../../instrument/instrument_category";
+import { instrumentCategory } from "../../fretboard/fretboard_category";
 
 export class RowManager {
   private configEntriesContainerEl: HTMLElement;

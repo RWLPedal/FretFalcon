@@ -1,13 +1,13 @@
 ﻿// ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
-import { KeyType, SignalKind, TempoSignal } from '../floating_views/link_types';
+import { KeyType, SignalKind, TempoSignal } from '../panels/link_types';
 import {
   DrumSoundId,
   DRUM_SOUND_LABELS,
   ALL_DRUM_SOUND_IDS,
   playDrumSound,
 } from '../sounds/drum_sounds';
-import { chord_tones_library } from '../instrument/chords';
+import { chord_tones_library } from '../fretboard/chords';
 import { volumeManager } from '../sounds/volume_manager';
 import {
   CHORD_ROOTS,
@@ -16,7 +16,7 @@ import {
   RomanEntry,
   resolveAbsoluteChordKey,
   isMajorChordSuffix,
-} from '../instrument/chord_key_resolver';
+} from '../fretboard/chord_key_resolver';
 
 // ─── Data types ────────────────────────────────────────────────────────────────
 

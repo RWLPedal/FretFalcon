@@ -7,24 +7,24 @@ import {
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature } from "../fretboard_base";
 import { Chord, chord_library, getChordLibraryForInstrument } from "../chords";
 import { AppSettings } from "../../settings";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AudioController } from "../../audio_controller";
 // Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils";
+} from "../fretboard_utils";
 import { KeyType, getChordInKey } from "../progressions";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { getEasiestMoveableShape } from "../moveable_shapes";
-import { peekPendingCanvasWidth } from "../instrument_base";
+import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 
 /** Displays chord diagrams for a Roman numeral progression in a given key. */

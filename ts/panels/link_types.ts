@@ -1,7 +1,7 @@
-// ts/floating_views/link_types.ts
+// ts/panels/link_types.ts
 
-import { KeyType } from '../instrument/music_types';
-export { KeyType } from '../instrument/music_types';
+import { KeyType } from '../fretboard/music_types';
+export { KeyType } from '../fretboard/music_types';
 
 export type HandleSide = 'top' | 'bottom' | 'left' | 'right';
 

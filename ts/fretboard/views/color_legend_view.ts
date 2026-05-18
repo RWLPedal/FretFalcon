@@ -3,7 +3,7 @@ import { AppSettings } from "../../settings";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
-} from "../instrument_settings";
+} from "../fretboard_settings";
 import { INTERVAL_COLORS, NOTE_COLORS } from "../colors"; // Import color maps
 
 export class ColorLegendView extends BaseView {

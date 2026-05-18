@@ -7,14 +7,14 @@ import {
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { Scale, scales, scale_names } from "../scales";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData, PolygonData, Tuning } from "../fretboard";
 import {
   getKeyIndex,
@@ -23,7 +23,7 @@ import {
   OPEN_NOTE_RADIUS_FACTOR,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils";
+} from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
 import { getColor as getColorFromScheme, NOTE_COLORS } from "../colors";
 

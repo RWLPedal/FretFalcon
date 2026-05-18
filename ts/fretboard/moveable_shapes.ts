@@ -1,6 +1,6 @@
 ﻿import { Chord, ChordType, BarreSpec } from "./chords";
 import { InstrumentName, Tuning } from "./fretboard";
-import { getKeyIndex } from "./instrument_utils";
+import { getKeyIndex } from "./fretboard_utils";
 import type { NoteName } from "./music_types";
 
 export interface MoveableChordTemplate {

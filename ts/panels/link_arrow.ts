@@ -1,4 +1,4 @@
-// ts/floating_views/link_arrow.ts
+// ts/panels/link_arrow.ts
 // Owns a single SVG arrow group and its hover tooltip.
 // Extracted from LinkOverlay so metadata-aware rendering can live here.
 

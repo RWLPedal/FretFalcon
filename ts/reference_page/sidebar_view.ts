@@ -1,7 +1,7 @@
-﻿import { FloatingViewManager } from '../floating_views/floating_view_manager';
+﻿import { FloatingViewManager } from '../panels/panel_manager';
 import { VolumeControl } from '../views/volume_control';
 import { AppSettings } from '../settings';
-import { InstrumentSettings } from '../instrument/instrument_settings';
+import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme, themeNames } from '../theme_manager';
 
 interface NavButton {

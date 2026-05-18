@@ -5,12 +5,12 @@
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature } from "../fretboard_base";
 import { Scale, scale_names, scales } from "../scales";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteIcon, NoteRenderData, FretboardConfig } from "../fretboard";
 import {
   getKeyIndex,
@@ -19,11 +19,11 @@ import {
   OPEN_NOTE_RADIUS_FACTOR,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils"; // getNotesInScale removed
+} from "../fretboard_utils"; // getNotesInScale removed
 import { FretboardView } from "../views/fretboard_view";
-import { peekPendingCanvasWidth } from "../instrument_base";
+import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 // Color for non-highlighted scale notes when highlighting is active
 const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC"; // Lighter grey for contrast
 const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B"; // Muted red for out-of-scale highlights

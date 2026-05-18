@@ -2,9 +2,9 @@
 // Library for dynamically playing musical notes as pure tones via Web Audio API.
 
 import { volumeManager } from './volume_manager';
-import { NoteName, NOTE_NAMES } from '../instrument/music_types';
+import { NoteName, NOTE_NAMES } from '../fretboard/music_types';
 
-export { NoteName, NOTE_NAMES } from '../instrument/music_types';
+export { NoteName, NOTE_NAMES } from '../fretboard/music_types';
 
 export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 

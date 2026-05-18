@@ -1,7 +1,7 @@
 // ts/instrument/views/metronome_view.ts
 import { BaseView } from "../../base_view";
 import { AudioController } from "../../audio_controller";
-import { SignalKind, TempoSignal } from "../../floating_views/link_types";
+import { SignalKind, TempoSignal } from "../../panels/link_types";
 
 enum BeatState {
   Silent = 0,

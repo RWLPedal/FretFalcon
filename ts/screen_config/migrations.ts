@@ -11,7 +11,7 @@
 //   6. Update default_configs.ts to the new shape
 //   7. Update SCREEN_CONFIG_FORMAT.md
 
-import { LinkRecord } from "../floating_views/link_types";
+import { LinkRecord } from "../panels/link_types";
 import {
   CURRENT_SCREEN_CONFIG_VERSION,
   CurrentPayload,

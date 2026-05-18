@@ -10,7 +10,7 @@ import {
   IntervalSettingsJSON, // Needed for parsing/creating settings
 } from "./interval/types";
 import { SelectionManager } from "./selection_manager";
-import { instrumentCategory } from "../../instrument/instrument_category";
+import { instrumentCategory } from "../../fretboard/fretboard_category";
 // Import the builder for interval rows
 import { buildIntervalRowElement } from "./interval/interval_row_ui";
 // --- Removed direct import of InstrumentIntervalSettings ---

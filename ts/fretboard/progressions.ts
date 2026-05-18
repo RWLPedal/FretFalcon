@@ -1,4 +1,4 @@
-import { NOTE_NAMES_FROM_A } from "./instrument_utils";
+import { NOTE_NAMES_FROM_A } from "./fretboard_utils";
 import { Chord, chord_library } from "./chords";
 import { KeyType, ChordQuality } from "./music_types";
 export { KeyType, ChordQuality };

@@ -1,12 +1,12 @@
-﻿// ts/floating_views/floating_view_manager.ts
-import { FloatingViewWrapper, GRID_UNIT } from "./floating_view_wrapper";
+﻿// ts/panels/panel_manager.ts
+import { FloatingViewWrapper, GRID_UNIT } from "./panel_wrapper";
 import {
   FloatingViewDescriptor,
   FloatingViewInstanceState,
   FloatingViewManagerSaveState,
   isFretboardDescriptor,
-} from "./floating_view_types";
-import { getFloatingViewDescriptor } from "./floating_view_registry";
+} from "./panel_types";
+import { getFloatingViewDescriptor } from "./panel_registry";
 import { AppSettings } from "../settings"; // Needed for createView
 import { LinkManager } from "./link_manager";
 import { getFeatureTypeNameByViewId } from "./drive_registry";

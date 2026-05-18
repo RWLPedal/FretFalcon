@@ -1,4 +1,4 @@
-﻿// ts/instrument/instrument_category.ts
+﻿// ts/instrument/fretboard_category.ts
 import { Category } from "../feature"; // Use Category from feature.ts
 import { FeatureTypeDescriptor, SettingsUISchemaItem } from "../feature";
 import {
@@ -16,11 +16,11 @@ import { TriadFeature } from "./features/triad_feature";
 import { MetronomeFeature } from "./features/metronome_feature";
 
 // Import Guitar Settings related items
-import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "./instrument_settings";
+import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "./fretboard_settings";
 import {
   InstrumentIntervalSettings,
   InstrumentIntervalSettingsJSON,
-} from "./instrument_interval_settings";
+} from "./fretboard_interval_settings";
 
 // Helper function imports (for settings UI schema)
 import { INSTRUMENT_TUNINGS, InstrumentName } from "./fretboard";

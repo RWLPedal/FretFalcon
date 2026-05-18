@@ -5,13 +5,13 @@ import {
   ConfigurationSchema,
   ConfigurationSchemaArg,
 } from "../../feature";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature } from "../fretboard_base";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 // Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
-import { addHeader, clearAllChildren } from "../instrument_utils";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
+import { addHeader, clearAllChildren } from "../fretboard_utils";
 import { View } from "../../view"; // Keep View import if used by base class logic
 
 /** A simple feature that only displays a MetronomeView (if BPM > 0). */

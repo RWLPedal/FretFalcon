@@ -2,7 +2,7 @@
   NOTE_RADIUS_PX,
   START_PX,
   OPEN_NOTE_RADIUS_FACTOR,
-} from "./instrument_utils";
+} from "./fretboard_utils";
 import { FretboardColorScheme, getColor as getColorFromScheme } from "./colors";
 import { playFrequency } from "../sounds/note_sounds";
 

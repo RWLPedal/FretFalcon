@@ -18,7 +18,7 @@ import {
   getIntervalLabel,
   addHeader, // Use for external title
   addCanvas,
-} from "../instrument_utils";
+} from "../fretboard_utils";
 import { NoteName } from "../music_types";
 
 /**

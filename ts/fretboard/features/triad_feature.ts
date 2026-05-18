@@ -6,7 +6,7 @@
   UiComponentType,
 } from "../../feature";
 import { BaseView } from "../../base_view";
-import { InstrumentFeature } from "../instrument_base";
+import { InstrumentFeature } from "../fretboard_base";
 import {
   FretboardConfig,
   AVAILABLE_TUNINGS,
@@ -15,18 +15,18 @@ import {
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils";
-import { peekPendingCanvasWidth } from "../instrument_base";
+} from "../fretboard_utils";
+import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planMultiFretboardGrid } from "../fretboard_layout";
 import { TriadQuality, getTriadNotesAndLinesForGroup } from "../triads";
 import { FretboardView } from "../views/fretboard_view";
-import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "../instrument_settings";
+import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "../fretboard_settings";
 
 const STRING_GROUPS: [number, number, number][] = [
   [0, 1, 2],

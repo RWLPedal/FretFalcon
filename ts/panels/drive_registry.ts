@@ -1,4 +1,4 @@
-// ts/floating_views/drive_registry.ts
+// ts/panels/drive_registry.ts
 import { DriveSignal, SignalKind } from './link_types';
 
 export interface DriveSourceDescriptor {

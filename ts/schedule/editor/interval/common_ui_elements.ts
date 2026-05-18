@@ -1,7 +1,7 @@
 // ts/schedule/editor/interval/common_ui_elements.ts
 import { ConfigurationSchemaArg, ArgType } from "../../../feature";
 import { IntervalSettings } from "./types";
-import { LayerType } from "../../../instrument/features/layer_types";
+import { LayerType } from "../../../fretboard/features/layer_types";
 
 // --- Generic UI Element Creation Functions ---
 

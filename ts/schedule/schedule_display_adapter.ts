@@ -3,7 +3,7 @@ import { Interval } from './schedule';
 import { IDisplayController, Status } from '../display_controller';
 import { TimerView } from '../views/timer_view';
 import { SchedulePlaybackView } from '../views/schedule_playback_view';
-import { SignalKind, FeatureSignal } from '../floating_views/link_types';
+import { SignalKind, FeatureSignal } from '../panels/link_types';
 
 /**
  * An IDisplayController implementation for the Schedule floating view.

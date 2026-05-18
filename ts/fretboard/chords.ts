@@ -260,7 +260,7 @@ const _CHORD_TYPES: _ChordTypeSpec[] = [
 
 export interface ChordToneEntry {
   name: string;
-  tones: string[]; // note names (enharmonics matched via NOTE_FLAT_ALIAS_FROM_A in instrument_utils)
+  tones: string[]; // note names (enharmonics matched via NOTE_FLAT_ALIAS_FROM_A in fretboard_utils)
 }
 
 /** Comprehensive chord tones library for all 12 roots × 7 chord types.

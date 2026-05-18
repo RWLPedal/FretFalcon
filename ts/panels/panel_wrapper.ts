@@ -1,5 +1,5 @@
 import { View } from "../view";
-import { FloatingViewInstanceState } from "./floating_view_types";
+import { FloatingViewInstanceState } from "./panel_types";
 
 // --- Grid Snap ---
 /** The canonical grid cell size in pixels. Used for both visual snap-to-grid

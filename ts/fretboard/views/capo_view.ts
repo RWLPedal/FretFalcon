@@ -1,8 +1,7 @@
-// ts/views/capo_view.ts
-import { BaseView } from '../base_view';
-import { AppSettings } from '../settings';
-import { getChordLibraryForInstrument, Chord, ChordType } from '../instrument/chords';
-import { getKeyIndex, NOTE_NAMES_FROM_A } from '../instrument/instrument_utils';
+import { BaseView } from '../../base_view';
+import { AppSettings } from '../../settings';
+import { getChordLibraryForInstrument, Chord, ChordType } from '../chords';
+import { getKeyIndex, NOTE_NAMES_FROM_A } from '../fretboard_utils';
 
 /**
  * A compact view that displays open MAJOR and MINOR chord shapes for the current

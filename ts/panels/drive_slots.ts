@@ -1,17 +1,17 @@
-﻿// ts/floating_views/drive_slots.ts
+﻿// ts/panels/drive_slots.ts
 // Concrete drive source/target registrations. Import this file once at app startup
 // (reference_main.ts) to wire all signal translations.
 
 import { registerDriveSource, registerDriveTarget } from './drive_registry';
 import { SignalKind, ChordSignal, KeySignal, DriveSignal, FeatureSignal } from './link_types';
-import { KeyType } from '../instrument/music_types';
+import { KeyType } from '../fretboard/music_types';
 import {
   resolveAbsoluteChordKey,
   resolveChordRootNote,
   isMajorChordSuffix,
   MAJOR_ROMANS,
   MINOR_ROMANS,
-} from '../instrument/chord_key_resolver';
+} from '../fretboard/chord_key_resolver';
 
 // ─── BackingTrackView as source ───────────────────────────────────────────────
 // viewId must match the registered floating view id for the backing track.

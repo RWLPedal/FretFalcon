@@ -5,7 +5,7 @@ import { AppSettings } from "../../settings";
 import { Feature } from "../../feature";
 // Import registry functions for generic handling
 import { getFeatureTypeDescriptor } from "../../feature_registry";
-import { instrumentCategory } from "../../instrument/instrument_category";
+import { instrumentCategory } from "../../fretboard/fretboard_category";
 import { parseDurationString } from "../../time_utils";
 import { ErrorDisplay } from "./error_display";
 import {

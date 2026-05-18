@@ -2,7 +2,7 @@
 import { PracticeSettings, DEFAULT_PRACTICE_SETTINGS } from "./practice_settings";
 import { ReferenceSettings, DEFAULT_REFERENCE_SETTINGS } from "./reference_settings";
 import { Theme } from "./theme_manager";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "./instrument/instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
 
 export type { InstrumentSettings };
 

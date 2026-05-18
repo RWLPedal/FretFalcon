@@ -11,7 +11,7 @@ import {
   getAvailableFeatureTypesForInstrument,
   getFeatureTypeDescriptor,
 } from "../../../feature_registry";
-import { instrumentCategory } from "../../../instrument/instrument_category";
+import { instrumentCategory } from "../../../fretboard/fretboard_category";
 // Import generic settings types
 import { IntervalSettings, IntervalRowData } from "./types";
 

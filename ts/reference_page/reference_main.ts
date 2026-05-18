@@ -1,14 +1,14 @@
 import { SidebarView } from "./sidebar_view";
-import { FloatingViewManager } from '../floating_views/floating_view_manager';
+import { FloatingViewManager } from '../panels/panel_manager';
 import { AppSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
 import { ThemeManager, Theme } from "../theme_manager";
-import { instrumentCategory } from "../instrument/instrument_category";
-import { TriadFeature } from "../instrument/features/triad_feature";
+import { instrumentCategory } from "../fretboard/fretboard_category";
+import { TriadFeature } from "../fretboard/features/triad_feature";
 import { SettingsManager } from "../settings_manager";
-import { LinkManager } from '../floating_views/link_manager';
-import '../floating_views/drive_slots'; // registers all drive sources/targets as a side effect
+import { LinkManager } from '../panels/link_manager';
+import '../panels/drive_slots'; // registers all drive sources/targets as a side effect
 import { registerBuiltins } from '../app_bootstrap';
-import { setFloatingViewGridSize, GRID_UNIT } from '../floating_views/floating_view_wrapper';
+import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 
 class ReferencePage {

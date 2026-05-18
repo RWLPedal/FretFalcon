@@ -1,6 +1,6 @@
 import { BaseView } from '../base_view';
 import { NoteName, NOTE_NAMES, SustainedNote } from '../sounds/note_sounds';
-import { DriveSignal, SignalKind } from '../floating_views/link_types';
+import { DriveSignal, SignalKind } from '../panels/link_types';
 
 const DRONE_OCTAVE = 4;
 

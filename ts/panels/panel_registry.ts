@@ -1,4 +1,4 @@
-import { FloatingViewDescriptor } from "./floating_view_types";
+import { FloatingViewDescriptor } from "./panel_types";
 
 const registry = new Map<string, FloatingViewDescriptor>();
 

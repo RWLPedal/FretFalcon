@@ -2,7 +2,7 @@
 import { IDisplayController } from "../../display_controller";
 import { Schedule } from "../schedule";
 import { AppSettings, LAST_RUN_SCHEDULE_JSON_KEY } from "../../settings";
-import { InstrumentSettings } from "../../instrument/instrument_settings";
+import { InstrumentSettings } from "../../fretboard/fretboard_settings";
 // Use JSON serializer functions
 import {
   parseScheduleJSON,
@@ -28,7 +28,7 @@ import { ClipboardManager } from "./clipboard_manager";
 import { DragDropManager } from "./drag_drop_manager";
 import { KeyboardShortcutManager } from "./keyboard_shortcut_manager";
 import { ScheduleBuilder } from "./schedule_builder";
-import { instrumentCategory } from "../../instrument/instrument_category";
+import { instrumentCategory } from "../../fretboard/fretboard_category";
 
 // --- Removed FeatureCategoryName import ---
 

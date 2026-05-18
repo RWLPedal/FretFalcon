@@ -7,12 +7,12 @@ import {
   ConfigurationSchemaArg,
   ArgType,
 } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
 import { AppSettings } from "../../settings";
 import { AudioController } from "../../audio_controller";
 // Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData, FretboardConfig } from "../fretboard"; // Import FretboardConfig
 import {
   NOTE_NAMES_FROM_A,
@@ -21,11 +21,11 @@ import {
   OPEN_NOTE_RADIUS_FACTOR,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils";
+} from "../fretboard_utils";
 import { FretboardColorScheme } from "../colors";
 import { FretboardView } from "../views/fretboard_view";
 import { planSingleFretboard } from "../fretboard_layout";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 
 /** A guitar feature for displaying all notes on the fretboard using FretboardView. */
 export class NotesFeature extends InstrumentFeature {

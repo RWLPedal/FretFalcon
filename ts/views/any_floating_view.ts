@@ -3,8 +3,8 @@ import { AppSettings } from '../settings';
 import { AudioController } from '../audio_controller';
 import { Feature } from '../feature';
 import { getFeatureTypeDescriptor } from '../feature_registry';
-import { instrumentCategory } from '../instrument/instrument_category';
-import { DriveSignal, SignalKind, FeatureSignal } from '../floating_views/link_types';
+import { instrumentCategory } from '../fretboard/fretboard_category';
+import { DriveSignal, SignalKind, FeatureSignal } from '../panels/link_types';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
 const PLACEHOLDER_REST = '(Rest)';

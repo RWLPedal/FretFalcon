@@ -6,7 +6,7 @@ import {
   LineData,
   PolygonData,
 } from "../fretboard"; // Import types from fretboard.ts
-import { addCanvas, START_PX } from "../instrument_utils";
+import { addCanvas, START_PX } from "../fretboard_utils";
 
 /**
  * A View that wraps a Fretboard instance, sets up its canvas,

@@ -4,7 +4,7 @@
 // This is a pure types file — no logic. The only external dependency is LinkRecord,
 // because links are structurally part of the saved layout.
 
-import { LinkRecord } from "../floating_views/link_types";
+import { LinkRecord } from "../panels/link_types";
 
 // Re-export so callers only need to import from this package.
 export type { LinkRecord };

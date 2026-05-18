@@ -1,13 +1,13 @@
 ﻿// ts/instrument/features/multi_select_fretboard_feature.ts
 
 import { Feature, ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../instrument_base";
+import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../instrument_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AppSettings } from "../../settings";
 import { AudioController } from "../../audio_controller";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../instrument_interval_settings";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData } from "../fretboard";
 import {
   NOTE_NAMES_FROM_A,
@@ -17,7 +17,7 @@ import {
   OPEN_NOTE_RADIUS_FACTOR,
   addHeader,
   clearAllChildren,
-} from "../instrument_utils";
+} from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
 import { scale_names, scales } from "../scales";
 import { chord_tones_library } from "../chords";
@@ -27,7 +27,7 @@ import {
   compareCagedPositions,
   getCagedTuningOffset,
 } from "./caged_feature";
-import { DriveSignal, ChordSignal, KeySignal, SignalKind } from "../../floating_views/link_types";
+import { DriveSignal, ChordSignal, KeySignal, SignalKind } from "../../panels/link_types";
 import { LayerType } from "./layer_types";
 
 // --- Layer Spec Types ---

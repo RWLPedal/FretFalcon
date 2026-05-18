@@ -1,5 +1,5 @@
 ﻿// ts/schedule/editor/schedule_serializer.ts
-import { instrumentCategory } from "../../instrument/instrument_category";
+import { instrumentCategory } from "../../fretboard/fretboard_category";
 import {
   IntervalSettings,
   IntervalRowData,

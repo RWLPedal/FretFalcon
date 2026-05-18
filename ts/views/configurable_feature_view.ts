@@ -1,13 +1,13 @@
 ﻿import { BaseView } from "../base_view";
 import { AppSettings } from "../settings";
-import { instrumentCategory } from "../instrument/instrument_category";
+import { instrumentCategory } from "../fretboard/fretboard_category";
 import { Feature, FeatureTypeDescriptor } from "../feature";
 import { ConfigView } from "./config_view";
 import { AudioController } from "../audio_controller";
-import { InstrumentIntervalSettings } from "../instrument/instrument_interval_settings";
-import { getDriveTargetSlots } from "../floating_views/drive_registry";
-import { DriveSignal } from "../floating_views/link_types";
-import { setPendingRenderConstraints } from "../instrument/instrument_base";
+import { InstrumentIntervalSettings } from "../fretboard/fretboard_interval_settings";
+import { getDriveTargetSlots } from "../panels/drive_registry";
+import { DriveSignal } from "../panels/link_types";
+import { setPendingRenderConstraints } from "../fretboard/fretboard_base";
 
 export class ConfigurableFeatureView extends BaseView {
     private appSettings: AppSettings;
