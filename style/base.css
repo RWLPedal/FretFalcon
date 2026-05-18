@@ -68,6 +68,7 @@ body {
   --clr-tertiary:    var(--input-bg);
   --clr-text:        var(--text-primary);
   --clr-text-subtle: var(--text-muted);
+  --clr-text-muted:  var(--text-muted);
   --clr-border:      var(--border);
   --clr-shadow:      var(--clr-shadow, rgba(0, 0, 0, 0.10));
   --clr-link:        var(--accent);

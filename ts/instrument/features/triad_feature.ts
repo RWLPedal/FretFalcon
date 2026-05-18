@@ -282,11 +282,14 @@ export class TriadFeature extends InstrumentFeature {
       const cs = getComputedStyle(container);
       const w = (container.clientWidth || container.offsetWidth)
         - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const h = (container.clientHeight || container.offsetHeight)
-        - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      if (w > 0 && h > 0) {
+      if (w > 0) {
+        // Height may be 0 when the container hasn't been laid out yet (e.g. after a
+        // theme-change rebuild). Pass undefined in that case so the layout uses its
+        // natural height, matching the unconstrained constructor path.
+        const h = (container.clientHeight || container.offsetHeight)
+          - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
         const { config } = planMultiFretboardGrid(
-          this.fretboardConfig, w, h,
+          this.fretboardConfig, w, h > 0 ? h : undefined,
           4, this._qualities.length, this._zoomMultiplier, 15
         );
         this._buildRowViews(config);

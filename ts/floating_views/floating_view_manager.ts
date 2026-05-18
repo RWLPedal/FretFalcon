@@ -503,7 +503,10 @@ export class FloatingViewManager {
 
       try {
         const newViewInstance = descriptor.createView(state.viewState, settingsToUse);
-        wrapper.replaceViewContent(newViewInstance);
+        // Only auto-size the wrapper when instrument settings actually changed (canvas
+        // dimensions may differ). For a pure theme change, keep the current wrapper size
+        // so it doesn't grow 12px per theme switch.
+        wrapper.replaceViewContent(newViewInstance, guitarSettingsChanged);
         this.linkManager?.refreshForInstance(instanceId);
       } catch (e) {
         console.error(`Error updating view ${instanceId} after settings change:`, e);

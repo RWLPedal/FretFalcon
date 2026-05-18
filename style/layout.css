@@ -511,8 +511,8 @@ body.is-zen-mode .config-compact {
 
 /* Handle circles */
 .link-handle {
-  fill: var(--clr-primary, #2C4A7C);
-  stroke: #fff;
+  fill: var(--accent, #2C4A7C);
+  stroke: var(--bg, #fff);
   stroke-width: 2;
   opacity: 0;
   cursor: crosshair;
@@ -540,13 +540,13 @@ body.is-zen-mode .config-compact {
 }
 .link-arrow-path {
   fill: none;
-  stroke: var(--clr-primary, #2C4A7C);
+  stroke: var(--accent, #2C4A7C);
   stroke-width: 2;
   stroke-linecap: round;
   opacity: 0.75;
 }
 .link-arrow-head {
-  fill: var(--clr-primary, #2C4A7C);
+  fill: var(--accent, #2C4A7C);
   opacity: 0.75;
 }
 
@@ -561,28 +561,30 @@ body.is-zen-mode .config-compact {
 .link-arrow-group:hover .link-arrow-path,
 .link-arrow-group:hover .link-arrow-head {
   opacity: 1;
-  stroke: var(--clr-navy-500, #2C4A7C);
+  stroke: var(--accent);
 }
 .link-arrow-group:hover .link-arrow-head {
-  fill: var(--clr-navy-500, #2C4A7C);
+  fill: var(--accent);
 }
 
 /* Delete button (foreignObject) */
 .link-delete-btn-fo {
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: opacity 0.12s 0.08s; /* brief fade-out delay avoids flicker when moving to button */
 }
-.link-arrow-group:hover .link-delete-btn-fo {
+.link-arrow-group:hover .link-delete-btn-fo,
+.link-delete-btn-fo:has(:hover) {
   pointer-events: auto;
   opacity: 1;
+  transition: opacity 0.10s;
 }
 .link-delete-btn {
   width: 20px; height: 20px;
   border-radius: 50%;
-  border: 1.5px solid var(--clr-danger, #C0392B);
-  background: #fff;
-  color: var(--clr-danger, #C0392B);
+  border: 1.5px solid var(--danger, #C0392B);
+  background: var(--panel-bg, #fff);
+  color: var(--danger, #C0392B);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
@@ -591,8 +593,8 @@ body.is-zen-mode .config-compact {
   box-shadow: 0 1px 4px rgba(0,0,0,0.18);
 }
 .link-delete-btn:hover {
-  background: var(--clr-danger, #C0392B);
-  color: #fff;
+  background: var(--danger, #C0392B);
+  color: var(--panel-bg, #fff);
 }
 
 /* Signal tooltip shown on arrow hover */
@@ -631,18 +633,10 @@ body.is-zen-mode .config-compact {
   opacity: 0.6;
 }
 
-body.dark-theme .link-signal-tooltip {
-  background: #1A1F2E;
-  border-color: #2E3A50;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-body.dark-theme .link-signal-matched {
-  color: var(--clr-sky-300, #87CEEB);
-}
 
 /* Provisional drag line */
 .link-provisional {
-  stroke: var(--clr-primary, #2C4A7C);
+  stroke: var(--accent, #2C4A7C);
   stroke-width: 2;
   stroke-dasharray: 6 4;
   opacity: 0.6;
@@ -655,11 +649,3 @@ select.is-driven {
   background: color-mix(in srgb, var(--clr-primary, #2C4A7C) 8%, var(--clr-bg, #F8F9FA));
 }
 
-/* Dark theme adjustments for link overlay */
-body.dark-theme .link-arrow-path { stroke: var(--clr-navy-300, #4E7FBA); }
-body.dark-theme .link-arrow-head { fill: var(--clr-navy-300, #4E7FBA); }
-body.dark-theme .link-arrow-group:hover .link-arrow-path { stroke: var(--clr-sky-300, #87CEEB); }
-body.dark-theme .link-arrow-group:hover .link-arrow-head { fill: var(--clr-sky-300, #87CEEB); }
-body.dark-theme .link-handle { fill: var(--clr-navy-300, #4E7FBA); }
-body.dark-theme .link-delete-btn { background: #1A1F2E; }
-body.dark-theme .link-delete-btn:hover { background: var(--clr-danger, #C0392B); color: #fff; }

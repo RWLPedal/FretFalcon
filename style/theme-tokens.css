@@ -33,6 +33,7 @@
   --note-third:   oklch(0.52 0.12 235);
   --note-fifth:   oklch(0.52 0.12 110);
   --note-alt:     #8C7F72;
+  --danger:       oklch(0.52 0.17 22);   /* brick red */
 
   --layer-scale:  #507A35;   /* note-fifth feel: olive/sage green */
   --layer-chord:  #A86030;   /* note-root feel: warm amber */
@@ -74,6 +75,7 @@
   --note-third:    oklch(0.58 0.14 78);   /* hay gold — thirds */
   --note-fifth:    oklch(0.50 0.11 178);  /* fern — fifths */
   --note-alt:      oklch(0.48 0.13 32);   /* rust ochre — alterations */
+  --danger:        oklch(0.50 0.14 25);   /* terracotta rust */
   --pad-off: #CFD5BB;
   --shadow:        0 2px 10px rgba(34,40,28,0.10);
   --shadow-panel:  0 1px 0 rgba(255,250,235,0.6) inset, 0 4px 22px rgba(34,40,28,0.14);
@@ -212,16 +214,16 @@
   background: var(--panel-bg);
   /* outer paper shadow + inner highlight + a hairline second rule */
   box-shadow:
-    0 0 0 4px var(--panel-bg),
-    0 0 0 5px color-mix(in oklch, var(--border) 70%, transparent),
+    0 0 0 1px var(--panel-bg),
+    0 0 0 2px color-mix(in oklch, var(--border) 70%, transparent),
     0 1px 0 rgba(255,250,235,0.7) inset,
     0 2px 6px rgba(34,40,28,0.06),
     0 10px 28px rgba(34,40,28,0.10);
 }
 :root[data-theme="moss"] .floating-view-wrapper:hover {
   box-shadow:
-    0 0 0 4px var(--panel-bg),
-    0 0 0 5px color-mix(in oklch, var(--accent) 35%, var(--border)),
+    0 0 0 1px var(--panel-bg),
+    0 0 0 2px color-mix(in oklch, var(--accent) 35%, var(--border)),
     0 1px 0 rgba(255,250,235,0.7) inset,
     0 4px 10px rgba(34,40,28,0.10),
     0 14px 36px rgba(34,40,28,0.16);
@@ -269,44 +271,109 @@
   border-radius: 1px;
 }
 
+/* ── LINK OVERLAY: boost handle visibility on low-contrast bg ── */
+:root[data-theme="moss"] .link-handle--visible { opacity: 0.82; }
+
 /* ───────────────────────────────────────
    DARK — Near-black · Crimson · Amber Gold
    ─────────────────────────────────────── */
-[data-theme="dark"] {
---bg: #1A1614;
-  --panel-bg: #241E1B;
-  --sidebar-bg: #161210;
-  --settings-bg: #2C2420;
-  --input-bg: #2C2420;
-  --border: #3C3028;
-  --text-primary: #F0E8E0;
-  --text-muted: #7A6A5A;
-  --text-sidebar: #C0A890;
-  --accent: oklch(0.62 0.18 48);        /* copper-amber */
-  --accent-dim: oklch(0.48 0.13 48);
-  --accent-warm: oklch(0.68 0.20 30);   /* ember orange */
-  --note-root:   oklch(0.62 0.18 48);   /* copper — root */
-  --note-third:  oklch(0.68 0.20 30);   /* ember orange — thirds */
-  --note-fifth:  oklch(0.60 0.14 80);   /* warm olive — fifths */
-  --note-alt:    oklch(0.55 0.10 15);   /* rust — alterations */
-  --pad-off: #302820;
-  --shadow: 0 2px 14px rgba(0,0,0,0.50);
-  --shadow-panel: 0 4px 28px rgba(0,0,0,0.60);
+:root[data-theme="dark"] {
+  --bg: #15100B;                /* deep espresso */
+  --panel-bg: #1F1812;          /* warm tobacco */
+  --sidebar-bg: #0E0907;        /* bean dark */
+  --settings-bg: #261C16;
+  --input-bg: #251A12;
+  --border: #3D2E20;            /* aged wood */
+  --text-primary: #EFE2CC;      /* warm ivory */
+  --text-muted: #8A7058;        /* milky coffee */
+  --text-sidebar: #C9A582;      /* café au lait */
+  --accent:        oklch(0.66 0.13 65);   /* honey amber — primary */
+  --accent-dim:    oklch(0.48 0.09 65);
+  --accent-warm:   oklch(0.46 0.14 28);   /* burgundy cherry — secondary */
+  --note-root:     oklch(0.66 0.13 65);   /* honey — root */
+  --note-third:    oklch(0.46 0.14 28);   /* burgundy — thirds */
+  --note-fifth:    oklch(0.62 0.10 85);   /* aged brass — fifths */
+  --note-alt:      oklch(0.48 0.06 200);  /* vintage teal — alterations */
+  --danger:        oklch(0.58 0.18 22);   /* ember red */
+  --pad-off: #2A1E14;
+  --shadow:        0 2px 14px rgba(0,0,0,0.55);
+  --shadow-panel:  0 4px 28px rgba(15, 10, 6, 0.7);
   /* multifret layer fills */
-  --layer-scale:  oklch(0.42 0.04 48  / 0.55);  /* smoky bronze — base scale */
-  --layer-chord:  oklch(0.62 0.18 48  / 0.70);  /* copper — chord */
-  --layer-notes:  oklch(0.68 0.20 30  / 0.80);  /* ember orange — notes */
-  --layer-driven: oklch(0.72 0.20 75  / 0.85);  /* gold flame — driven */
+  --layer-scale:   oklch(0.38 0.04 50  / 0.55);   /* shadow-brown — base scale */
+  --layer-chord:   oklch(0.46 0.14 28  / 0.72);   /* burgundy — chord */
+  --layer-notes:   oklch(0.66 0.13 65  / 0.78);   /* honey amber — notes */
+  --layer-driven:  oklch(0.62 0.10 85  / 0.82);   /* aged brass — driven */
   /* drum machine palette */
-  --dm-palette-1: oklch(0.62 0.18 48);   /* copper */
-  --dm-palette-2: oklch(0.68 0.20 30);   /* ember */
-  --dm-palette-3: oklch(0.60 0.14 80);   /* warm olive */
-  --dm-palette-4: oklch(0.55 0.10 15);   /* rust */
-  --dm-palette-5: oklch(0.72 0.16 95);   /* hay yellow */
-  --dm-palette-6: oklch(0.50 0.13 350);  /* dusk plum */
-  --dm-palette-7: oklch(0.58 0.12 200);  /* cool slate (contrast) */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  --dm-palette-1: oklch(0.66 0.13 65);    /* honey amber */
+  --dm-palette-2: oklch(0.46 0.14 28);    /* burgundy */
+  --dm-palette-3: oklch(0.62 0.10 85);    /* aged brass */
+  --dm-palette-4: oklch(0.48 0.06 200);   /* vintage teal */
+  --dm-palette-5: oklch(0.55 0.12 350);   /* dusk plum */
+  --dm-palette-6: oklch(0.58 0.08 145);   /* faded jade */
+  --dm-palette-7: oklch(0.52 0.10 240);   /* cold steel */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
 }
+
+/* ── BODY: pendant-light spotlight + film grain ── */
+:root[data-theme="dark"] body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -8%,
+      rgba(232, 168, 88, 0.06) 0%,
+      transparent 55%),
+    var(--grain);
+}
+
+/* ── PANEL: cream binding hairline + tobacco rim ── */
+:root[data-theme="dark"] .floating-view-wrapper {
+  border-color: #2A1F16;
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 208, 168, 0.07),    /* cream binding */
+    inset 0 1px 0 rgba(255, 220, 170, 0.04),       /* top sheen */
+    0 4px 24px rgba(10, 6, 4, 0.65);
+}
+:root[data-theme="dark"] .floating-view-wrapper:hover {
+  box-shadow:
+    inset 0 0 0 1px rgba(232, 208, 168, 0.14),
+    inset 0 1px 0 rgba(255, 220, 170, 0.05),
+    0 6px 30px rgba(10, 6, 4, 0.75);
+}
+
+/* ── PANEL HEADER: italic serif title + brass seam ── */
+:root[data-theme="dark"] .floating-view-titlebar {
+  background: linear-gradient(180deg, #1A130D 0%, #1F1812 100%);
+  border-bottom: 1px solid rgba(184, 146, 74, 0.22);
+  padding: 5px 10px;
+}
+:root[data-theme="dark"] .floating-view-title-text {
+  font-family: 'EB Garamond', serif;
+  font-style: italic;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #D8B88A;
+}
+
+/* ── NAV: warm honey active state, no fill ── */
+:root[data-theme="dark"] .sidebar-nav-btn.is-active {
+  background: color-mix(in oklch, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+:root[data-theme="dark"] .sidebar-nav-btn.is-active::before {
+  background: linear-gradient(180deg, var(--accent), var(--accent-warm));
+  box-shadow: 0 0 5px rgba(198, 138, 62, 0.5);
+}
+
+/* ── SIDEBAR: subtle vertical grain ── */
+:root[data-theme="dark"] .side-bar-container {
+  background:
+    linear-gradient(180deg,
+      var(--sidebar-bg) 0%,
+      color-mix(in oklch, var(--sidebar-bg) 94%, var(--accent)) 100%);
+  border-right: 1px solid var(--border);
+}
+
 
 
 /* ───────────────────────────────────────
@@ -328,6 +395,7 @@
   --note-third:  oklch(0.65 0.18 55);   /* amber — thirds */
   --note-fifth:  oklch(0.60 0.14 210);  /* cool blue — fifths */
   --note-alt:    oklch(0.62 0.12 170);  /* seafoam — alterations */
+  --danger:      oklch(0.57 0.20 18);   /* deep crimson */
   --pad-off: #1E2840;
   --shadow: 0 2px 14px rgba(0,0,0,0.55);
   --shadow-panel: 0 6px 32px rgba(0,0,0,0.65);
@@ -367,6 +435,7 @@
   --note-third:    oklch(0.80 0.18 200);  /* cyan — thirds */
   --note-fifth:    oklch(0.78 0.20 60);   /* sunset orange — fifths */
   --note-alt:      oklch(0.72 0.25 295);  /* electric purple — alterations */
+  --danger:        oklch(0.68 0.26 12);   /* hot coral-red */
   --pad-off: #1F1147;
   --shadow:        0 2px 18px rgba(255, 60, 200, 0.18);
   --shadow-panel:  0 4px 32px rgba(120, 60, 255, 0.25);

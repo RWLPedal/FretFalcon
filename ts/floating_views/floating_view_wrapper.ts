@@ -364,12 +364,15 @@ export class FloatingViewWrapper {
   }
 
   /**
-   * Destroys the current view instance, renders a new one in its place,
-   * then auto-sizes the wrapper to fit. Used for both manual rotation and
-   * settings-driven refreshes; sizing always uses force=true so the window
-   * snaps to the new canvas size (floored at this.defaultWidth).
+   * Destroys the current view instance, renders a new one in its place.
+   *
+   * @param forceAutoSize - When true (rotation, zoom, instrument settings changes),
+   *   auto-size the wrapper to fit the new canvas. When false (theme-only changes),
+   *   keep the current wrapper size and let the canvas fill it via wrapper-user-resized.
+   *   Passing false avoids the 12px-per-change growth that occurs when _autoSizeToContent
+   *   adds its padding overhead on top of a canvas already constrained by clientWidth.
    */
-  public replaceViewContent(newViewInstance: View): void {
+  public replaceViewContent(newViewInstance: View, forceAutoSize = true): void {
     try {
       this.viewInstance.destroy();
     } catch (e) {
@@ -386,7 +389,31 @@ export class FloatingViewWrapper {
       this.contentElement.textContent = "Error rendering view.";
     }
 
-    requestAnimationFrame(() => this._autoSizeToContent(true));
+    requestAnimationFrame(() => {
+      if (this.state.size) {
+        // Tell the new view its available space so features scale to the saved wrapper
+        // size, not their unconstrained natural size. Mirrors the saved-size path in the
+        // constructor. The event handler runs synchronously, so canvases exist by the
+        // time _autoSizeToContent runs below.
+        const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
+        const titleBarH = titleBarEl?.offsetHeight ?? 30;
+        const w = this.contentElement.clientWidth;
+        const h = this.element.clientHeight - titleBarH;
+        if (w > 0 && h > 0) {
+          this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
+            bubbles: false,
+            detail: { width: w, height: h },
+          }));
+        }
+      }
+      // forceAutoSize=false (theme-only change): the canvas is already sized to fill
+      // the current wrapper via wrapper-user-resized above. Calling _autoSizeToContent
+      // here would add contentPaddingH on top of a canvas already constrained by
+      // clientWidth, growing the wrapper by 12px on every theme change.
+      if (forceAutoSize) {
+        this._autoSizeToContent(true);
+      }
+    });
   }
 
   /**
