@@ -320,7 +320,9 @@
 .select.is-small select {
   font-size: 0.7rem;
   height: 24px;
-  padding: 0 1.2em 0 0.4em;
+  /* padding-right uses rem (not em) to account for the arrow being positioned
+     at the wrapper's larger inherited font-size rather than the select's 0.7rem */
+  padding: 0 1.75rem 0 0.4em;
 }
 
 /* Actions cell (copy + remove) — hidden until row hover, solid bg prevents overlap */

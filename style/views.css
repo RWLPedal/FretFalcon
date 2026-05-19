@@ -488,6 +488,13 @@ body.dark-theme .drone-icon-btn.is-active {
   font-family: inherit !important;
 }
 
+/* ─── Global: prevent Bulma .select from shrinking in flex rows ──────────── */
+/* When a .select wrapper compresses below content-width, the CSS arrow
+   overlaps the selected text. Selects should never shrink past their content. */
+.select:not(.is-multiple) {
+  flex-shrink: 0;
+}
+
 /* ─── DrumMachineView ────────────────────────────────────────────────────── */
 .drum-machine-view {
   display: flex;
@@ -497,6 +504,40 @@ body.dark-theme .drone-icon-btn.is-active {
   min-width: 440px;
 }
 
+/* Two-row header with large play button */
+.dm-header {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;  /* matches dm-row gap so controls align with grid cells */
+}
+.dm-play-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 72px;  /* matches dm-track-header width */
+  width: 72px;
+}
+.dm-play-large .button {
+  width: 100%;
+  height: 100% !important;
+  min-height: 44px;
+  padding: 0 !important;
+}
+.dm-controls-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.dm-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Legacy single-row controls (kept for compatibility) */
 .dm-controls {
   display: flex;
   align-items: center;
@@ -535,7 +576,6 @@ body.dark-theme .drone-icon-btn.is-active {
   font-variant-numeric: tabular-nums;
 }
 .dm-play-btn {
-  margin-left: auto;
   min-width: 56px;
 }
 .dm-icon-btn {
@@ -598,9 +638,31 @@ body.dark-theme .drone-icon-btn.is-active {
   white-space: nowrap;
   overflow: hidden;
 }
+/* Per-row track labels and dropdown wrappers — same width so columns align */
+.dm-track-header {
+  width: 110px;
+  min-width: 110px;
+  margin-right: 8px;   /* matches the beat-gutter spacing */
+  font-size: 0.68rem;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+/* Bulma .select wrapper for track-header dropdowns */
+.dm-track-header-wrap {
+  width: 110px;
+  min-width: 110px;
+  margin-right: 8px;   /* matches the beat-gutter spacing */
+}
+.dm-track-header-wrap select {
+  width: 100%;
+}
+/* Root note dropdown — wider to show full note name */
+.dm-root-select-wrap {
+  min-width: 58px;
+}
 .dm-step-num {
-  width: 28px;
-  min-width: 28px;
+  width: 24px;
+  min-width: 24px;
   height: 14px;
   text-align: center;
   font-size: 0.62rem;
@@ -612,12 +674,12 @@ body.dark-theme .drone-icon-btn.is-active {
 .dm-step-num.dm-step-current { color: var(--clr-primary); }
 
 /* Extra left margin at beat boundaries (steps 4, 8, 12, …) */
-.dm-beat-start { margin-left: 4px; }
+.dm-beat-start { margin-left: 8px; }
 
 .dm-cell {
-  width: 28px;
-  min-width: 28px;
-  height: 28px;
+  width: 24px;
+  min-width: 24px;
+  height: 24px;
   border-radius: 4px;
   cursor: pointer;
   display: flex;
@@ -708,11 +770,11 @@ body.dark-theme .dm-cell.dm-cell-filled {
   margin: 4px 0 2px;
   opacity: 0.6;
 }
-/* Width and font-size are set dynamically; the formula w = 480/N − 2 ensures
-   N cells always fill the same 490 px as the drum grid. */
+/* Width and font-size are set dynamically; the formula w = 416/N − 2 ensures
+   N cells always fill the same row width as the 16-step drum grid. */
 .dm-measure-cell {
   flex: none;
-  height: 28px;
+  height: 24px;
   border-radius: 4px;
   border: 1px solid var(--border);
   background: var(--pad-off);

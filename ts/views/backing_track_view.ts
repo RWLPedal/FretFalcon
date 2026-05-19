@@ -1,4 +1,4 @@
-﻿// ts/views/backing_track_view.ts
+// ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
 import { KeyType, SignalKind, TempoSignal } from '../panels/link_types';
 import {
@@ -34,8 +34,6 @@ interface DrumPreset {
 }
 
 // ─── Chord progression helpers ─────────────────────────────────────────────────
-// CHORD_ROOTS, MAJOR_ROMANS, MINOR_ROMANS are imported from chord_key_resolver.ts
-
 
 function chordToneFreq(toneName: string, octave: number): number {
   const idx = CHORD_ROOTS.indexOf(toneName);
@@ -62,6 +60,7 @@ const BASS_DEGREE_COLORS: Record<number, string> = {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const NUM_TRACKS = 4;
+const DEFAULT_TRACK_SOUNDS: DrumSoundId[] = ['kick', 'snare', 'hihat', 'crash'];
 
 const SOUND_COLORS: Record<DrumSoundId, string> = {
   kick:       'var(--dm-palette-1)',
@@ -84,7 +83,7 @@ function emptyBass(steps: number): BassStep[] {
 
 const PRESETS: DrumPreset[] = [
   {
-    name: '— Empty —', bpm: 120, steps: 16, numMeasures: 4,
+    name: 'Empty', bpm: 120, steps: 16, numMeasures: 4,
     tracks: emptyTracks(16), bassTrack: emptyBass(16),
     measureChords: [null, null, null, null],
   },
@@ -124,25 +123,20 @@ const PRESETS: DrumPreset[] = [
   {
     name: 'Blues Shuffle', bpm: 90, steps: 16, numMeasures: 12,
     tracks: [
-      // Kick on 1, Tom on 3 for variety
       ['kick', null, null, null, null, null, null, null, 'tom', null, null, null, null, null, null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
       ['hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null],
       [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 'open_hihat', null],
     ],
-    // Walking quarter notes: 1 → 3 → 5 → 7
     bassTrack: [1, null, null, null, 3, null, null, null, 5, null, null, null, 7, null, null, null],
-    // Standard 12-bar blues: I I I I | IV IV I I | V IV I V
     measureChords: ['I','I','I','I','IV','IV','I','I','V','IV','I','V'],
   },
   {
     name: 'Indie Rock', bpm: 118, steps: 16, numMeasures: 8,
     tracks: [
-      // Kick pushes on beat 2½ for a stumble-forward feel
       ['kick', null, null, null, null, null, 'kick', null, 'kick', null, null, null, null, null, null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
       ['hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null],
-      // Crash on 1, shaker driving 8th notes after
       ['crash', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null],
     ],
     bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
@@ -151,16 +145,12 @@ const PRESETS: DrumPreset[] = [
   {
     name: 'Jazz Swing', bpm: 160, steps: 16, numMeasures: 8,
     tracks: [
-      // Kick on beat 4 ("dropping the bomb"), otherwise sparse
       [null, null, null, null, null, null, null, null, null, null, null, null, 'kick', null, null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
-      // Ride cymbal: quarter notes with "and of 2" subdivision (swing approximation)
       ['hihat', null, null, null, 'hihat', null, 'hihat', null, 'hihat', null, null, null, 'hihat', null, 'hihat', null],
       [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
     ],
-    // Walking quarter notes: 1 → 2 → 5 → 4
     bassTrack: [1, null, null, null, 2, null, null, null, 5, null, null, null, 4, null, null, null],
-    // I-vi7-ii7-V turnaround × 2
     measureChords: ['Imaj7', 'vi7', 'ii7', 'V', 'Imaj7', 'vi7', 'ii7', 'V'],
   },
 ];
@@ -175,7 +165,7 @@ export class BackingTrackView extends BaseView {
   private stepMs: number = 0;
   private tracks: TrackData[] = [];
   private bassTrack: BassStep[] = [];
-  private selectedSound: DrumSoundId | null = 'kick';
+  private trackSounds: DrumSoundId[] = [...DEFAULT_TRACK_SOUNDS];
   private selectedBassDegree: number | null = null;
   private isPlaying: boolean = false;
   private currentStep: number = -1;
@@ -202,9 +192,8 @@ export class BackingTrackView extends BaseView {
   private bpmDisplayEl: HTMLElement | null = null;
   private swingSliderEl: HTMLInputElement | null = null;
   private swingDisplayEl: HTMLElement | null = null;
-  private soundPaletteBtns: Map<DrumSoundId, HTMLButtonElement> = new Map();
   private barsBtns: Map<number, HTMLButtonElement> = new Map();
-  private bassToolSelectEl: HTMLSelectElement | null = null;
+  private trackDropdowns: HTMLSelectElement[] = [];
   private chordToolSelectEl: HTMLSelectElement | null = null;
   private progRootSelectEl: HTMLSelectElement | null = null;
   private progKeyTypeBtn: HTMLButtonElement | null = null;
@@ -225,6 +214,7 @@ export class BackingTrackView extends BaseView {
     } else {
       this.measureChords = new Array(this.numMeasures).fill(null);
     }
+    this.trackSounds = this.resolveTrackSounds(initialState?.trackSounds, initialState?.tracks);
     this.initTracks(initialState?.tracks);
     this.initBassTrack(initialState?.bassTrack);
   }
@@ -238,8 +228,7 @@ export class BackingTrackView extends BaseView {
     const wrapper = document.createElement('div');
     wrapper.classList.add('drum-machine-view');
 
-    wrapper.appendChild(this.buildControls());
-    wrapper.appendChild(this.buildPalette());
+    wrapper.appendChild(this.buildHeader());
 
     this.gridEl = document.createElement('div');
     this.gridEl.classList.add('dm-grid');
@@ -281,9 +270,8 @@ export class BackingTrackView extends BaseView {
     this.bpmDisplayEl        = null;
     this.swingSliderEl       = null;
     this.swingDisplayEl      = null;
-    this.soundPaletteBtns.clear();
     this.barsBtns.clear();
-    this.bassToolSelectEl    = null;
+    this.trackDropdowns      = [];
     this.chordToolSelectEl   = null;
     this.progRootSelectEl    = null;
     this.progKeyTypeBtn      = null;
@@ -291,95 +279,58 @@ export class BackingTrackView extends BaseView {
     super.destroy();
   }
 
-  // ─── Controls row ────────────────────────────────────────────────────────────
+  // ─── Header (two-row layout with large play button) ──────────────────────────
 
-  private buildControls(): HTMLElement {
+  private buildHeader(): HTMLElement {
+    const header = document.createElement('div');
+    header.classList.add('dm-header');
+
+    // Large play button (spans both rows via align-self: stretch)
+    const playWrap = document.createElement('div');
+    playWrap.classList.add('dm-play-large');
+    this.playBtn = document.createElement('button');
+    this.playBtn.classList.add('button', 'is-small', 'dm-play-btn');
+    this.playBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
+    this.playBtn.title = 'Play / Stop';
+    this.playBtn.addEventListener('click', () => {
+      if (this.isPlaying) this.stopPlayback();
+      else this.startPlayback();
+    });
+    playWrap.appendChild(this.playBtn);
+    header.appendChild(playWrap);
+
+    // Right side: two stacked control rows
+    const rows = document.createElement('div');
+    rows.classList.add('dm-controls-rows');
+
+    rows.appendChild(this.buildControlRow1());
+    rows.appendChild(this.buildControlRow2());
+
+    header.appendChild(rows);
+    return header;
+  }
+
+  /** Row 1: PRESET: [Dropdown] [Save] [Load] [Key Root] [Major/Minor] */
+  private buildControlRow1(): HTMLElement {
     const row = document.createElement('div');
-    row.classList.add('dm-controls');
+    row.classList.add('dm-controls-row');
 
-    // Preset selector
-    row.appendChild(this.buildLabeledControl('Preset', () => {
-      const wrap = document.createElement('div');
-      wrap.classList.add('select', 'is-small');
-      const sel = document.createElement('select');
-      PRESETS.forEach((p, i) => sel.appendChild(new Option(p.name, String(i))));
-      sel.addEventListener('change', () => {
-        const idx = parseInt(sel.value, 10);
-        if (!isNaN(idx)) this.applyPreset(PRESETS[idx]);
-      });
-      wrap.appendChild(sel);
-      return wrap;
-    }));
+    // Preset label + dropdown
+    const presetLbl = document.createElement('span');
+    presetLbl.classList.add('dm-label');
+    presetLbl.textContent = 'Preset:';
+    row.appendChild(presetLbl);
 
-    // BPM
-    row.appendChild(this.buildLabeledControl('BPM', () => {
-      const group = document.createElement('div');
-      group.classList.add('dm-bpm-group');
-
-      this.bpmSliderEl       = document.createElement('input');
-      this.bpmSliderEl.type  = 'range';
-      this.bpmSliderEl.min   = '30';
-      this.bpmSliderEl.max   = '200';
-      this.bpmSliderEl.value = String(this.bpm);
-      this.bpmSliderEl.classList.add('dm-bpm-slider');
-      this.bpmSliderEl.addEventListener('input', () => {
-        this.bpm = parseInt(this.bpmSliderEl!.value, 10);
-        if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(this.bpm);
-        if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
-        this.dispatchStateChange();
-      });
-
-      this.bpmDisplayEl = document.createElement('span');
-      this.bpmDisplayEl.classList.add('dm-bpm-display');
-      this.bpmDisplayEl.textContent = String(this.bpm);
-
-      group.appendChild(this.bpmSliderEl);
-      group.appendChild(this.bpmDisplayEl);
-      return group;
-    }));
-
-    // Swing
-    row.appendChild(this.buildLabeledControl('Swing', () => {
-      const group = document.createElement('div');
-      group.classList.add('dm-bpm-group');
-
-      this.swingSliderEl = document.createElement('input');
-      this.swingSliderEl.type = 'range';
-      this.swingSliderEl.min = '0';
-      this.swingSliderEl.max = '50';
-      this.swingSliderEl.value = String(Math.round(this.swingAmount * 100));
-      this.swingSliderEl.classList.add('dm-bpm-slider');
-      this.swingSliderEl.addEventListener('input', () => {
-        this.swingAmount = parseInt(this.swingSliderEl!.value, 10) / 100;
-        if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${this.swingSliderEl!.value}%`;
-        this.dispatchStateChange();
-      });
-
-      this.swingDisplayEl = document.createElement('span');
-      this.swingDisplayEl.classList.add('dm-bpm-display');
-      this.swingDisplayEl.textContent = `${Math.round(this.swingAmount * 100)}%`;
-
-      group.appendChild(this.swingSliderEl);
-      group.appendChild(this.swingDisplayEl);
-      return group;
-    }));
-
-    // Bars pill toggle
-    row.appendChild(this.buildLabeledControl('Bars', () => {
-      const toggle = document.createElement('div');
-      toggle.classList.add('dm-bars-toggle');
-      this.barsBtns.clear();
-      for (const n of [4, 8, 12] as const) {
-        const btn = document.createElement('button');
-        btn.classList.add('dm-bars-btn');
-        btn.textContent = String(n);
-        if (n === this.numMeasures) btn.classList.add('is-active');
-        btn.addEventListener('click', () => this.setNumMeasures(n));
-        this.barsBtns.set(n, btn);
-        toggle.appendChild(btn);
-      }
-      return toggle;
-    }));
+    const presetWrap = document.createElement('div');
+    presetWrap.classList.add('select', 'is-small');
+    const sel = document.createElement('select');
+    PRESETS.forEach((p, i) => sel.appendChild(new Option(p.name, String(i))));
+    sel.addEventListener('change', () => {
+      const idx = parseInt(sel.value, 10);
+      if (!isNaN(idx)) this.applyPreset(PRESETS[idx]);
+    });
+    presetWrap.appendChild(sel);
+    row.appendChild(presetWrap);
 
     // Save
     const saveBtn = document.createElement('button');
@@ -406,83 +357,9 @@ export class BackingTrackView extends BaseView {
     });
     row.appendChild(loadBtn);
 
-    // Play/Stop
-    this.playBtn = document.createElement('button');
-    this.playBtn.classList.add('button', 'is-small', 'dm-play-btn');
-    this.playBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
-    this.playBtn.title = 'Play / Stop';
-    this.playBtn.addEventListener('click', () => {
-      if (this.isPlaying) this.stopPlayback();
-      else this.startPlayback();
-    });
-    row.appendChild(this.playBtn);
-
-    return row;
-  }
-
-  private buildLabeledControl(labelText: string, buildContent: () => HTMLElement): HTMLElement {
-    const group = document.createElement('div');
-    group.classList.add('dm-control-group');
-    const lbl = document.createElement('label');
-    lbl.classList.add('dm-label');
-    lbl.textContent = labelText;
-    group.appendChild(lbl);
-    group.appendChild(buildContent());
-    return group;
-  }
-
-  // ─── Palette (two rows) ──────────────────────────────────────────────────────
-
-  private buildPalette(): HTMLElement {
-    const palette = document.createElement('div');
-    palette.classList.add('dm-palette');
-
-    // ── Row 1: drum sound selector ───────────────────────────────────────────
-    const soundRow = document.createElement('div');
-    soundRow.classList.add('dm-palette-row');
-
-    const drumLbl = document.createElement('span');
-    drumLbl.classList.add('dm-label');
-    drumLbl.textContent = 'Drum:';
-    soundRow.appendChild(drumLbl);
-
-    this.soundPaletteBtns.clear();
-    for (const id of ALL_DRUM_SOUND_IDS) {
-      const btn = document.createElement('button');
-      btn.classList.add('button', 'is-small', 'dm-sound-btn');
-      btn.textContent = DRUM_SOUND_LABELS[id];
-      btn.style.setProperty('--dm-color', SOUND_COLORS[id]);
-      btn.dataset.soundId = id;
-      if (id === this.selectedSound) btn.classList.add('is-active');
-      btn.addEventListener('click', () => {
-        this.selectedSound = (this.selectedSound === id) ? null : id;
-        if (this.selectedSound) {
-          this.selectedChord = null;
-          this.selectedBassDegree = null;
-          this.updateChordToolSelect();
-          this.updateBassToolSelect();
-        }
-        this.updatePaletteSelection();
-        if (this.selectedSound === id) playDrumSound(id);
-      });
-      this.soundPaletteBtns.set(id, btn);
-      soundRow.appendChild(btn);
-    }
-
-    palette.appendChild(soundRow);
-
-    // ── Row 2: key / chord / bass ────────────────────────────────────────────
-    const keyRow = document.createElement('div');
-    keyRow.classList.add('dm-palette-row');
-
     // Key root dropdown
-    const keyLbl = document.createElement('span');
-    keyLbl.classList.add('dm-label');
-    keyLbl.textContent = 'Key:';
-    keyRow.appendChild(keyLbl);
-
     const rootWrap = document.createElement('div');
-    rootWrap.classList.add('select', 'is-small');
+    rootWrap.classList.add('select', 'is-small', 'dm-root-select-wrap');
     this.progRootSelectEl = document.createElement('select');
     CHORD_ROOTS.forEach(r => {
       const opt = new Option(r, r);
@@ -496,7 +373,7 @@ export class BackingTrackView extends BaseView {
       this.dispatchStateChange();
     });
     rootWrap.appendChild(this.progRootSelectEl);
-    keyRow.appendChild(rootWrap);
+    row.appendChild(rootWrap);
 
     // Major / Minor toggle
     this.progKeyTypeBtn = document.createElement('button');
@@ -510,100 +387,90 @@ export class BackingTrackView extends BaseView {
       this.rebuildChordToolOptions();
       this.dispatchStateChange();
     });
-    keyRow.appendChild(this.progKeyTypeBtn);
+    row.appendChild(this.progKeyTypeBtn);
 
-    // Chord tool dropdown
-    const chordLbl = document.createElement('span');
-    chordLbl.classList.add('dm-label');
-    chordLbl.textContent = 'Chord:';
-    keyRow.appendChild(chordLbl);
+    return row;
+  }
 
-    const chordWrap = document.createElement('div');
-    chordWrap.classList.add('select', 'is-small');
-    this.chordToolSelectEl = document.createElement('select');
-    this.chordToolSelectEl.classList.add('dm-chord-tool-select');
-    this.rebuildChordToolOptions();
-    this.chordToolSelectEl.addEventListener('change', () => {
-      this.selectedChord = this.chordToolSelectEl!.value || null;
-      if (this.selectedChord) {
-        this.selectedSound = null;
-        this.selectedBassDegree = null;
-        this.updatePaletteSelection();
-        this.updateBassToolSelect();
-      }
-      this.updateChordToolSelect();
+  /** Row 2: BPM: [slider+display] SWING: [slider+display] BARS: [4|8|12] */
+  private buildControlRow2(): HTMLElement {
+    const row = document.createElement('div');
+    row.classList.add('dm-controls-row');
+
+    // BPM
+    const bpmLbl = document.createElement('span');
+    bpmLbl.classList.add('dm-label');
+    bpmLbl.textContent = 'BPM:';
+    row.appendChild(bpmLbl);
+
+    const bpmGroup = document.createElement('div');
+    bpmGroup.classList.add('dm-bpm-group');
+    this.bpmSliderEl       = document.createElement('input');
+    this.bpmSliderEl.type  = 'range';
+    this.bpmSliderEl.min   = '30';
+    this.bpmSliderEl.max   = '200';
+    this.bpmSliderEl.value = String(this.bpm);
+    this.bpmSliderEl.classList.add('dm-bpm-slider');
+    this.bpmSliderEl.addEventListener('input', () => {
+      this.bpm = parseInt(this.bpmSliderEl!.value, 10);
+      if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(this.bpm);
+      if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
+      this.dispatchStateChange();
     });
-    chordWrap.appendChild(this.chordToolSelectEl);
-    keyRow.appendChild(chordWrap);
+    this.bpmDisplayEl = document.createElement('span');
+    this.bpmDisplayEl.classList.add('dm-bpm-display');
+    this.bpmDisplayEl.textContent = String(this.bpm);
+    bpmGroup.appendChild(this.bpmSliderEl);
+    bpmGroup.appendChild(this.bpmDisplayEl);
+    row.appendChild(bpmGroup);
 
-    // Bass degree dropdown
-    const bassLbl = document.createElement('span');
-    bassLbl.classList.add('dm-label');
-    bassLbl.textContent = 'Bass:';
-    keyRow.appendChild(bassLbl);
+    // Swing
+    const swingLbl = document.createElement('span');
+    swingLbl.classList.add('dm-label');
+    swingLbl.textContent = 'Swing:';
+    row.appendChild(swingLbl);
 
-    const bassWrap = document.createElement('div');
-    bassWrap.classList.add('select', 'is-small');
-    this.bassToolSelectEl = document.createElement('select');
-    this.bassToolSelectEl.classList.add('dm-bass-tool-select');
-    this.rebuildBassToolOptions();
-    this.bassToolSelectEl.addEventListener('change', () => {
-      const val = this.bassToolSelectEl!.value;
-      this.selectedBassDegree = val ? parseInt(val, 10) : null;
-      if (this.selectedBassDegree !== null) {
-        this.selectedSound = null;
-        this.selectedChord = null;
-        this.updatePaletteSelection();
-        this.updateChordToolSelect();
-      }
-      this.updateBassToolSelect();
+    const swingGroup = document.createElement('div');
+    swingGroup.classList.add('dm-bpm-group');
+    this.swingSliderEl = document.createElement('input');
+    this.swingSliderEl.type = 'range';
+    this.swingSliderEl.min = '0';
+    this.swingSliderEl.max = '50';
+    this.swingSliderEl.value = String(Math.round(this.swingAmount * 100));
+    this.swingSliderEl.classList.add('dm-bpm-slider');
+    this.swingSliderEl.addEventListener('input', () => {
+      this.swingAmount = parseInt(this.swingSliderEl!.value, 10) / 100;
+      if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${this.swingSliderEl!.value}%`;
+      this.dispatchStateChange();
     });
-    bassWrap.appendChild(this.bassToolSelectEl);
-    keyRow.appendChild(bassWrap);
+    this.swingDisplayEl = document.createElement('span');
+    this.swingDisplayEl.classList.add('dm-bpm-display');
+    this.swingDisplayEl.textContent = `${Math.round(this.swingAmount * 100)}%`;
+    swingGroup.appendChild(this.swingSliderEl);
+    swingGroup.appendChild(this.swingDisplayEl);
+    row.appendChild(swingGroup);
 
-    palette.appendChild(keyRow);
+    // Bars pill toggle
+    const barsLbl = document.createElement('span');
+    barsLbl.classList.add('dm-label');
+    barsLbl.textContent = 'Bars:';
+    row.appendChild(barsLbl);
 
-    return palette;
-  }
-
-  private rebuildChordToolOptions(): void {
-    if (!this.chordToolSelectEl) return;
-    this.chordToolSelectEl.innerHTML = '';
-    this.chordToolSelectEl.appendChild(new Option('— none —', ''));
-    const romans = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
-    for (const entry of romans) {
-      const chordKey = this.resolveChordKey(entry);
-      if (!chordKey) continue;
-      const label = `${entry.roman} — ${chord_tones_library[chordKey]?.name ?? entry.roman}`;
-      const opt = new Option(label, entry.roman);
-      if (entry.roman === this.selectedChord) opt.selected = true;
-      this.chordToolSelectEl.appendChild(opt);
+    const toggle = document.createElement('div');
+    toggle.classList.add('dm-bars-toggle');
+    this.barsBtns.clear();
+    for (const n of [4, 8, 12] as const) {
+      const btn = document.createElement('button');
+      btn.classList.add('dm-bars-btn');
+      btn.textContent = String(n);
+      if (n === this.numMeasures) btn.classList.add('is-active');
+      btn.addEventListener('click', () => this.setNumMeasures(n));
+      this.barsBtns.set(n, btn);
+      toggle.appendChild(btn);
     }
-    this.refreshAllMeasureCells();
-  }
+    row.appendChild(toggle);
 
-  private updateChordToolSelect(): void {
-    if (!this.chordToolSelectEl) return;
-    this.chordToolSelectEl.value = this.selectedChord ?? '';
-    this.chordToolSelectEl.classList.toggle('dm-chord-tool-active', this.selectedChord !== null);
-  }
-
-  private rebuildBassToolOptions(): void {
-    if (!this.bassToolSelectEl) return;
-    this.bassToolSelectEl.innerHTML = '';
-    this.bassToolSelectEl.appendChild(new Option('— none —', ''));
-    const labels: Record<number, string> = { 1: '1 — Root', 3: '3 — Third', 5: '5 — Fifth', 7: '7 — Seventh' };
-    for (let d = 1; d <= 7; d++) {
-      const opt = new Option(labels[d] ?? String(d), String(d));
-      if (d === this.selectedBassDegree) opt.selected = true;
-      this.bassToolSelectEl.appendChild(opt);
-    }
-  }
-
-  private updateBassToolSelect(): void {
-    if (!this.bassToolSelectEl) return;
-    this.bassToolSelectEl.value = this.selectedBassDegree !== null ? String(this.selectedBassDegree) : '';
-    this.bassToolSelectEl.classList.toggle('dm-bass-tool-active', this.selectedBassDegree !== null);
+    return row;
   }
 
   // ─── Grid ────────────────────────────────────────────────────────────────────
@@ -615,6 +482,7 @@ export class BackingTrackView extends BaseView {
     this.bassCellEls         = [];
     this.stepNumEls          = [];
     this.chordMeasureCellEls = [];
+    this.trackDropdowns      = [];
 
     // Header row — beat numbers
     const headerRow = document.createElement('div');
@@ -634,7 +502,7 @@ export class BackingTrackView extends BaseView {
     for (let t = 0; t < NUM_TRACKS; t++) {
       const row = document.createElement('div');
       row.classList.add('dm-row');
-      row.appendChild(this.makeTrackLabel(`T${t + 1}`));
+      row.appendChild(this.makeTrackHeader(t));
       const rowCells: HTMLElement[] = [];
       for (let s = 0; s < this.steps; s++) {
         const cell = document.createElement('div');
@@ -665,7 +533,7 @@ export class BackingTrackView extends BaseView {
 
     const row = document.createElement('div');
     row.classList.add('dm-row');
-    row.appendChild(this.makeTrackLabel('Bass'));
+    row.appendChild(this.makeBassHeader());
 
     for (let s = 0; s < this.steps; s++) {
       const cell = document.createElement('div');
@@ -691,7 +559,7 @@ export class BackingTrackView extends BaseView {
 
     const row = document.createElement('div');
     row.classList.add('dm-row', 'dm-prog-row');
-    row.appendChild(this.makeTrackLabel('Chords'));
+    row.appendChild(this.makeChordHeader());
 
     const cellW    = this.measureCellWidth();
     const fontSize = this.numMeasures <= 4 ? '0.75rem' : this.numMeasures === 8 ? '0.68rem' : '0.58rem';
@@ -714,29 +582,83 @@ export class BackingTrackView extends BaseView {
 
   private makeTrackLabel(text: string): HTMLElement {
     const el = document.createElement('div');
-    el.classList.add('dm-track-label');
+    el.classList.add('dm-track-header');
     el.textContent = text;
     return el;
+  }
+
+  /** Per-track dropdown for choosing which sound to place. */
+  private makeTrackHeader(t: number): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.classList.add('select', 'is-small', 'dm-track-header-wrap');
+    const sel = document.createElement('select');
+    for (const id of ALL_DRUM_SOUND_IDS) {
+      const opt = new Option(DRUM_SOUND_LABELS[id], id);
+      if (id === this.trackSounds[t]) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', () => {
+      this.trackSounds[t] = sel.value as DrumSoundId;
+    });
+    this.trackDropdowns[t] = sel;
+    wrap.appendChild(sel);
+    return wrap;
+  }
+
+  /** Bass row header: dropdown to select which scale degree clicking places. */
+  private makeBassHeader(): HTMLElement {
+    const BASS_LABELS: Record<number, string> = {
+      1: '1 Root', 2: '2', 3: '3 Third', 4: '4', 5: '5 Fifth', 6: '6', 7: '7 Seventh',
+    };
+    const wrap = document.createElement('div');
+    wrap.classList.add('select', 'is-small', 'dm-track-header-wrap');
+    const sel = document.createElement('select');
+    sel.appendChild(new Option('Bass', ''));
+    for (let d = 1; d <= 7; d++) {
+      const opt = new Option(BASS_LABELS[d] ?? String(d), String(d));
+      if (d === this.selectedBassDegree) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', () => {
+      const val = sel.value;
+      this.selectedBassDegree = val ? parseInt(val, 10) : null;
+    });
+    wrap.appendChild(sel);
+    return wrap;
+  }
+
+  /** Chord row header: dropdown to select which roman numeral chord clicking places. */
+  private makeChordHeader(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.classList.add('select', 'is-small', 'dm-track-header-wrap');
+    const sel = document.createElement('select');
+    this.chordToolSelectEl = sel;
+    this.rebuildChordToolOptions();
+    sel.addEventListener('change', () => {
+      this.selectedChord = sel.value || null;
+    });
+    wrap.appendChild(sel);
+    return wrap;
   }
 
   // ─── Cell width / beat-alignment helpers ─────────────────────────────────────
 
   /**
-   * Width in px for a measure cell so that N cells always fill the same total
-   * row width as the 16-step drum grid (490 px content, excluding the label).
-   * Formula derivation: N×w + (N−1)×2 + 3×4 = 490  →  w = 480/N − 2
+   * Width in px for a measure cell so that N cells fill the same total row
+   * width as the 16-step drum grid.
+   * Grid content = 16×24 + 15×2 (gaps) + 3×8 (beat margins) = 438px
+   * Solve: N×w + (N-1)×2 + 3×8 = 438  →  w = 416/N − 2
    */
   private measureCellWidth(): number {
-    return 480 / this.numMeasures - 2;
+    return 416 / this.numMeasures - 2;
   }
 
   /**
    * Returns true when cell m should carry a dm-beat-start margin so that
-   * visual beat boundaries (groups of 4 drum steps) are mirrored in the
-   * chord row regardless of how many measures are shown.
-   *   4 bars  → beat-start every 1 cell (i.e. cells 1, 2, 3)
-   *   8 bars  → beat-start every 2 cells (i.e. cells 2, 4, 6)
-   *  12 bars  → beat-start every 3 cells (i.e. cells 3, 6, 9)
+   * visual beat boundaries are mirrored in the chord row.
+   *   4 bars  → every 1 cell  (cells 1, 2, 3)
+   *   8 bars  → every 2 cells (cells 2, 4, 6)
+   *  12 bars  → every 3 cells (cells 3, 6, 9)
    */
   private measureBeatStart(m: number): boolean {
     if (m === 0) return false;
@@ -803,13 +725,10 @@ export class BackingTrackView extends BaseView {
   // ─── Click handlers ──────────────────────────────────────────────────────────
 
   private handleCellClick(track: number, step: number): void {
+    const selectedSound = this.trackSounds[track];
     const current = this.tracks[track][step];
-    if (this.selectedSound !== null) {
-      this.tracks[track][step] = (current === this.selectedSound) ? null : this.selectedSound;
-      if (this.tracks[track][step]) playDrumSound(this.selectedSound!);
-    } else {
-      this.tracks[track][step] = null;
-    }
+    this.tracks[track][step] = (current === selectedSound) ? null : selectedSound;
+    if (this.tracks[track][step]) playDrumSound(selectedSound);
     const cell = this.cellEls[track]?.[step];
     if (cell) {
       const isCurrent = this.currentStep === step;
@@ -851,10 +770,22 @@ export class BackingTrackView extends BaseView {
     this.dispatchStateChange();
   }
 
-  private updatePaletteSelection(): void {
-    this.soundPaletteBtns.forEach((btn, id) => {
-      btn.classList.toggle('is-active', id === this.selectedSound);
-    });
+  // ─── Chord tool options ───────────────────────────────────────────────────────
+
+  private rebuildChordToolOptions(): void {
+    if (!this.chordToolSelectEl) return;
+    this.chordToolSelectEl.innerHTML = '';
+    this.chordToolSelectEl.appendChild(new Option('Chord', ''));
+    const romans = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
+    for (const entry of romans) {
+      const chordKey = this.resolveChordKey(entry);
+      if (!chordKey) continue;
+      const opt = new Option(entry.roman, entry.roman);
+      opt.title = chord_tones_library[chordKey]?.name ?? entry.roman;
+      if (entry.roman === this.selectedChord) opt.selected = true;
+      this.chordToolSelectEl.appendChild(opt);
+    }
+    this.refreshAllMeasureCells();
   }
 
   // ─── Bars count ───────────────────────────────────────────────────────────────
@@ -890,6 +821,7 @@ export class BackingTrackView extends BaseView {
     }
     this.initTracks(preset.tracks);
     this.initBassTrack(preset.bassTrack);
+    this.trackSounds = this.resolveTrackSounds(undefined, preset.tracks);
     this.currentStep    = -1;
     this.currentMeasure = -1;
     if (this.bpmSliderEl)  this.bpmSliderEl.value = String(this.bpm);
@@ -916,6 +848,7 @@ export class BackingTrackView extends BaseView {
       this.measureChords = state.measureChords.slice(0, this.numMeasures);
       while (this.measureChords.length < this.numMeasures) this.measureChords.push(null);
     }
+    this.trackSounds = this.resolveTrackSounds(state.trackSounds, state.tracks);
     this.initTracks(state.tracks);
     this.initBassTrack(state.bassTrack);
     this.currentStep    = -1;
@@ -932,12 +865,22 @@ export class BackingTrackView extends BaseView {
 
     this.rebuildGrid();
     this.rebuildChordToolOptions();
-    this.updateChordToolSelect();
-    this.rebuildBassToolOptions();
-    this.updateBassToolSelect();
 
     if (wasPlaying) this.startPlayback();
     this.dispatchStateChange();
+  }
+
+  /** Derive one active sound per track. Prefers explicit `savedSounds`, then
+   *  scans the track data for the first non-null sound, then falls back to defaults. */
+  private resolveTrackSounds(savedSounds?: DrumSoundId[], tracks?: TrackData[]): DrumSoundId[] {
+    return DEFAULT_TRACK_SOUNDS.map((def, t) => {
+      if (savedSounds?.[t] && ALL_DRUM_SOUND_IDS.includes(savedSounds[t])) return savedSounds[t];
+      if (tracks?.[t]) {
+        const first = (tracks[t] as (DrumSoundId | null)[]).find(s => s !== null);
+        if (first) return first;
+      }
+      return def;
+    });
   }
 
   private initTracks(saved?: TrackData[]): void {
@@ -1069,11 +1012,6 @@ export class BackingTrackView extends BaseView {
 
   // ─── Bass playback ────────────────────────────────────────────────────────────
 
-  /**
-   * Plays a bass note for the given scale degree.
-   * The degree is interpreted relative to the current measure's chord root;
-   * if no chord is assigned, it falls back to the key root.
-   */
   private playBassStep(degree: number): void {
     let rootName     = this.progRootNote;
     let isMajorChord = this.progKeyType === 'Major';
@@ -1183,6 +1121,7 @@ export class BackingTrackView extends BaseView {
       swingAmount:   this.swingAmount,
       tracks:        this.tracks,
       bassTrack:     this.bassTrack,
+      trackSounds:   this.trackSounds,
       progRootNote:  this.progRootNote,
       progKeyType:   this.progKeyType,
       numMeasures:   this.numMeasures,
