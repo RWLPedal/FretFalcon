@@ -6,6 +6,47 @@ export enum KeyType {
   Minor = 'Minor',
 }
 
+// The seven diatonic modes. Values are scale keys into the `scales` object,
+// so DiatonicMode is the single source of truth for mode identity.
+export enum DiatonicMode {
+  Ionian     = 'MAJOR',
+  Dorian     = 'DORIAN',
+  Phrygian   = 'PHRYGIAN',
+  Lydian     = 'LYDIAN',
+  Mixolydian = 'MIXOLYDIAN',
+  Aeolian    = 'NATURAL_MINOR',
+  Locrian    = 'LOCRIAN',
+}
+
+export const DIATONIC_MODE_LABELS: Record<DiatonicMode, string> = {
+  [DiatonicMode.Ionian]:     'Ionian (Major)',
+  [DiatonicMode.Dorian]:     'Dorian',
+  [DiatonicMode.Phrygian]:   'Phrygian',
+  [DiatonicMode.Lydian]:     'Lydian',
+  [DiatonicMode.Mixolydian]: 'Mixolydian',
+  [DiatonicMode.Aeolian]:    'Aeolian (Minor)',
+  [DiatonicMode.Locrian]:    'Locrian',
+};
+
+export const ALL_DIATONIC_MODES: DiatonicMode[] = [
+  DiatonicMode.Ionian,
+  DiatonicMode.Dorian,
+  DiatonicMode.Phrygian,
+  DiatonicMode.Lydian,
+  DiatonicMode.Mixolydian,
+  DiatonicMode.Aeolian,
+  DiatonicMode.Locrian,
+];
+
+// Shared by scales.ts and chord_key_resolver.ts — defined here to avoid circular imports.
+export interface RomanEntry {
+  roman: string;        // e.g. "I", "ii", "vii°", "Imaj7"
+  degree: number;       // semitone offset from scale root (0–11)
+  suffix: string;       // chord_tones_library suffix e.g. "MAJ", "MIN7", "DOM7"
+  quality: ChordQuality;
+  degreeIndex: number;  // 0-based scale degree (0–6)
+}
+
 export enum ChordQuality {
   Major      = 'Major',
   Minor      = 'Minor',

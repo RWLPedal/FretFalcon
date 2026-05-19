@@ -111,6 +111,9 @@ export enum UiComponentType {
   LayerList = "layer_list",
 }
 
+/** A toggle button entry with a separate display label and stored value. */
+export interface LabelValue { label: string; value: string }
+
 export interface ConfigurationSchemaArg {
   name: string;
   type: ArgType;
@@ -119,16 +122,24 @@ export interface ConfigurationSchemaArg {
     buttonLabels?: string[];
     /** Advanced (7th chord) labels — hidden until the Advanced checkbox is checked. */
     advancedButtonLabels?: string[];
-    /** Basic labels used when Key type is Minor. */
+    /** Basic labels used when Key type is Minor (legacy — prefer labelsByMode). */
     minorButtonLabels?: string[];
-    /** Advanced labels used when Key type is Minor. */
+    /** Advanced labels used when Key type is Minor (legacy — prefer labelsByMode). */
     minorAdvancedButtonLabels?: string[];
+    /**
+     * Mode-aware button labels for ToggleButtonSelector.
+     * Keys are DiatonicMode enum values (e.g. 'MAJOR', 'DORIAN').
+     * Takes precedence over buttonLabels / minorButtonLabels when present.
+     */
+    labelsByMode?: Record<string, { basic: LabelValue[]; advanced: LabelValue[] }>;
     /** Layer list data for MultiLayerFretboard feature. */
     scaleNames?: string[];
     rootNoteOptions?: string[];
     chordEntries?: { key: string; label: string }[];
     noteNames?: string[];
   };
+  /** Display labels for enum values — parallel array to `enum`. Falls back to value if absent. */
+  enumLabels?: string[];
   required?: boolean;
   enum?: string[];
   /** Initial selected value when rendering a fresh (unconfigured) enum selector. Overrides the first enum entry. */

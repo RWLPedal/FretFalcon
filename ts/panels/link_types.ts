@@ -1,7 +1,7 @@
 // ts/panels/link_types.ts
 
 import { KeyType } from '../fretboard/music_types';
-export { KeyType } from '../fretboard/music_types';
+export { KeyType, DiatonicMode } from '../fretboard/music_types';
 
 export type HandleSide = 'top' | 'bottom' | 'left' | 'right';
 
@@ -41,13 +41,13 @@ export interface ChordSignal {
   roman: string | null;          // roman numeral in source's key e.g. "IV", or null for rest
 }
 
-// A key signal — carries the progression key (root + modality).
+// A key signal — carries the progression key (root + scale/mode).
 //   ScaleFeature:         drives ScaleName and Root Note
 //   MultiLayerFretboard: drives a "driven|scale" layer
 export interface KeySignal {
   kind: SignalKind.Key;
   rootNote: string;              // e.g. "C"
-  keyType: KeyType;              // e.g. "Major"
+  scaleKey: string;              // DiatonicMode value, e.g. "MAJOR", "DORIAN", "NATURAL_MINOR"
 }
 
 // A tempo signal — carries a BPM value from a metronome or backing track source.

@@ -2,7 +2,8 @@
 // Owns a single SVG arrow group and its hover tooltip.
 // Extracted from LinkOverlay so metadata-aware rendering can live here.
 
-import { HandleSide, LinkRecord, SignalKind, DriveSignal, SIGNAL_KIND_ICON } from './link_types';
+import { HandleSide, LinkRecord, SignalKind, DriveSignal, SIGNAL_KIND_ICON, DiatonicMode } from './link_types';
+import { DIATONIC_MODE_LABELS } from '../fretboard/music_types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -89,7 +90,7 @@ function signalDisplayValue(signals: DriveSignal[], kind: SignalKind): string | 
   if (!s) return null;
   if (s.kind === SignalKind.Tempo) return `${Math.round(s.bpm)} BPM`;
   if (s.kind === SignalKind.Chord) return s.rootNote || null;
-  if (s.kind === SignalKind.Key)   return `${s.rootNote} ${s.keyType}`;
+  if (s.kind === SignalKind.Key)   return `${s.rootNote} ${DIATONIC_MODE_LABELS[s.scaleKey as DiatonicMode] ?? s.scaleKey}`;
   return null;
 }
 
@@ -104,14 +105,6 @@ export class LinkArrow {
   private linkId: string;
   private onDelete: (id: string) => void;
   private hideTimer: ReturnType<typeof setTimeout> | null = null;
-  private onDocMouseMove = (e: MouseEvent): void => {
-    if (!this.tooltip.classList.contains('is-visible')) return;
-    const r = this.tooltip.getBoundingClientRect();
-    if (e.clientX >= r.left && e.clientX <= r.right &&
-        e.clientY >= r.top  && e.clientY <= r.bottom) {
-      this.cancelHide();
-    }
-  };
 
   constructor(
     link: LinkRecord,
@@ -182,7 +175,8 @@ export class LinkArrow {
 
     g.addEventListener('mouseenter', () => { this.cancelHide(); this.showTooltip(); });
     g.addEventListener('mouseleave', () => this.scheduleHide());
-    document.addEventListener('mousemove', this.onDocMouseMove);
+    this.tooltip.addEventListener('mouseenter', () => this.cancelHide());
+    this.tooltip.addEventListener('mouseleave', () => this.scheduleHide());
   }
 
   // ── Hide timer helpers ────────────────────────────────────────────────────
@@ -191,7 +185,7 @@ export class LinkArrow {
     this.hideTimer = setTimeout(() => {
       this.hideTimer = null;
       this.tooltip.classList.remove('is-visible');
-    }, 150);
+    }, 350);
   }
 
   private cancelHide(): void {
@@ -258,7 +252,6 @@ export class LinkArrow {
 
   destroy(): void {
     this.cancelHide();
-    document.removeEventListener('mousemove', this.onDocMouseMove);
     this.svgGroup.remove();
     this.tooltip.remove();
   }

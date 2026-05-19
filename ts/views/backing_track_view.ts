@@ -1,6 +1,6 @@
 // ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
-import { KeyType, SignalKind, TempoSignal } from '../panels/link_types';
+import { SignalKind, TempoSignal } from '../panels/link_types';
 import {
   DrumSoundId,
   DRUM_SOUND_LABELS,
@@ -11,12 +11,15 @@ import { chord_tones_library } from '../fretboard/chords';
 import { volumeManager } from '../sounds/volume_manager';
 import {
   CHORD_ROOTS,
-  MAJOR_ROMANS,
-  MINOR_ROMANS,
-  RomanEntry,
+  getRomansForMode,
   resolveAbsoluteChordKey,
-  isMajorChordSuffix,
+  isMajorChordQuality,
 } from '../fretboard/chord_key_resolver';
+import {
+  DiatonicMode,
+  ALL_DIATONIC_MODES,
+  DIATONIC_MODE_LABELS,
+} from '../fretboard/music_types';
 
 // ─── Data types ────────────────────────────────────────────────────────────────
 
@@ -30,10 +33,10 @@ interface DrumPreset {
   tracks: TrackData[];
   bassTrack: BassStep[];
   numMeasures?: 4 | 8 | 12;
-  measureChords?: (string | null)[];
+  measureChords?: (number | null)[];  // scale degree numbers 1–7, null = rest
 }
 
-// ─── Chord progression helpers ─────────────────────────────────────────────────
+// ─── Chord tone frequency helper ───────────────────────────────────────────────
 
 function chordToneFreq(toneName: string, octave: number): number {
   const idx = CHORD_ROOTS.indexOf(toneName);
@@ -81,6 +84,8 @@ function emptyBass(steps: number): BassStep[] {
   return new Array(steps).fill(null);
 }
 
+// measureChords values are scale degree numbers (1=tonic, 4=subdominant, 5=dominant…)
+// Presets assume Ionian (Major) by default; mode changes re-express the same degrees.
 const PRESETS: DrumPreset[] = [
   {
     name: 'Empty', bpm: 120, steps: 16, numMeasures: 4,
@@ -96,7 +101,7 @@ const PRESETS: DrumPreset[] = [
       ['crash', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
     ],
     bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, null, null],
-    measureChords: ['I', 'IV', 'V', 'I'],
+    measureChords: [1, 4, 5, 1],
   },
   {
     name: 'Funk', bpm: 100, steps: 16, numMeasures: 4,
@@ -107,7 +112,7 @@ const PRESETS: DrumPreset[] = [
       [null, null, null, null, null, null, 'open_hihat', null, null, null, null, null, null, null, 'open_hihat', null],
     ],
     bassTrack: [1, null, null, 1, null, null, null, 3, 5, null, null, 1, null, null, null, null],
-    measureChords: ['I', 'IV', 'I', 'V'],
+    measureChords: [1, 4, 1, 5],
   },
   {
     name: 'Electronic', bpm: 128, steps: 16, numMeasures: 4,
@@ -118,7 +123,7 @@ const PRESETS: DrumPreset[] = [
       ['crash', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null],
     ],
     bassTrack: [1, null, null, null, 1, null, null, null, 5, null, null, null, 5, null, null, null],
-    measureChords: ['I', 'V', 'vi', 'IV'],
+    measureChords: [1, 5, 6, 4],
   },
   {
     name: 'Blues Shuffle', bpm: 90, steps: 16, numMeasures: 12,
@@ -129,7 +134,7 @@ const PRESETS: DrumPreset[] = [
       [null, null, null, null, null, null, null, null, null, null, null, null, null, null, 'open_hihat', null],
     ],
     bassTrack: [1, null, null, null, 3, null, null, null, 5, null, null, null, 7, null, null, null],
-    measureChords: ['I','I','I','I','IV','IV','I','I','V','IV','I','V'],
+    measureChords: [1,1,1,1,4,4,1,1,5,4,1,5],
   },
   {
     name: 'Indie Rock', bpm: 118, steps: 16, numMeasures: 8,
@@ -140,7 +145,7 @@ const PRESETS: DrumPreset[] = [
       ['crash', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null],
     ],
     bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
-    measureChords: ['I', 'I', 'V', 'V', 'vi', 'vi', 'IV', 'IV'],
+    measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
   },
   {
     name: 'Jazz Swing', bpm: 160, steps: 16, numMeasures: 8,
@@ -151,7 +156,7 @@ const PRESETS: DrumPreset[] = [
       [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
     ],
     bassTrack: [1, null, null, null, 2, null, null, null, 5, null, null, null, 4, null, null, null],
-    measureChords: ['Imaj7', 'vi7', 'ii7', 'V', 'Imaj7', 'vi7', 'ii7', 'V'],
+    measureChords: [1, 6, 2, 5, 1, 6, 2, 5],
   },
 ];
 
@@ -174,9 +179,9 @@ export class BackingTrackView extends BaseView {
   // Chord progression state
   private numMeasures: 4 | 8 | 12 = 4;
   private progRootNote: string = 'C';
-  private progKeyType: KeyType = KeyType.Major;
-  private selectedChord: string | null = null;
-  private measureChords: (string | null)[] = [];
+  private progMode: DiatonicMode = DiatonicMode.Ionian;
+  private selectedChordDeg: number | null = null; // 1–7, null = erase tool
+  private measureChords: (number | null)[] = []; // degree numbers 1–7, null = rest
   private currentMeasure: number = -1;
 
   // Tempo target state
@@ -196,7 +201,7 @@ export class BackingTrackView extends BaseView {
   private trackDropdowns: HTMLSelectElement[] = [];
   private chordToolSelectEl: HTMLSelectElement | null = null;
   private progRootSelectEl: HTMLSelectElement | null = null;
-  private progKeyTypeBtn: HTMLButtonElement | null = null;
+  private progModeSelectEl: HTMLSelectElement | null = null;
   private chordMeasureCellEls: HTMLElement[] = [];
 
   constructor(initialState?: any) {
@@ -205,18 +210,38 @@ export class BackingTrackView extends BaseView {
     this.steps        = initialState?.steps        ?? 16;
     this.swingAmount  = Math.min(0.5, Math.max(0, initialState?.swingAmount ?? 0));
     this.progRootNote = initialState?.progRootNote ?? 'C';
-    this.progKeyType  = initialState?.progKeyType  ?? 'Major';
+
+    const modeRaw = initialState?.progMode;
+    this.progMode = (modeRaw && (Object.values(DiatonicMode) as string[]).includes(modeRaw))
+      ? (modeRaw as DiatonicMode)
+      : DiatonicMode.Ionian;
+
     const nm = initialState?.numMeasures;
-    this.numMeasures  = (nm === 4 || nm === 8 || nm === 12) ? nm : 4;
+    this.numMeasures = (nm === 4 || nm === 8 || nm === 12) ? nm : 4;
+
     if (Array.isArray(initialState?.measureChords)) {
-      this.measureChords = initialState.measureChords.slice(0, this.numMeasures);
-      while (this.measureChords.length < this.numMeasures) this.measureChords.push(null);
+      this.measureChords = this.parseMeasureChords(initialState.measureChords, this.numMeasures);
     } else {
       this.measureChords = new Array(this.numMeasures).fill(null);
     }
     this.trackSounds = this.resolveTrackSounds(initialState?.trackSounds, initialState?.tracks);
     this.initTracks(initialState?.tracks);
     this.initBassTrack(initialState?.bassTrack);
+  }
+
+  // Accepts either degree numbers (new) or Roman numeral strings (legacy import).
+  private parseMeasureChords(raw: any[], size: number): (number | null)[] {
+    const parsed = raw.slice(0, size).map((c: any): number | null => {
+      if (c === null || c === undefined) return null;
+      if (typeof c === 'number' && c >= 1 && c <= 7) return c;
+      if (typeof c === 'string') {
+        const entry = getRomansForMode(this.progMode).find(r => r.roman === c);
+        return entry ? entry.degreeIndex + 1 : null;
+      }
+      return null;
+    });
+    while (parsed.length < size) parsed.push(null);
+    return parsed;
   }
 
   // ─── View interface ──────────────────────────────────────────────────────────
@@ -274,7 +299,7 @@ export class BackingTrackView extends BaseView {
     this.trackDropdowns      = [];
     this.chordToolSelectEl   = null;
     this.progRootSelectEl    = null;
-    this.progKeyTypeBtn      = null;
+    this.progModeSelectEl    = null;
     this.chordMeasureCellEls = [];
     super.destroy();
   }
@@ -285,7 +310,6 @@ export class BackingTrackView extends BaseView {
     const header = document.createElement('div');
     header.classList.add('dm-header');
 
-    // Large play button (spans both rows via align-self: stretch)
     const playWrap = document.createElement('div');
     playWrap.classList.add('dm-play-large');
     this.playBtn = document.createElement('button');
@@ -299,18 +323,15 @@ export class BackingTrackView extends BaseView {
     playWrap.appendChild(this.playBtn);
     header.appendChild(playWrap);
 
-    // Right side: two stacked control rows
     const rows = document.createElement('div');
     rows.classList.add('dm-controls-rows');
-
     rows.appendChild(this.buildControlRow1());
     rows.appendChild(this.buildControlRow2());
-
     header.appendChild(rows);
     return header;
   }
 
-  /** Row 1: PRESET: [Dropdown] [Save] [Load] [Key Root] [Major/Minor] */
+  /** Row 1: PRESET [Dropdown] [Save] [Load] | Root [Dropdown] | Mode [Dropdown] */
   private buildControlRow1(): HTMLElement {
     const row = document.createElement('div');
     row.classList.add('dm-controls-row');
@@ -368,26 +389,30 @@ export class BackingTrackView extends BaseView {
     });
     this.progRootSelectEl.addEventListener('change', () => {
       this.progRootNote = this.progRootSelectEl!.value;
-      this.selectedChord = null;
+      this.selectedChordDeg = null;
       this.rebuildChordToolOptions();
       this.dispatchStateChange();
     });
     rootWrap.appendChild(this.progRootSelectEl);
     row.appendChild(rootWrap);
 
-    // Major / Minor toggle
-    this.progKeyTypeBtn = document.createElement('button');
-    this.progKeyTypeBtn.classList.add('button', 'is-small', 'dm-key-type-btn');
-    this.progKeyTypeBtn.textContent = this.progKeyType;
-    this.progKeyTypeBtn.addEventListener('click', () => {
-      this.progKeyType = this.progKeyType === KeyType.Major ? KeyType.Minor : KeyType.Major;
-      this.progKeyTypeBtn!.textContent = this.progKeyType;
-      this.selectedChord = null;
-      this.measureChords = new Array(this.numMeasures).fill(null);
+    // Mode dropdown (replaces binary Major/Minor toggle)
+    const modeWrap = document.createElement('div');
+    modeWrap.classList.add('select', 'is-small');
+    this.progModeSelectEl = document.createElement('select');
+    for (const mode of ALL_DIATONIC_MODES) {
+      const opt = new Option(DIATONIC_MODE_LABELS[mode], mode);
+      if (mode === this.progMode) opt.selected = true;
+      this.progModeSelectEl.appendChild(opt);
+    }
+    this.progModeSelectEl.addEventListener('change', () => {
+      this.progMode = this.progModeSelectEl!.value as DiatonicMode;
+      this.selectedChordDeg = null;
       this.rebuildChordToolOptions();
       this.dispatchStateChange();
     });
-    row.appendChild(this.progKeyTypeBtn);
+    modeWrap.appendChild(this.progModeSelectEl);
+    row.appendChild(modeWrap);
 
     return row;
   }
@@ -397,7 +422,6 @@ export class BackingTrackView extends BaseView {
     const row = document.createElement('div');
     row.classList.add('dm-controls-row');
 
-    // BPM
     const bpmLbl = document.createElement('span');
     bpmLbl.classList.add('dm-label');
     bpmLbl.textContent = 'BPM:';
@@ -424,7 +448,6 @@ export class BackingTrackView extends BaseView {
     bpmGroup.appendChild(this.bpmDisplayEl);
     row.appendChild(bpmGroup);
 
-    // Swing
     const swingLbl = document.createElement('span');
     swingLbl.classList.add('dm-label');
     swingLbl.textContent = 'Swing:';
@@ -450,7 +473,6 @@ export class BackingTrackView extends BaseView {
     swingGroup.appendChild(this.swingDisplayEl);
     row.appendChild(swingGroup);
 
-    // Bars pill toggle
     const barsLbl = document.createElement('span');
     barsLbl.classList.add('dm-label');
     barsLbl.textContent = 'Bars:';
@@ -517,10 +539,7 @@ export class BackingTrackView extends BaseView {
       this.gridEl.appendChild(row);
     }
 
-    // Bass row (separated by a thin rule)
     this.buildBassRow();
-
-    // Chord progression: single inline row
     this.buildProgRow();
   }
 
@@ -587,7 +606,6 @@ export class BackingTrackView extends BaseView {
     return el;
   }
 
-  /** Per-track dropdown for choosing which sound to place. */
   private makeTrackHeader(t: number): HTMLElement {
     const wrap = document.createElement('div');
     wrap.classList.add('select', 'is-small', 'dm-track-header-wrap');
@@ -605,7 +623,6 @@ export class BackingTrackView extends BaseView {
     return wrap;
   }
 
-  /** Bass row header: dropdown to select which scale degree clicking places. */
   private makeBassHeader(): HTMLElement {
     const BASS_LABELS: Record<number, string> = {
       1: '1 Root', 2: '2', 3: '3 Third', 4: '4', 5: '5 Fifth', 6: '6', 7: '7 Seventh',
@@ -627,7 +644,7 @@ export class BackingTrackView extends BaseView {
     return wrap;
   }
 
-  /** Chord row header: dropdown to select which roman numeral chord clicking places. */
+  /** Chord row header: dropdown listing the 7 diatonic triads for the current mode. */
   private makeChordHeader(): HTMLElement {
     const wrap = document.createElement('div');
     wrap.classList.add('select', 'is-small', 'dm-track-header-wrap');
@@ -635,7 +652,8 @@ export class BackingTrackView extends BaseView {
     this.chordToolSelectEl = sel;
     this.rebuildChordToolOptions();
     sel.addEventListener('change', () => {
-      this.selectedChord = sel.value || null;
+      const val = parseInt(sel.value, 10);
+      this.selectedChordDeg = isNaN(val) ? null : val;
     });
     wrap.appendChild(sel);
     return wrap;
@@ -643,23 +661,10 @@ export class BackingTrackView extends BaseView {
 
   // ─── Cell width / beat-alignment helpers ─────────────────────────────────────
 
-  /**
-   * Width in px for a measure cell so that N cells fill the same total row
-   * width as the 16-step drum grid.
-   * Grid content = 16×24 + 15×2 (gaps) + 3×8 (beat margins) = 438px
-   * Solve: N×w + (N-1)×2 + 3×8 = 438  →  w = 416/N − 2
-   */
   private measureCellWidth(): number {
     return 416 / this.numMeasures - 2;
   }
 
-  /**
-   * Returns true when cell m should carry a dm-beat-start margin so that
-   * visual beat boundaries are mirrored in the chord row.
-   *   4 bars  → every 1 cell  (cells 1, 2, 3)
-   *   8 bars  → every 2 cells (cells 2, 4, 6)
-   *  12 bars  → every 3 cells (cells 3, 6, 9)
-   */
   private measureBeatStart(m: number): boolean {
     if (m === 0) return false;
     return m % (this.numMeasures / 4) === 0;
@@ -695,14 +700,17 @@ export class BackingTrackView extends BaseView {
     }
   }
 
-  private updateMeasureCellAppearance(cell: HTMLElement, chord: string | null): void {
-    if (chord) {
-      const romans = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
-      const entry = romans.find(r => r.roman === chord);
-      const chordKey = entry ? this.resolveChordKey(entry) : null;
-      const chordName = chordKey ? (chord_tones_library[chordKey]?.name ?? chord) : chord;
+  private updateMeasureCellAppearance(cell: HTMLElement, chordDeg: number | null): void {
+    if (chordDeg !== null && chordDeg >= 1 && chordDeg <= 7) {
+      const entries = getRomansForMode(this.progMode);
+      const entry   = entries[chordDeg - 1]; // first 7 entries are triads
+      const roman   = entry?.roman ?? String(chordDeg);
+      const chordKey = entry
+        ? resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode)
+        : null;
+      const chordName = chordKey ? (chord_tones_library[chordKey]?.name ?? roman) : roman;
 
-      cell.textContent = chord;
+      cell.textContent = roman;
       cell.title       = chordName;
       cell.style.setProperty('--dm-measure-color', 'var(--accent-dim)');
       cell.classList.add('dm-measure-filled');
@@ -756,8 +764,8 @@ export class BackingTrackView extends BaseView {
 
   private handleMeasureCellClick(measureIndex: number): void {
     const current = this.measureChords[measureIndex];
-    if (this.selectedChord !== null) {
-      this.measureChords[measureIndex] = (current === this.selectedChord) ? null : this.selectedChord;
+    if (this.selectedChordDeg !== null) {
+      this.measureChords[measureIndex] = (current === this.selectedChordDeg) ? null : this.selectedChordDeg;
     } else {
       this.measureChords[measureIndex] = null;
     }
@@ -776,13 +784,15 @@ export class BackingTrackView extends BaseView {
     if (!this.chordToolSelectEl) return;
     this.chordToolSelectEl.innerHTML = '';
     this.chordToolSelectEl.appendChild(new Option('Chord', ''));
-    const romans = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
-    for (const entry of romans) {
-      const chordKey = this.resolveChordKey(entry);
-      if (!chordKey) continue;
-      const opt = new Option(entry.roman, entry.roman);
-      opt.title = chord_tones_library[chordKey]?.name ?? entry.roman;
-      if (entry.roman === this.selectedChord) opt.selected = true;
+
+    const entries = getRomansForMode(this.progMode);
+    const triads = entries.slice(0, 7); // first 7 are the diatonic triads
+    for (const entry of triads) {
+      const chordKey  = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode);
+      const chordName = chordKey ? (chord_tones_library[chordKey]?.name ?? entry.roman) : entry.roman;
+      const degNum    = entry.degreeIndex + 1; // 1–7
+      const opt = new Option(`${entry.roman} — ${chordName}`, String(degNum));
+      if (degNum === this.selectedChordDeg) opt.selected = true;
       this.chordToolSelectEl.appendChild(opt);
     }
     this.refreshAllMeasureCells();
@@ -841,12 +851,17 @@ export class BackingTrackView extends BaseView {
       this.swingAmount = Math.min(0.5, Math.max(0, state.swingAmount));
     }
     this.progRootNote = state.progRootNote ?? this.progRootNote;
-    this.progKeyType  = state.progKeyType  ?? this.progKeyType;
+
+    const modeRaw = state.progMode;
+    if (modeRaw && (Object.values(DiatonicMode) as string[]).includes(modeRaw)) {
+      this.progMode = modeRaw as DiatonicMode;
+    }
+
     const nm = state.numMeasures;
     if (nm === 4 || nm === 8 || nm === 12) this.numMeasures = nm;
+
     if (Array.isArray(state.measureChords)) {
-      this.measureChords = state.measureChords.slice(0, this.numMeasures);
-      while (this.measureChords.length < this.numMeasures) this.measureChords.push(null);
+      this.measureChords = this.parseMeasureChords(state.measureChords, this.numMeasures);
     }
     this.trackSounds = this.resolveTrackSounds(state.trackSounds, state.tracks);
     this.initTracks(state.tracks);
@@ -860,7 +875,7 @@ export class BackingTrackView extends BaseView {
     if (this.swingSliderEl)    this.swingSliderEl.value = String(swingPct);
     if (this.swingDisplayEl)   this.swingDisplayEl.textContent = `${swingPct}%`;
     if (this.progRootSelectEl) this.progRootSelectEl.value = this.progRootNote;
-    if (this.progKeyTypeBtn)   this.progKeyTypeBtn.textContent = this.progKeyType;
+    if (this.progModeSelectEl) this.progModeSelectEl.value = this.progMode;
     this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === this.numMeasures));
 
     this.rebuildGrid();
@@ -870,8 +885,6 @@ export class BackingTrackView extends BaseView {
     this.dispatchStateChange();
   }
 
-  /** Derive one active sound per track. Prefers explicit `savedSounds`, then
-   *  scans the track data for the first non-null sound, then falls back to defaults. */
   private resolveTrackSounds(savedSounds?: DrumSoundId[], tracks?: TrackData[]): DrumSoundId[] {
     return DEFAULT_TRACK_SOUNDS.map((def, t) => {
       if (savedSounds?.[t] && ALL_DRUM_SOUND_IDS.includes(savedSounds[t])) return savedSounds[t];
@@ -955,26 +968,36 @@ export class BackingTrackView extends BaseView {
       playHits();
     }
 
-    // Advance measure at the start of each drum loop
     if (this.currentStep === 0) {
       this.clearMeasureHighlight();
       this.currentMeasure = (this.currentMeasure + 1) % this.numMeasures;
       this.highlightCurrentMeasure();
-      const chord = this.measureChords[this.currentMeasure];
-      if (chord) this.playChordDrone(chord);
-      this.dispatchTickEvent(chord ?? null);
+      const chordDeg = this.measureChords[this.currentMeasure];
+      if (chordDeg !== null) this.playChordDrone(chordDeg);
+      this.dispatchTickEvent(chordDeg ?? null);
     }
   }
 
-  private dispatchTickEvent(currentChord: string | null): void {
+  private dispatchTickEvent(chordDeg: number | null): void {
     if (!this.container) return;
+    let currentRoman: string | null = null;
+    let chordKey: string | null = null;
+    if (chordDeg !== null) {
+      const entry = getRomansForMode(this.progMode)[chordDeg - 1];
+      if (entry) {
+        currentRoman = entry.roman;
+        chordKey = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode);
+      }
+    }
     this.container.dispatchEvent(new CustomEvent('backing-track-tick', {
       bubbles: true,
       detail: {
         currentMeasure:  this.currentMeasure,
-        currentChord,
+        currentChordDeg: chordDeg,
+        currentRoman,
+        chordKey,
         progRootNote:    this.progRootNote,
-        progKeyType:     this.progKeyType,
+        progMode:        this.progMode,
         bpm:             this.bpm,
       },
     }));
@@ -1012,23 +1035,22 @@ export class BackingTrackView extends BaseView {
 
   // ─── Bass playback ────────────────────────────────────────────────────────────
 
-  private playBassStep(degree: number): void {
+  private playBassStep(bassDeg: number): void {
     let rootName     = this.progRootNote;
-    let isMajorChord = this.progKeyType === 'Major';
+    let isMajorChord = true;
 
-    const chord = this.measureChords[Math.max(0, this.currentMeasure)];
-    if (chord) {
-      const romans = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
-      const entry  = romans.find(r => r.roman === chord);
+    const chordDeg = this.measureChords[Math.max(0, this.currentMeasure)];
+    if (chordDeg !== null) {
+      const entry = getRomansForMode(this.progMode)[chordDeg - 1];
       if (entry) {
         const rootIdx = CHORD_ROOTS.indexOf(this.progRootNote);
-        rootName      = CHORD_ROOTS[(rootIdx + entry.degree) % 12];
-        isMajorChord  = isMajorChordSuffix(entry.suffix);
+        rootName     = CHORD_ROOTS[(rootIdx + entry.degree) % 12];
+        isMajorChord = isMajorChordQuality(entry.quality);
       }
     }
 
     const intervals = isMajorChord ? MAJOR_SCALE_SEMITONES : MINOR_SCALE_SEMITONES;
-    const semitones = intervals[(degree - 1) % 7];
+    const semitones = intervals[(bassDeg - 1) % 7];
     const rootIdx   = CHORD_ROOTS.indexOf(rootName);
     if (rootIdx === -1) return;
     const noteIdx = (rootIdx + semitones) % 12;
@@ -1063,23 +1085,17 @@ export class BackingTrackView extends BaseView {
 
   // ─── Chord drone ─────────────────────────────────────────────────────────────
 
-  private resolveChordKey(entry: RomanEntry): string | null {
-    const key = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progKeyType);
-    return (key && chord_tones_library[key]) ? key : null;
-  }
-
-  private playChordDrone(roman: string): void {
-    const romans  = this.progKeyType === 'Major' ? MAJOR_ROMANS : MINOR_ROMANS;
-    const entry   = romans.find(r => r.roman === roman);
+  private playChordDrone(chordDeg: number): void {
+    const entry = getRomansForMode(this.progMode)[chordDeg - 1];
     if (!entry) return;
-    const chordKey = this.resolveChordKey(entry);
+    const chordKey = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode);
     if (!chordKey) return;
     const chordEntry = chord_tones_library[chordKey];
     if (!chordEntry) return;
 
-    const stepMs      = (60000 * 4) / this.bpm / this.steps;
-    const measureSec  = (stepMs * this.steps) / 1000;
-    const fadeSec     = Math.min(0.12, measureSec * 0.08);
+    const stepMs     = (60000 * 4) / this.bpm / this.steps;
+    const measureSec = (stepMs * this.steps) / 1000;
+    const fadeSec    = Math.min(0.12, measureSec * 0.08);
 
     try {
       const ctx       = volumeManager.getAudioContext();
@@ -1123,7 +1139,7 @@ export class BackingTrackView extends BaseView {
       bassTrack:     this.bassTrack,
       trackSounds:   this.trackSounds,
       progRootNote:  this.progRootNote,
-      progKeyType:   this.progKeyType,
+      progMode:      this.progMode,
       numMeasures:   this.numMeasures,
       measureChords: this.measureChords,
     };

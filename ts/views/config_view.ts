@@ -1,4 +1,4 @@
-import { ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../feature";
+import { ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType, LabelValue } from "../feature";
 import { createLayerListInput, extractLayerListValues } from "../schedule/editor/interval/common_ui_elements";
 
 export type ConfigChangeCallback = (config: (string | null)[]) => void;
@@ -60,12 +60,23 @@ export class ConfigView {
                 // Toggle-button variadic: consume all remaining values
                 const values = config.slice(configIndex);
                 configIndex = config.length;
-                this.argValues.set(argIndex, values);
                 const control = this.container.querySelector<HTMLElement>(
                     `[data-arg-index="${argIndex}"] .control`
                 );
-                control?.querySelectorAll<HTMLButtonElement>('button[data-value]').forEach(btn => {
-                    btn.classList.toggle('is-active', values.includes(btn.dataset.value ?? ''));
+                const btns = control
+                    ? Array.from(control.querySelectorAll<HTMLButtonElement>('button[data-value]'))
+                    : [];
+                // Resolve incoming values to button dataset.value. If a value doesn't match
+                // any button's value directly, try matching by innerText (label) to handle
+                // legacy configs that stored Roman numeral strings instead of degree indices.
+                const resolvedValues = values.map(v => {
+                    if (btns.some(b => b.dataset.value === v)) return v;
+                    const byLabel = btns.find(b => b.innerText === v);
+                    return byLabel?.dataset.value ?? v;
+                });
+                this.argValues.set(argIndex, resolvedValues);
+                btns.forEach(btn => {
+                    btn.classList.toggle('is-active', resolvedValues.includes(btn.dataset.value ?? ''));
                 });
             } else {
                 // Non-variadic enum, or variadic enum rendered as a single <select>:
@@ -211,9 +222,28 @@ export class ConfigView {
         if (!select) return;
         // Only apply if the select is currently in driven mode
         if (select.value !== '__driven__') return;
-        // Temporarily update a data attribute to carry the driven value without
-        // changing select.value (which would trigger the 'change' handler)
+        // Carry the driven value on a data attribute (used by buildDrivenConfig externally)
         select.dataset.drivenValue = value;
+
+        if (typeof this.schema === 'string') return;
+        const argIndex = this.schema.args.findIndex(a => a.name === argName);
+        if (argIndex < 0) return;
+        const arg = this.schema.args[argIndex];
+
+        // Update argValues so getKeyTypeForArg sees the driven mode
+        this.argValues.set(argIndex, value);
+
+        // If this enum arg controls a toggle-button arg, rebuild its labels for the new value
+        if (arg.controlsArgName) {
+            const controlledArg = this.schema.args.find(a => a.name === arg.controlsArgName);
+            if (controlledArg) {
+                const controlledIndex = this.schema.args.indexOf(controlledArg);
+                const advCb = this.container.querySelector<HTMLInputElement>(
+                    `input[type="checkbox"][data-controls-arg-name="${arg.controlsArgName}"]`
+                );
+                this.rebuildToggleButtons(controlledArg, controlledIndex, value, advCb?.checked ?? false);
+            }
+        }
     }
 
     public render(): void {
@@ -298,10 +328,10 @@ export class ConfigView {
         select.dataset.argName = arg.name;
 
         const options = arg.enum ?? [];
-        options.forEach(optionValue => {
+        options.forEach((optionValue, i) => {
             const option = document.createElement('option');
             option.value = optionValue;
-            option.text = optionValue;
+            option.text = arg.enumLabels?.[i] ?? optionValue;
             select.appendChild(option);
         });
 
@@ -340,33 +370,38 @@ export class ConfigView {
         buttonsDiv.style.gap = '3px';
 
         const data = arg.uiComponentData ?? {};
-        const basicLabels: string[] =
-            keyType === 'Minor' && data.minorButtonLabels
-                ? data.minorButtonLabels
-                : (data.buttonLabels ?? []);
-        const advancedLabels: string[] =
-            keyType === 'Minor' && data.minorAdvancedButtonLabels
-                ? data.minorAdvancedButtonLabels
-                : (data.advancedButtonLabels ?? []);
+        let basicItems:    (string | LabelValue)[];
+        let advancedItems: (string | LabelValue)[];
+        if (data.labelsByMode?.[keyType]) {
+          basicItems    = data.labelsByMode[keyType].basic;
+          advancedItems = data.labelsByMode[keyType].advanced;
+        } else {
+          basicItems    = keyType === 'Minor' && data.minorButtonLabels
+              ? data.minorButtonLabels : (data.buttonLabels ?? []);
+          advancedItems = keyType === 'Minor' && data.minorAdvancedButtonLabels
+              ? data.minorAdvancedButtonLabels : (data.advancedButtonLabels ?? []);
+        }
 
-        const makeBtn = (label: string, isAdvanced: boolean): void => {
+        const makeBtn = (item: string | LabelValue, isAdvanced: boolean): void => {
+            const label = typeof item === 'string' ? item : item.label;
+            const value = typeof item === 'string' ? item : item.value;
             const btn = document.createElement('button');
             btn.classList.add('config-toggle-btn');
             btn.innerText = label;
-            btn.dataset.value = label;
+            btn.dataset.value = value;
 
             if (isAdvanced) {
                 btn.classList.add('is-advanced-btn');
                 if (!showAdvanced) btn.style.display = 'none';
             }
-            if (currentSelection.has(label)) btn.classList.add('is-active');
+            if (currentSelection.has(value)) btn.classList.add('is-active');
 
             btn.addEventListener('click', () => {
                 btn.classList.toggle('is-active');
                 const arr = (this.argValues.get(index) as string[]) ?? [];
-                const pos = arr.indexOf(label);
+                const pos = arr.indexOf(value);
                 if (btn.classList.contains('is-active')) {
-                    if (pos === -1) arr.push(label);
+                    if (pos === -1) arr.push(value);
                 } else {
                     if (pos !== -1) arr.splice(pos, 1);
                 }
@@ -377,8 +412,8 @@ export class ConfigView {
             buttonsDiv.appendChild(btn);
         };
 
-        basicLabels.forEach(l => makeBtn(l, false));
-        advancedLabels.forEach(l => makeBtn(l, true));
+        basicItems.forEach(item => makeBtn(item, false));
+        advancedItems.forEach(item => makeBtn(item, true));
 
         parent.appendChild(buttonsDiv);
     }
@@ -397,12 +432,15 @@ export class ConfigView {
 
     /** Rebuilds the toggle button set for an arg after Key or Advanced changes. */
     private rebuildToggleButtons(arg: ConfigurationSchemaArg, index: number, keyType: string, showAdvanced: boolean): void {
-        // Clear previous selection when key type changes
         const field = this.container.querySelector<HTMLElement>(`[data-arg-name="${arg.name}"] .control`);
         if (!field) return;
         field.innerHTML = '';
-        // Reset selection so stale numerals from the old key don't carry over.
-        this.argValues.set(index, []);
+        // When buttons use separate label/value (labelsByMode), the stored values are
+        // mode-agnostic degree indices — preserve them so selections survive mode changes.
+        // For plain string buttons (label === value), reset to avoid stale values.
+        if (!arg.uiComponentData?.labelsByMode) {
+            this.argValues.set(index, []);
+        }
         this.renderToggleButtons(field, arg, index, keyType, showAdvanced);
     }
 

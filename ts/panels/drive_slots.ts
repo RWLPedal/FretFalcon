@@ -1,45 +1,62 @@
-﻿// ts/panels/drive_slots.ts
+// ts/panels/drive_slots.ts
 // Concrete drive source/target registrations. Import this file once at app startup
 // (reference_main.ts) to wire all signal translations.
 
 import { registerDriveSource, registerDriveTarget } from './drive_registry';
 import { SignalKind, ChordSignal, KeySignal, DriveSignal, FeatureSignal } from './link_types';
-import { KeyType } from '../fretboard/music_types';
-import {
-  resolveAbsoluteChordKey,
-  resolveChordRootNote,
-  isMajorChordSuffix,
-  MAJOR_ROMANS,
-  MINOR_ROMANS,
-} from '../fretboard/chord_key_resolver';
+import { KeyType, DiatonicMode, ChordQuality } from '../fretboard/music_types';
+import { scales } from '../fretboard/scales';
+
+// Maps DiatonicMode values to the scale display names used by ScaleFeature config.
+// scales[mode].name gives the canonical name (e.g. "Minor" for NATURAL_MINOR).
+function scaleNameForKey(scaleKey: string): string {
+  const scale = (scales as any)[scaleKey];
+  return scale?.name ?? 'Major';
+}
+
+// Returns true when the tonic of a mode is minor- or diminished-quality.
+function tonicIsMinor(scaleKey: string): boolean {
+  const scale = (scales as any)[scaleKey];
+  if (!scale || typeof scale.getChordQualityAt !== 'function') return false;
+  const q: ChordQuality = scale.getChordQualityAt(0);
+  return q === ChordQuality.Minor || q === ChordQuality.Diminished;
+}
+
+// Derives KeyType (major/minor) from a chord library key suffix (e.g. "G_MAJ" → Major).
+function keyTypeFromChordKey(chordKey: string | null): KeyType {
+  if (!chordKey) return KeyType.Major;
+  const suffix = chordKey.split('_')[1] ?? '';
+  return (suffix === 'MAJ' || suffix === 'MAJ7' || suffix === 'DOM7')
+    ? KeyType.Major : KeyType.Minor;
+}
+
+// Maps scale display names (as stored in ScaleFeature config) to DiatonicMode values.
+const SCALE_NAME_TO_MODE: Record<string, DiatonicMode> = {
+  'Major':         DiatonicMode.Ionian,
+  'Dorian':        DiatonicMode.Dorian,
+  'Phrygian':      DiatonicMode.Phrygian,
+  'Lydian':        DiatonicMode.Lydian,
+  'Mixolydian':    DiatonicMode.Mixolydian,
+  'Minor':         DiatonicMode.Aeolian,
+  'Natural Minor': DiatonicMode.Aeolian,
+  'Locrian':       DiatonicMode.Locrian,
+};
 
 // ─── BackingTrackView as source ───────────────────────────────────────────────
-// viewId must match the registered floating view id for the backing track.
 // The BackingTrackView dispatches 'backing-track-tick' with:
-//   { currentMeasure, currentChord, progRootNote, progKeyType }
+//   { currentMeasure, currentChordDeg, currentRoman, chordKey, progRootNote, progMode, bpm }
 
 registerDriveSource({
   viewId: 'drum_machine',
   emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Tempo],
   extractSignals(detail: any): DriveSignal[] {
-    const roman: string | null = detail?.currentChord ?? null;
-    const root: string = detail?.progRootNote ?? 'C';
-    const keyType: KeyType = detail?.progKeyType ?? KeyType.Major;
+    const roman: string | null = detail?.currentRoman ?? null;
+    const root: string         = detail?.progRootNote ?? 'C';
+    const progMode: DiatonicMode = detail?.progMode ?? DiatonicMode.Ionian;
+    const chordKey: string | null = detail?.chordKey ?? null;
 
-    let chordKey: string | null = null;
-    let chordRoot = root;
-    let chordKeyType: KeyType = keyType;
-
-    if (roman) {
-      chordKey = resolveAbsoluteChordKey(roman, root, keyType);
-      const resolvedRoot = resolveChordRootNote(roman, root, keyType);
-      if (resolvedRoot) chordRoot = resolvedRoot;
-
-      // Determine if this chord is major or minor quality
-      const romans = keyType === KeyType.Major ? MAJOR_ROMANS : MINOR_ROMANS;
-      const entry = romans.find(r => r.roman === roman);
-      if (entry) chordKeyType = isMajorChordSuffix(entry.suffix) ? KeyType.Major : KeyType.Minor;
-    }
+    const chordRoot    = chordKey ? (chordKey.split('_')[0] ?? root) : root;
+    const chordKeyType = keyTypeFromChordKey(chordKey);
 
     const chordSignal: ChordSignal = {
       kind: SignalKind.Chord,
@@ -51,7 +68,7 @@ registerDriveSource({
     const keySignal: KeySignal = {
       kind: SignalKind.Key,
       rootNote: root,
-      keyType,
+      scaleKey: progMode,
     };
     const signals: DriveSignal[] = [chordSignal, keySignal];
     if (typeof detail?.bpm === 'number') {
@@ -90,31 +107,26 @@ registerDriveSource({
 });
 
 // ─── ScaleFeature as source ──────────────────────────────────────────────────
-// When the scale config changes, emit a ChordSignal with the scale's root note.
-// Using ChordSignal (not KeySignal) so drone targets can distinguish chord-level
-// signals from overall-key signals and follow the scale root specifically.
+// Emits ChordSignal (for drone/chord targets) and KeySignal (for mode-aware targets).
 
 registerDriveSource({
   viewId: 'configurable_instrument_feature',
   featureTypeName: 'Scale',
-  emittedKinds: [SignalKind.Chord],
-  extractSignals(detail: any): ChordSignal[] {
+  emittedKinds: [SignalKind.Chord, SignalKind.Key],
+  extractSignals(detail: any): DriveSignal[] {
     const config: string[] = detail?.config ?? [];
     const rootNote: string = config[1] ?? 'C';
     const scaleName: string = config[0] ?? 'Major';
-    const keyType: KeyType = scaleName.toLowerCase().includes('minor') ? KeyType.Minor : KeyType.Major;
-    return [{
-      kind: SignalKind.Chord,
-      chordKey: null,
-      rootNote,
-      keyType,
-      roman: null,
-    }];
+    const scaleKey: DiatonicMode = SCALE_NAME_TO_MODE[scaleName] ?? DiatonicMode.Ionian;
+    const keyType: KeyType = tonicIsMinor(scaleKey) ? KeyType.Minor : KeyType.Major;
+    return [
+      { kind: SignalKind.Chord, chordKey: null, rootNote, keyType, roman: null },
+      { kind: SignalKind.Key, rootNote, scaleKey },
+    ];
   },
 });
 
 // ─── ChordFeature as target ───────────────────────────────────────────────────
-// Drives the 'Root' and 'Type' args from any ChordSignal.
 
 registerDriveTarget({
   featureTypeName: 'Chord',
@@ -150,11 +162,6 @@ registerDriveTarget({
 });
 
 // ─── MultiLayerFretboard as target ──────────────────────────────────────────
-// The 'Layers' arg uses a layer_list — driven layers are handled directly by
-// MultiLayerFretboardFeature listening for 'drive-signal' on its container.
-// This target slot is a placeholder so ConfigurableFeatureView knows to show
-// 'Driven' options when a link points to a MultiLayerFretboard window.
-// (The actual driven-layer resolution is done inside the feature itself.)
 
 registerDriveTarget({
   featureTypeName: 'MultiLayerFretboard',
@@ -162,16 +169,12 @@ registerDriveTarget({
   label: 'Driven layer (from linked source)',
   acceptedKinds: [SignalKind.Chord, SignalKind.Key],
   resolveValue(_signal: DriveSignal): string | null {
-    // Resolution is delegated to MultiLayerFretboardFeature; return null here
-    // so ConfigurableFeatureView does not rebuild unnecessarily.
     return null;
   },
 });
 
 // ─── ScaleFeature as target ───────────────────────────────────────────────────
-// A KeySignal drives both the scale name (Major / Natural Minor) and root note.
-// A ChordSignal also drives both, enabling MultiLayerFretboard → Scale links.
-// When BackingTrack drives Scale both signals arrive; KeySignal (sent last) wins.
+// KeySignal maps scaleKey → scale display name; ChordSignal falls back to Major/Minor.
 
 registerDriveTarget({
   featureTypeName: 'Scale',
@@ -179,8 +182,11 @@ registerDriveTarget({
   label: 'Scale name (from linked source)',
   acceptedKinds: [SignalKind.Key, SignalKind.Chord],
   resolveValue(signal: DriveSignal): string | null {
-    if (signal.kind !== SignalKind.Chord && signal.kind !== SignalKind.Key) return null;
-    return signal.keyType === 'Major' ? 'Major' : 'Natural Minor';
+    if (signal.kind === SignalKind.Key) return scaleNameForKey(signal.scaleKey);
+    if (signal.kind === SignalKind.Chord) {
+      return signal.keyType === KeyType.Major ? 'Major' : 'Natural Minor';
+    }
+    return null;
   },
 });
 
@@ -196,8 +202,6 @@ registerDriveTarget({
 });
 
 // ─── TriadFeature as target ───────────────────────────────────────────────────
-// Root Note is driven from any signal's root note.
-// Qualities is driven from a KeySignal's key type (Major → 'Major', Minor → 'Minor').
 
 registerDriveTarget({
   featureTypeName: 'Triad Shapes',
@@ -217,13 +221,14 @@ registerDriveTarget({
   acceptedKinds: [SignalKind.Key, SignalKind.Chord],
   transparent: true,
   resolveValue(signal: DriveSignal): string | null {
-    if (signal.kind !== SignalKind.Key && signal.kind !== SignalKind.Chord) return null;
-    return signal.keyType === 'Major' ? 'Major' : 'Minor';
+    if (signal.kind === SignalKind.Key) return tonicIsMinor(signal.scaleKey) ? 'Minor' : 'Major';
+    if (signal.kind === SignalKind.Chord) return signal.keyType === KeyType.Major ? 'Major' : 'Minor';
+    return null;
   },
 });
 
 // ─── ChordProgressionFeature as target ───────────────────────────────────────
-// A KeySignal or ChordSignal drives the root note and key type of the progression.
+// KeySignal drives Root Note and Mode; ChordSignal drives Root Note only.
 
 registerDriveTarget({
   featureTypeName: 'Chord Progression',
@@ -238,17 +243,19 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Chord Progression',
-  argName: 'Key Type',
-  label: 'Key type (from linked source)',
+  argName: 'Mode',
+  label: 'Mode (from linked source)',
   acceptedKinds: [SignalKind.Key, SignalKind.Chord],
   resolveValue(signal: DriveSignal): string | null {
-    if (signal.kind !== SignalKind.Key && signal.kind !== SignalKind.Chord) return null;
-    return signal.keyType === 'Major' ? 'Major' : 'Minor';
+    if (signal.kind === SignalKind.Key) return signal.scaleKey;
+    if (signal.kind === SignalKind.Chord) {
+      return signal.keyType === KeyType.Major ? DiatonicMode.Ionian : DiatonicMode.Aeolian;
+    }
+    return null;
   },
 });
 
 // ─── NotesFeature as target ───────────────────────────────────────────────────
-// Drives the 'Root Note' arg to switch to interval-relative coloring.
 
 registerDriveTarget({
   featureTypeName: 'Notes',
@@ -262,8 +269,6 @@ registerDriveTarget({
 });
 
 // ─── CagedFeature as target ───────────────────────────────────────────────────
-// Drives the 'Root Note' arg to slide CAGED patterns to a new root.
-// Also drives 'Scale Type' from a KeySignal so major/minor modality follows the source.
 
 registerDriveTarget({
   featureTypeName: 'CAGED',
@@ -283,12 +288,11 @@ registerDriveTarget({
   acceptedKinds: [SignalKind.Key],
   resolveValue(signal: DriveSignal): string | null {
     if (signal.kind !== SignalKind.Key) return null;
-    return signal.keyType === 'Major' ? 'Major' : 'Minor';
+    return tonicIsMinor(signal.scaleKey) ? 'Minor' : 'Major';
   },
 });
 
 // ─── Metronome as tempo source ────────────────────────────────────────────────
-// The MetronomeView dispatches 'metronome-tempo-changed' with { bpm }.
 
 registerDriveSource({
   viewId: 'instrument_floating_metronome',
@@ -300,9 +304,6 @@ registerDriveSource({
 });
 
 // ─── DroneView as target ──────────────────────────────────────────────────────
-// DroneView (viewId: 'drone_view') listens for drive-signal on its container
-// and updates its root note from the incoming ChordSignal.rootNote.
-// resolveValue returns null; DroneView handles signal application directly.
 
 registerDriveTarget({
   featureTypeName: 'Drone',
@@ -316,9 +317,6 @@ registerDriveTarget({
 });
 
 // ─── BackingTrackView as tempo target ─────────────────────────────────────────
-// BackingTrackView (viewId: 'drum_machine') listens for Tempo drive-signals
-// and updates its BPM directly.
-// resolveValue returns null; BackingTrackView handles signal application directly.
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
@@ -332,9 +330,6 @@ registerDriveTarget({
 });
 
 // ─── MetronomeView as tempo target ────────────────────────────────────────────
-// MetronomeView (viewId: 'instrument_floating_metronome') listens for Tempo
-// drive-signals and updates its BPM directly.
-// resolveValue returns null; MetronomeView handles signal application directly.
 
 registerDriveTarget({
   featureTypeName: 'Metronome',
@@ -348,9 +343,6 @@ registerDriveTarget({
 });
 
 // ─── ScheduleFloatingView as source ───────────────────────────────────────────
-// Dispatches 'schedule-feature-changed' CustomEvent when a schedule interval
-// starts or the schedule resets. Carries category + feature type + config so
-// AnyFloatingView can create and render the appropriate feature.
 
 registerDriveSource({
   viewId: 'schedule_floating_view',
@@ -367,9 +359,6 @@ registerDriveSource({
 });
 
 // ─── AnyFloatingView as target ────────────────────────────────────────────────
-// AnyFloatingView (viewId: 'any_floating_view') listens for drive-signal events
-// and renders whatever feature the signal describes.
-// resolveValue returns null; AnyFloatingView handles signal application directly.
 
 registerDriveTarget({
   featureTypeName: 'Any',
@@ -381,4 +370,3 @@ registerDriveTarget({
     return null;
   },
 });
-

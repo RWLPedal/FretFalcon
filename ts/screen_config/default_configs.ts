@@ -63,7 +63,7 @@ export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       gridPosition: { col: 112, row: 1 },
       gridSize: { cols: 35, rows: 66 },
       zIndex: 143,
-      viewState: { featureTypeName: "Chord Progression", config: ["G", "Major", "I", "IV", "V"] },
+      viewState: { featureTypeName: "Chord Progression", config: ["G", "MAJOR", "0", "3", "4"] },
     },
   },
 });
@@ -89,8 +89,8 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         steps: 16,
         numMeasures: 8,
         progRootNote: "C",
-        progKeyType: "Major",
-        measureChords: ["I", "I", "V", "V", "vi", "vi", "IV", "IV"],
+        progMode: "MAJOR",
+        measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
         tracks: [
           ["kick",  null,    null,    null, null,    null, "kick",  null, "kick",   null, null, null, null,    null, null, null],
           [null,    null,    null,    null, "snare", null, null,    null, null,     null, null, null, "snare", null, null, null],

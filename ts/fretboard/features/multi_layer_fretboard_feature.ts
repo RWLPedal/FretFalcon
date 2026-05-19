@@ -291,7 +291,12 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     let resolvedScaleName = layer.scaleName;
     if (resolvedScaleName === 'driven') {
       if (!this.lastRootSignal) return [];
-      resolvedScaleName = this.lastRootSignal.keyType === 'Minor' ? 'Natural Minor' : 'Major';
+      if (this.lastRootSignal.kind === SignalKind.Key) {
+        const scale = scales[this.lastRootSignal.scaleKey as keyof typeof scales];
+        resolvedScaleName = scale?.name ?? 'Major';
+      } else {
+        resolvedScaleName = this.lastRootSignal.keyType === 'Minor' ? 'Natural Minor' : 'Major';
+      }
     }
 
     const scaleKey =

@@ -244,7 +244,7 @@ const _CHORD_TYPES: _ChordTypeSpec[] = [
   { key: 'MIN7',    name: 'Minor 7',       intervals: [0, 3, 7, 10] },
   { key: 'SUS2',    name: 'Sus2',          intervals: [0, 2, 7] },
   { key: 'SUS4',    name: 'Sus4',          intervals: [0, 5, 7] },
-  //{ key: 'DIM',     name: 'Diminished',    intervals: [0, 3, 6] },
+  { key: 'DIM',     name: 'Diminished',    intervals: [0, 3, 6] },
   //{ key: 'AUG',     name: 'Augmented',     intervals: [0, 4, 8] },
   //{ key: 'DIM7',    name: 'Dim 7',         intervals: [0, 3, 6, 9] },
   //{ key: 'HDIM7',   name: 'Half-Dim 7',    intervals: [0, 3, 6, 10] },

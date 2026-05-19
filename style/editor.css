@@ -64,10 +64,9 @@
   font-size: 0.78rem;
   height: 26px;
   padding: 0 1.5em 0 0.4em;
-  border: none;
-  border-bottom: 1px solid var(--border);
-  border-radius: 0;
-  background-color: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background-color: var(--input-bg);
   color: var(--text-primary);
   appearance: none;
   -webkit-appearance: none;
@@ -81,22 +80,25 @@
 }
 .config-compact .config-select-wrap select:hover,
 .config-compact .config-select-wrap select:focus {
-  border-bottom-color: var(--accent);
+  border-color: var(--accent);
   outline: none;
   box-shadow: none;
 }
 .config-compact .config-select-wrap::after {
   content: '';
+  display: block;
   position: absolute;
-  right: 3px;
+  right: 0.75em;
   top: 50%;
-  transform: translateY(-50%);
-  width: 0;
-  height: 0;
-  border-left: 4px solid transparent;
-  border-right: 4px solid transparent;
-  border-top: 5px solid var(--text-muted);
+  width: 0.5em;
+  height: 0.5em;
+  border-color: var(--accent);
+  border-style: solid;
+  border-width: 2px;
+  border-right: 0;
+  border-top: 0;
   pointer-events: none;
+  transform: translateY(-75%) rotate(-45deg);
 }
 
 /* Toggle buttons */

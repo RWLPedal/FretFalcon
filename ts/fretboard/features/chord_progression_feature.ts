@@ -1,18 +1,17 @@
-﻿// ts/instrument/features/chord_progression_feature.ts
+// ts/instrument/features/chord_progression_feature.ts
 import {
   Feature,
-  // FeatureCategoryName removed
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
   UiComponentType,
+  LabelValue,
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
 import { Chord, chord_library, getChordLibraryForInstrument } from "../chords";
 import { AppSettings } from "../../settings";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AudioController } from "../../audio_controller";
-// Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
 import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import {
@@ -21,104 +20,111 @@ import {
   addHeader,
   clearAllChildren,
 } from "../fretboard_utils";
-import { KeyType, getChordInKey } from "../progressions";
+import { DiatonicMode, ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from "../music_types";
+import { scales } from "../scales";
+import { getChordInKey } from "../progressions";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { getEasiestMoveableShape } from "../moveable_shapes";
 import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 
-/** Displays chord diagrams for a Roman numeral progression in a given key. */
+/** Pre-computed per-mode button entries: label = Roman numeral, value = degree index string. */
+function buildLabelsByMode(): Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> {
+  const result: Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> = {};
+  for (const mode of ALL_DIATONIC_MODES) {
+    const entries = scales[mode].generateRomanEntries(true);
+    const basic    = entries.slice(0, 7).map((e, i) => ({ label: e.roman, value: String(i) }));
+    const advanced = entries.slice(7).map((e, i)  => ({ label: e.roman, value: String(i + 7) }));
+    result[mode] = { basic, advanced };
+  }
+  return result;
+}
+
+const LABELS_BY_MODE = buildLabelsByMode();
+
+/** Displays chord diagrams for a Roman numeral progression in a given key and mode. */
 export class ChordProgressionFeature extends InstrumentFeature {
-  // Static properties (category removed, others unchanged)
-  // static readonly category = FeatureCategoryName.Guitar; // Removed
   static readonly typeName = "Chord Progression";
   static readonly displayName = "Chord Progression";
   static readonly requiredInstruments = ["Guitar", "Mandolin", "Mandola"] as const;
   static readonly description =
-    "Displays chord diagrams for a Roman numeral progression (e.g., I-IV-V) in a specified key.";
+    "Displays chord diagrams for a Roman numeral progression (e.g., I-IV-V) in a specified key and mode.";
 
   readonly typeName = ChordProgressionFeature.typeName;
   private readonly rootNoteName: string;
-  private readonly progression: string[]; // Array of Roman numerals specific to this feature
+  private readonly progression: string[];
   private readonly headerText: string;
-  private readonly keyType: KeyType;
+  private readonly mode: DiatonicMode;
 
   constructor(
-    config: ReadonlyArray<string>, // Should contain only progression numerals now
+    config: ReadonlyArray<string>,
     rootNoteName: string,
     progression: string[],
     headerText: string,
-    keyType: KeyType,
+    mode: DiatonicMode,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings, // Constructor expects specific type
+    intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
     maxCanvasHeight?: number,
     chordLibrary: Record<string, Chord> = chord_library
   ) {
-    // Peek before super() consumes the pending constraint.
     const totalWidth = peekPendingCanvasWidth();
 
-    super(
-      config, // Pass specific config
-      settings,
-      intervalSettings, // Pass specific type
-      audioController,
-      maxCanvasHeight
-    );
+    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.rootNoteName = rootNoteName;
-    this.progression = progression;
-    this.headerText = headerText;
-    this.keyType = keyType;
+    this.progression  = progression;
+    this.headerText   = headerText;
+    this.mode         = mode;
 
-    // Create ChordDiagramViews (metronome view is handled by base constructor)
-    const rootNoteIndex = getKeyIndex(this.rootNoteName);
+    const rootNoteIndex  = getKeyIndex(this.rootNoteName);
     const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
+    const modeEntries    = scales[this.mode].generateRomanEntries(true);
+
+    // Resolve stored values: degree index strings ("0"–"13") → Roman numerals for this mode.
+    // Legacy Roman strings (e.g. "I", "IV") pass through unchanged.
+    const resolveNumeral = (v: string): string => {
+      const i = parseInt(v, 10);
+      return (!isNaN(i) && i >= 0 && i < modeEntries.length) ? modeEntries[i].roman : v;
+    };
 
     if (progression.length > 0) {
-      const { config } = planChordDiagramGrid(
+      const { config: fc } = planChordDiagramGrid(
         this.fretboardConfig, totalWidth, maxCanvasHeight,
         progression.length, guitarSettings.zoomMultiplier ?? 1.2
       );
-      this.fretboardConfig = config;
+      this.fretboardConfig = fc;
     }
 
     if (rootNoteIndex !== -1) {
-      this.progression.forEach((numeral) => {
-        const chordDetails = getChordInKey(rootNoteIndex, numeral, this.keyType, chordLibrary);
-        const chordData = chordDetails.chordKey
-          ? chordLibrary[chordDetails.chordKey]
-          : null;
+      this.progression.forEach((stored) => {
+        const numeral      = resolveNumeral(stored);
+        const chordDetails = getChordInKey(rootNoteIndex, numeral, this.mode, chordLibrary);
+        const chordData = chordDetails.chordKey ? chordLibrary[chordDetails.chordKey] : null;
         if (chordData) {
           const title = `${chordDetails.chordName} (${numeral})`;
           this._views.push(new ChordDiagramView(chordData, title, this.fretboardConfig));
         } else {
-          // Chord not in open-chord library — fall back to a moveable shape.
-          const easiest = getEasiestMoveableShape(guitarSettings.instrument, chordDetails.chordName, this.fretboardConfig.tuning);
+          const easiest = getEasiestMoveableShape(
+            guitarSettings.instrument, chordDetails.chordName, this.fretboardConfig.tuning
+          );
           if (easiest) {
             const title = `${chordDetails.chordName} [${easiest.shapeName}] (${numeral})`;
             this._views.push(new ChordDiagramView(easiest.chord, title, this.fretboardConfig));
           } else {
             console.warn(
-              `[${this.typeName}] No chord shape found for ${chordDetails.chordName} (${numeral}) in key ${this.rootNoteName}`
+              `[${this.typeName}] No chord shape found for ${chordDetails.chordName} (${numeral}) in ${this.rootNoteName} ${this.mode}`
             );
           }
         }
       });
     } else {
-      console.error(
-        `[${this.typeName}] Invalid root note provided: ${this.rootNoteName}`
-      );
+      console.error(`[${this.typeName}] Invalid root note provided: ${this.rootNoteName}`);
     }
   }
 
   // --- Static Methods ---
   static getConfigurationSchema(): ConfigurationSchema {
     const availableKeys = NOTE_NAMES_FROM_A as string[];
-
-    const majorBasic    = ["I", "ii", "iii", "IV", "V", "vi", "vii°"];
-    const majorAdvanced = ["Imaj7", "ii7", "iii7", "IVmaj7", "V7", "vi7", "viiø7"];
-    const minorBasic    = ["i", "ii°", "III", "iv", "v", "VI", "VII"];
-    const minorAdvanced = ["im7", "iiø7", "IIImaj7", "iv7", "v7", "VImaj7", "VII7"];
 
     const specificArgs: ConfigurationSchemaArg[] = [
       {
@@ -129,11 +135,12 @@ export class ChordProgressionFeature extends InstrumentFeature {
         description: "Root note (key) of the progression.",
       },
       {
-        name: "Key Type",
+        name: "Mode",
         type: ArgType.Enum,
         required: true,
-        enum: ["Major", "Minor"],
-        description: "Major or natural minor key.",
+        enum: ALL_DIATONIC_MODES as string[],
+        enumLabels: ALL_DIATONIC_MODES.map(m => DIATONIC_MODE_LABELS[m]),
+        description: "Diatonic mode for the progression.",
         controlsArgName: "Prog",
       },
       {
@@ -148,18 +155,13 @@ export class ChordProgressionFeature extends InstrumentFeature {
         type: ArgType.String,
         required: true,
         uiComponentType: UiComponentType.ToggleButtonSelector,
-        uiComponentData: {
-          buttonLabels: majorBasic,
-          advancedButtonLabels: majorAdvanced,
-          minorButtonLabels: minorBasic,
-          minorAdvancedButtonLabels: minorAdvanced,
-        },
+        uiComponentData: { labelsByMode: LABELS_BY_MODE },
         isVariadic: true,
         description: "Build the progression sequence using Roman numeral buttons.",
       },
     ];
     return {
-      description: `Config: ${this.typeName},Root,Key,ProgNumerals...[,InstrumentSettings]`,
+      description: `Config: ${this.typeName},Root,Mode,ProgNumerals...[,InstrumentSettings]`,
       args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
@@ -172,17 +174,21 @@ export class ChordProgressionFeature extends InstrumentFeature {
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
-    // Config layout: [Root, Key, Numeral1, Numeral2, ...]
+    // Config layout: [Root, Mode, Numeral1, Numeral2, ...]
     if (config.length < 3) {
       throw new Error(
-        `[${this.typeName}] Invalid config. Expected [Root, Key, Numeral1, ...], received: [${config.join(", ")}]`
+        `[${this.typeName}] Invalid config. Expected [Root, Mode, Numeral1, ...], received: [${config.join(", ")}]`
       );
     }
     const rootNoteName = config[0];
-    const keyType = config[1] as KeyType;
-    if (keyType !== "Major" && keyType !== "Minor") {
-      throw new Error(`[${this.typeName}] Invalid key type: "${keyType}". Expected "Major" or "Minor".`);
-    }
+    const modeStr = config[1];
+
+    // Accept either the DiatonicMode value ('MAJOR') or legacy KeyType ('Major')
+    const legacyMap: Record<string, DiatonicMode> = { Major: DiatonicMode.Ionian, Minor: DiatonicMode.Aeolian };
+    const mode: DiatonicMode = (Object.values(DiatonicMode) as string[]).includes(modeStr)
+      ? (modeStr as DiatonicMode)
+      : (legacyMap[modeStr] ?? DiatonicMode.Ionian);
+
     const progressionNumerals = config.slice(2);
 
     const keyIndex = getKeyIndex(rootNoteName);
@@ -190,11 +196,16 @@ export class ChordProgressionFeature extends InstrumentFeature {
       throw new Error(`[${this.typeName}] Unknown root note: "${rootNoteName}"`);
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? rootNoteName;
 
-    if (progressionNumerals.length === 0) {
+    if (progressionNumerals.length === 0)
       throw new Error(`[${this.typeName}] Progression cannot be empty.`);
-    }
 
-    const headerText = `${progressionNumerals.join("-")} in ${validRootName} ${keyType}`;
+    const modeLabel  = DIATONIC_MODE_LABELS[mode] ?? mode;
+    const modeEntries = scales[mode].generateRomanEntries(true);
+    const displayNumerals = progressionNumerals.map(v => {
+      const i = parseInt(v, 10);
+      return (!isNaN(i) && i >= 0 && i < modeEntries.length) ? modeEntries[i].roman : v;
+    });
+    const headerText = `${displayNumerals.join("-")} in ${validRootName} ${modeLabel}`;
     const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
     const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
     const chordLibrary = getChordLibraryForInstrument(guitarSettings.instrument);
@@ -204,7 +215,7 @@ export class ChordProgressionFeature extends InstrumentFeature {
       validRootName,
       progressionNumerals,
       headerText,
-      keyType,
+      mode,
       settings,
       guitarIntervalSettings,
       audioController,
@@ -213,11 +224,9 @@ export class ChordProgressionFeature extends InstrumentFeature {
     );
   }
 
-  /** Render method now just adds the header. Views are rendered by DisplayController. */
   render(container: HTMLElement): void {
     clearAllChildren(container);
     const header = addHeader(container, this.headerText);
     header.classList.add('feature-main-title');
-    // DisplayController renders the views (_views) added in the constructor
   }
 }
