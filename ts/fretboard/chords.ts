@@ -10,6 +10,7 @@ export interface BarreSpec {
 export enum ChordType {
   MAJOR = "Major",
   MINOR = "Minor",
+  DIM   = "Dim",
   DOM7  = "Dom 7",
   MAJ7  = "Major 7",
   MIN7  = "Minor 7",
@@ -23,6 +24,7 @@ export enum ChordType {
 export const CHORD_TYPE_SORT_ORDER: ChordType[] = [
   ChordType.MAJOR,
   ChordType.MINOR,
+  ChordType.DIM,
   ChordType.DOM7,
   ChordType.MAJ7,
   ChordType.MIN7,
@@ -117,6 +119,10 @@ export const chord_library = {
   DM7: new Chord("D Minor 7", [-1, -1, 0, 2, 1, 1], [-1, -1, 0, 2, 1, 1], undefined, CT.MIN7, N.D),
   EM7: new Chord("E Minor 7", [0, 2, 0, 0, 0, 0], [0, 2, 0, 0, 0, 0], undefined, CT.MIN7, N.E),
 
+  // --- Diminished ---
+  // Open E-string shape; barre forms are in moveable_shapes.ts.
+  E_DIM: new Chord("Edim", [0, 1, 2, 0, -1, -1], [0, 1, 2, 0, -1, -1], undefined, CT.DIM, N.E),
+
   // --- Suspended ---
   ASUS2: new Chord("Asus2",  [-1, 0, 2, 2, 0, 0], [-1, 0, 2, 3, 0, 0], undefined, CT.SUS2, N.A),
   DSUS2: new Chord("Dsus2",  [-1, -1, 0, 2, 3, 0], [-1, -1, 0, 1, 3, 0], undefined, CT.SUS2, N.D),
@@ -150,6 +156,11 @@ export const ukulele_chord_library: Record<string, Chord> = {
   F_MINOR: new Chord("Fm", [1, 0, 1, 3], [1, 0, 2, 4], undefined, CT.MINOR, N.F),
   G_MINOR: new Chord("Gm", [0, 2, 3, 1], [0, 2, 3, 1], undefined, CT.MINOR, N.G),
 
+  // --- Diminished ---
+  // [G, C, E, A]: Bdim = B D F B; Edim = G E E Bb
+  B_DIM: new Chord("Bdim", [4, 2, 1, 2], [4, 2, 1, 3], undefined, CT.DIM, N.B),
+  E_DIM: new Chord("Edim", [0, 4, 0, 1], [0, 4, 0, 1], undefined, CT.DIM, N.E),
+
   // --- Dominant 7th ---
   A7: new Chord("A7", [0, 1, 0, 0], [0, 1, 0, 0], undefined, CT.DOM7, N.A),
   B7: new Chord("B7", [2, 3, 2, 2], [1, 2, 1, 1],
@@ -179,6 +190,12 @@ export const mandolin_chord_library: Record<string, Chord> = {
   E_MINOR: new Chord("E", [0, 2, 2, 0], [0, 1, 2, 0], undefined, CT.MINOR, N.E),
   G_MINOR: new Chord("G", [0, 0, 1, 3], [0, 0, 1, 3], undefined, CT.MINOR, N.G),
 
+  // --- Diminished ---
+  // [G, D, A, E]: Adim = A Eb C x; Edim = G E Bb G; Bdim = B D B F
+  A_DIM: new Chord("Adim", [2, 1, 3, -1], [2, 1, 3, -1], undefined, CT.DIM, N.A),
+  E_DIM: new Chord("Edim", [0, 2, 1,  3], [0, 2, 1,  3], undefined, CT.DIM, N.E),
+  B_DIM: new Chord("Bdim", [4, 0, 2,  1], [4, 0, 2,  1], undefined, CT.DIM, N.B),
+
   // --- Dominant 7th ---
   A7: new Chord("A7", [2, 2, 4, 3], [1, 1, 3, 2], undefined, CT.DOM7, N.A),
   D7: new Chord("D7", [2, 0, 3, 2], [2, 0, 3, 1], undefined, CT.DOM7, N.D),
@@ -204,6 +221,13 @@ export const mandola_chord_library: Record<string, Chord> = {
   C_MINOR: new Chord("Cm", [0, 0, 1, 3], [0, 0, 1, 3], undefined, CT.MINOR, N.C),
   D_MINOR: new Chord("Dm", [2, 2, 3, 0], [1, 2, 3, 0], undefined, CT.MINOR, N.D),
   G_MINOR: new Chord("Gm", [-1, 0, 0, 1], [-1, 0, 0, 1], undefined, CT.MINOR, N.G),
+
+  // --- Diminished ---
+  // [C, G, D, A]: same shapes as mandolin, names transposed down a 5th.
+  // Ddim = D Ab F x; Adim = C A Eb C; Edim = E G E Bb
+  D_DIM: new Chord("Ddim", [2, 1, 3, -1], [2, 1, 3, -1], undefined, CT.DIM, N.D),
+  A_DIM: new Chord("Adim", [0, 2, 1,  3], [0, 2, 1,  3], undefined, CT.DIM, N.A),
+  E_DIM: new Chord("Edim", [4, 0, 2,  1], [4, 0, 2,  1], undefined, CT.DIM, N.E),
 
   // --- Dominant 7th ---
   A7: new Chord("A7", [1, 0, 2, 0], [1, 0, 2, 0], undefined, CT.DOM7, N.A),

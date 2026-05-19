@@ -63,6 +63,16 @@ export const guitar_moveable_chord_library: MoveableChordTemplate[] = [
     barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
   },
 
+  {
+    shapeName: "E-Shape",
+    chordType: ChordType.DIM,
+    rootStringIndex: 0,
+    // Finger 1 covers E and G strings at root fret; 2 and 3 step up on A and D.
+    stringOffsets: [0, 1, 2, 0, -1, -1],
+    fingers:       [1, 2, 3, 1, -1, -1],
+    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3 }],
+  },
+
   // --- A-Shape ---
   {
     shapeName: "A-Shape",
@@ -106,6 +116,15 @@ export const guitar_moveable_chord_library: MoveableChordTemplate[] = [
     stringOffsets: [-1, 0, 2, 1, 2, 0],
     fingers:       [-1, 1, 3, 2, 4, 1],
     barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
+  },
+  {
+    shapeName: "A-Shape",
+    chordType: ChordType.DIM,
+    rootStringIndex: 1,
+    // No barre: D at +1, G at +2, B at +1 (D and B share fret but aren't adjacent).
+    stringOffsets: [-1, 0, 1, 2, 1, -1],
+    fingers:       [-1, 1, 2, 4, 3, -1],
+    barres: [],
   },
 ];
 
@@ -226,6 +245,7 @@ function detectChordType(chordName: string): ChordType {
   if (/maj.*7/i.test(afterRoot)) return ChordType.MAJ7;
   if (/^(7|dom)/i.test(afterRoot)) return ChordType.DOM7;
   if (/^(m(?!aj)|min)/i.test(afterRoot)) return ChordType.MINOR;
+  if (/^(dim|°)/i.test(afterRoot)) return ChordType.DIM;
   return ChordType.MAJOR;
 }
 
