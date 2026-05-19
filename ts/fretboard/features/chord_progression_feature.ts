@@ -8,6 +8,7 @@ import {
   LabelValue,
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
+import { BaseView } from "../../base_view";
 import { Chord, chord_library, getChordLibraryForInstrument } from "../chords";
 import { AppSettings } from "../../settings";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
@@ -114,6 +115,7 @@ export class ChordProgressionFeature extends InstrumentFeature {
             console.warn(
               `[${this.typeName}] No chord shape found for ${chordDetails.chordName} (${numeral}) in ${this.rootNoteName} ${this.mode}`
             );
+            this._views.push(new UnresolvableChordView(chordDetails.chordName, numeral));
           }
         }
       });
@@ -228,5 +230,48 @@ export class ChordProgressionFeature extends InstrumentFeature {
     clearAllChildren(container);
     const header = addHeader(container, this.headerText);
     header.classList.add('feature-main-title');
+  }
+}
+
+/** Placeholder shown when no chord shape (library or moveable) could be found. */
+class UnresolvableChordView extends BaseView {
+  private chordName: string;
+  private numeral: string;
+
+  constructor(chordName: string, numeral: string) {
+    super();
+    this.chordName = chordName;
+    this.numeral = numeral;
+  }
+
+  render(container: HTMLElement): void {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("chord-diagram-view");
+    wrapper.style.display = "inline-block";
+    wrapper.style.verticalAlign = "top";
+    wrapper.style.padding = "5px";
+    wrapper.style.textAlign = "center";
+    wrapper.style.opacity = "0.6";
+
+    const titleEl = document.createElement("div");
+    titleEl.classList.add("chord-diagram-title");
+    titleEl.textContent = `${this.chordName} (${this.numeral})`;
+
+    const warn = document.createElement("span");
+    warn.textContent = " ⚠";
+    warn.title = "No chord shape found for this chord";
+    warn.style.color = "var(--clr-warning, #e6a817)";
+    warn.style.fontSize = "0.9em";
+    titleEl.appendChild(warn);
+    wrapper.appendChild(titleEl);
+
+    const msg = document.createElement("div");
+    msg.style.fontSize = "0.75rem";
+    msg.style.color = "var(--clr-text-subtle)";
+    msg.style.marginTop = "8px";
+    msg.textContent = "No shape found";
+    wrapper.appendChild(msg);
+
+    container.appendChild(wrapper);
   }
 }

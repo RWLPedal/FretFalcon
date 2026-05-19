@@ -238,12 +238,18 @@ export class ConfigurableFeatureView extends BaseView {
                 posToArgName[pos++] = arg.name;
             }
         }
-        return rawConfig.map((v, i) => {
+        let anyUnresolved = false;
+        const mapped = rawConfig.map((v, i) => {
             if (v !== '__driven__') return v;
             const argName = posToArgName[i];
             const driven = argName !== undefined ? this.drivenValues.get(argName) : undefined;
-            return driven !== undefined ? driven : null;
-        }).filter(v => v !== null) as string[];
+            if (driven === undefined) { anyUnresolved = true; return null; }
+            return driven;
+        });
+        // If any driven sentinel has no value yet, return empty so the requiredArgs
+        // check in createAndRenderFeature silently skips creation until signal arrives.
+        if (anyUnresolved) return [];
+        return mapped.filter(v => v !== null) as string[];
     }
 
     private createAndRenderFeature(config: (string | null)[]) {

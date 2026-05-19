@@ -56,6 +56,7 @@ export class ChordDiagramView extends BaseView {
   private ctx: CanvasRenderingContext2D | null = null;
   /** When set, draws a small red dot at this string+fret position (e.g. the barre root). */
   private rootPosition: { stringIndex: number; fret: number } | null;
+  private isFallback: boolean;
 
   // Store calculated dimensions
   private requiredWidth: number = 0;
@@ -66,13 +67,15 @@ export class ChordDiagramView extends BaseView {
     chord: Chord,
     title: string,
     fretboardConfig: FretboardConfig,
-    rootPosition?: { stringIndex: number; fret: number }
+    rootPosition?: { stringIndex: number; fret: number },
+    isFallback?: boolean
   ) {
     super();
     this.chord = chord;
     this.title = title;
     this.fretboardConfig = fretboardConfig;
     this.rootPosition = rootPosition ?? null;
+    this.isFallback = isFallback ?? false;
 
     // Calculate dimensions needed for canvas
     this.calculateDimensions();
@@ -269,6 +272,14 @@ export class ChordDiagramView extends BaseView {
       const titleEl = document.createElement("div");
       titleEl.classList.add("chord-diagram-title");
       titleEl.textContent = this.title;
+      if (this.isFallback) {
+        const warn = document.createElement("span");
+        warn.textContent = " ⚠";
+        warn.title = "Approximate shape — no exact fingering found in library";
+        warn.style.color = "var(--clr-warning, #e6a817)";
+        warn.style.fontSize = "0.9em";
+        titleEl.appendChild(warn);
+      }
       this.wrapperDiv.appendChild(titleEl);
     }
 
