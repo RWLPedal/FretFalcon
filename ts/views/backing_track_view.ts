@@ -803,9 +803,28 @@ export class BackingTrackView extends BaseView {
   private setNumMeasures(n: 4 | 8 | 12): void {
     if (this.numMeasures === n) return;
     const old = this.measureChords.slice();
+    const oldLen = old.length;
+
+    // All valid counts (4, 8, 12) divide evenly into 4 beat-groups.
+    // Remap group-by-group: if a group is internally uniform, broadcast its value
+    // to the new group size. This makes transitions reversible (4↔8↔12).
+    const oldGroupSize = oldLen / 4;
+    const newGroupSize = n / 4;
+    const newChords: (number | null)[] = new Array(n).fill(null);
+    for (let g = 0; g < 4; g++) {
+      const oldStart = g * oldGroupSize;
+      const newStart = g * newGroupSize;
+      const groupVal = old[oldStart];
+      const uniform  = old.slice(oldStart, oldStart + oldGroupSize).every(v => v === groupVal);
+      if (uniform) {
+        for (let i = 0; i < newGroupSize; i++) newChords[newStart + i] = groupVal;
+      } else {
+        for (let i = 0; i < Math.min(oldGroupSize, newGroupSize); i++) newChords[newStart + i] = old[oldStart + i];
+      }
+    }
+
     this.numMeasures = n;
-    this.measureChords = new Array(n).fill(null);
-    for (let i = 0; i < Math.min(old.length, n); i++) this.measureChords[i] = old[i];
+    this.measureChords = newChords;
     if (this.currentMeasure >= n) this.currentMeasure = -1;
     this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === n));
     this.rebuildGrid();
