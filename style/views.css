@@ -488,7 +488,7 @@ body.dark-theme .drone-icon-btn.is-active {
   font-family: inherit !important;
 }
 
-/* ─── Global: prevent Bulma .select from shrinking in flex rows ──────────── */
+/* ─── Global: prevent .select from shrinking in flex rows ───────────────── */
 /* When a .select wrapper compresses below content-width, the CSS arrow
    overlaps the selected text. Selects should never shrink past their content. */
 .select:not(.is-multiple) {
@@ -647,7 +647,7 @@ body.dark-theme .drone-icon-btn.is-active {
   cursor: pointer;
   box-sizing: border-box;
 }
-/* Bulma .select wrapper for track-header dropdowns */
+/* .select wrapper for track-header dropdowns */
 .dm-track-header-wrap {
   width: 110px;
   min-width: 110px;
@@ -1076,4 +1076,218 @@ body.dark-theme .dm-measure-cell.dm-measure-filled {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* ─── StrumView ──────────────────────────────────────────────────────────────── */
+.sv-root {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+}
+
+/* Header: tall play button (left) + two stacked control rows (right) */
+.sv-header {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.sv-play-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  min-width: 44px;
+  width: 44px;
+}
+.sv-play-large .button {
+  width: 100%;
+  height: 100% !important;
+  min-height: 44px;
+  padding: 0 !important;
+}
+.sv-controls-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+.sv-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Labels, BPM */
+.sv-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--clr-text-subtle);
+  white-space: nowrap;
+}
+.sv-bpm-slider {
+  width: 70px;
+  cursor: pointer;
+  accent-color: var(--clr-primary);
+}
+.sv-bpm-display {
+  font-size: 0.78rem;
+  font-weight: 700;
+  min-width: 3.2ch;
+  text-align: right;
+  color: var(--clr-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Subdivision toggle */
+.sv-subdiv-btn {
+  font-size: 0.72rem !important;
+  padding: 2px 9px !important;
+  height: auto !important;
+  line-height: 1.6 !important;
+  white-space: nowrap;
+  font-weight: 700 !important;
+  letter-spacing: 0.03em;
+  transition: background 0.12s, border-color 0.12s, color 0.12s !important;
+}
+.sv-subdiv-btn--active {
+  background: var(--clr-primary, #4a90d9) !important;
+  border-color: var(--clr-primary, #4a90d9) !important;
+  color: #fff !important;
+}
+
+/* Small icon buttons — fixed height to match Bulma .is-small select/button */
+.sv-icon-btn {
+  padding: 0 5px !important;
+  height: 26px !important;
+  line-height: 1 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+.sv-icon-btn .material-icons { font-size: 16px; line-height: 1; }
+
+/* Metronome toggle */
+.sv-metronome-btn--on {
+  background-color: var(--clr-warning, #f5a623) !important;
+  color: rgba(0, 0, 0, 0.82) !important;
+  border-color: transparent !important;
+}
+
+/* Preset select */
+.sv-preset-wrap {
+  flex: 1;
+  min-width: 100px;
+  max-width: 200px;
+}
+.sv-preset-wrap select {
+  width: 100%;
+}
+
+/* Beat-start gap (matches dm-beat-start spacing) */
+.sv-beat-start { margin-left: 8px; }
+
+/* Beat label row — one label per slot; width set in JS via computeCellWidth */
+.sv-beat-labels {
+  display: flex;
+}
+.sv-beat-label {
+  height: 14px;
+  text-align: center;
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  user-select: none;
+  line-height: 14px;
+  flex-shrink: 0;
+}
+.sv-beat-label--beat {
+  font-weight: 700;
+  color: var(--clr-text-subtle);
+}
+.sv-beat-label--current {
+  color: var(--clr-primary);
+}
+
+/* Slot grid — horizontal single row; cell widths set in JS via computeCellWidth */
+.sv-grid {
+  display: flex;
+}
+.sv-slot {
+  height: 38px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  border: 1px solid var(--border);
+  background: var(--pad-off);
+  box-sizing: border-box;
+  transition: filter 0.07s, transform 0.06s;
+  flex-shrink: 0;
+}
+.sv-slot:hover {
+  filter: brightness(1.12);
+  transform: scale(1.06);
+}
+.sv-slot-indicator {
+  font-size: 1rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* Action type colors */
+.sv-slot--rest {
+  background: var(--pad-off);
+  color: var(--text-muted);
+}
+.sv-slot--stroke {
+  background: var(--dm-palette-2);
+  color: #fff;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+.sv-slot--accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+.sv-slot--chuck {
+  background: var(--dm-palette-6);
+  color: #fff;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+/* Air: ghost strum — hand moves but doesn't touch strings */
+.sv-slot--air {
+  background: transparent;
+  border-style: dashed;
+  color: var(--text-muted);
+  opacity: 0.65;
+}
+
+/* Up-strokes are slightly lighter to aid pattern reading */
+.sv-slot--up:not(.sv-slot--rest):not(.sv-slot--air) {
+  filter: brightness(0.82);
+}
+
+/* Playhead highlight */
+.sv-slot--current {
+  outline: 2px solid var(--clr-primary);
+  outline-offset: 1px;
+}
+body.dark-theme .sv-slot--stroke,
+body.dark-theme .sv-slot--accent,
+body.dark-theme .sv-slot--chuck {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Grid wrapper — padding-bottom lets the 3px outline show without clipping */
+.sv-grid-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }

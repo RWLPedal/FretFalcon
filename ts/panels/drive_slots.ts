@@ -3,7 +3,7 @@
 // (reference_main.ts) to wire all signal translations.
 
 import { registerDriveSource, registerDriveTarget } from './drive_registry';
-import { SignalKind, ChordSignal, KeySignal, DriveSignal, FeatureSignal } from './link_types';
+import { SignalKind, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal } from './link_types';
 import { KeyType, DiatonicMode, ChordQuality } from '../fretboard/music_types';
 import { scales } from '../fretboard/scales';
 
@@ -48,7 +48,7 @@ const SCALE_NAME_TO_MODE: Record<string, DiatonicMode> = {
 
 registerDriveSource({
   viewId: 'drum_machine',
-  emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Tempo],
+  emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Groove, SignalKind.Transport],
   extractSignals(detail: any): DriveSignal[] {
     const roman: string | null = detail?.currentRoman ?? null;
     const root: string         = detail?.progRootNote ?? 'C';
@@ -72,7 +72,14 @@ registerDriveSource({
     };
     const signals: DriveSignal[] = [chordSignal, keySignal];
     if (typeof detail?.bpm === 'number') {
-      signals.push({ kind: SignalKind.Tempo, bpm: detail.bpm });
+      const grooveSignal: GrooveSignal = {
+        kind: SignalKind.Groove,
+        bpm: detail.bpm,
+        timeSig: detail?.timeSig ?? { beats: 4, division: 4 },
+        swing: detail?.swing ?? 0,
+        beat: typeof detail?.beat === 'number' ? detail.beat : undefined,
+      };
+      signals.push(grooveSignal);
     }
     return signals;
   },
@@ -292,14 +299,21 @@ registerDriveTarget({
   },
 });
 
-// ─── Metronome as tempo source ────────────────────────────────────────────────
+// ─── Metronome as groove source ───────────────────────────────────────────────
 
 registerDriveSource({
   viewId: 'instrument_floating_metronome',
-  emittedKinds: [SignalKind.Tempo],
+  emittedKinds: [SignalKind.Groove],
   extractSignals(detail: any): DriveSignal[] {
     if (typeof detail?.bpm !== 'number') return [];
-    return [{ kind: SignalKind.Tempo, bpm: detail.bpm }];
+    const grooveSignal: GrooveSignal = {
+      kind: SignalKind.Groove,
+      bpm: detail.bpm,
+      timeSig: detail?.timeSig ?? { beats: 4, division: 4 },
+      swing: detail?.swing ?? 0,
+      beat: typeof detail?.beat === 'number' ? detail.beat : undefined,
+    };
+    return [grooveSignal];
   },
 });
 
@@ -316,27 +330,71 @@ registerDriveTarget({
   },
 });
 
-// ─── BackingTrackView as tempo target ─────────────────────────────────────────
+// ─── BackingTrackView as groove target ────────────────────────────────────────
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
   viewId: 'drum_machine',
   argName: 'BPM',
-  label: 'BPM (from linked tempo source)',
-  acceptedKinds: [SignalKind.Tempo],
+  label: 'BPM (from linked groove source)',
+  acceptedKinds: [SignalKind.Groove],
   resolveValue(_signal: DriveSignal): string | null {
     return null;
   },
 });
 
-// ─── MetronomeView as tempo target ────────────────────────────────────────────
+// ─── MetronomeView as groove target ──────────────────────────────────────────
 
 registerDriveTarget({
   featureTypeName: 'Metronome',
   viewId: 'instrument_floating_metronome',
   argName: 'BPM',
-  label: 'BPM (from linked tempo source)',
-  acceptedKinds: [SignalKind.Tempo],
+  label: 'BPM (from linked groove source)',
+  acceptedKinds: [SignalKind.Groove],
+  resolveValue(_signal: DriveSignal): string | null {
+    return null;
+  },
+});
+
+// ─── StrumView as groove source ──────────────────────────────────────────────
+// The StrumView dispatches 'metronome-tempo-changed' on BPM/timeSig config changes,
+// which is picked up by the existing link_manager listener.
+
+registerDriveSource({
+  viewId: 'strum_view',
+  emittedKinds: [SignalKind.Groove],
+  extractSignals(detail: any): DriveSignal[] {
+    if (typeof detail?.bpm !== 'number') return [];
+    const grooveSignal: GrooveSignal = {
+      kind: SignalKind.Groove,
+      bpm: detail.bpm,
+      timeSig: detail?.timeSig ?? { beats: 4, division: 4 },
+      swing: detail?.swing ?? 0,
+      beat: typeof detail?.beat === 'number' ? detail.beat : undefined,
+    };
+    return [grooveSignal];
+  },
+});
+
+// ─── StrumView as groove target ───────────────────────────────────────────────
+
+registerDriveTarget({
+  featureTypeName: 'Strum',
+  viewId: 'strum_view',
+  argName: 'BPM',
+  label: 'BPM (from linked groove source)',
+  acceptedKinds: [SignalKind.Groove],
+  resolveValue(_signal: DriveSignal): string | null {
+    return null;
+  },
+});
+
+registerDriveTarget({
+  featureTypeName: 'Strum',
+  viewId: 'strum_view',
+  argName: 'Transport',
+  label: 'Play/stop (from linked source)',
+  acceptedKinds: [SignalKind.Transport],
   resolveValue(_signal: DriveSignal): string | null {
     return null;
   },

@@ -11,6 +11,7 @@ import { CapoView } from "./fretboard/views/capo_view";
 import { ConfigurableFeatureView } from "./views/configurable_feature_view";
 import { ColorLegendView } from "./fretboard/views/color_legend_view";
 import { MetronomeView } from "./fretboard/views/metronome_view";
+import { StrumView } from "./views/strum_view";
 import { NotesFeature } from "./fretboard/features/notes_feature";
 import { ChordProgressionFeature } from "./fretboard/features/chord_progression_feature";
 import { InstrumentIntervalSettings } from "./fretboard/fretboard_interval_settings";
@@ -179,6 +180,23 @@ export function registerBuiltins(): void {
                 document.querySelector("#metronome-accent-sound") as HTMLAudioElement,
             );
             return new MetronomeView(120, audioController);
+        },
+    });
+
+    registerFloatingView({
+        viewId: "strum_view",
+        displayName: "Strum",
+        categoryName: "Practice",
+        defaultWidth: 520,
+        defaultHeight: 160,
+        createView: (initialState?: any) => {
+            const audioController = new AudioController(
+                document.querySelector("#intro-end-sound") as HTMLAudioElement,
+                document.querySelector("#interval-end-sound") as HTMLAudioElement,
+                document.querySelector("#metronome-sound") as HTMLAudioElement,
+                document.querySelector("#metronome-accent-sound") as HTMLAudioElement,
+            );
+            return new StrumView(initialState, audioController);
         },
     });
 }

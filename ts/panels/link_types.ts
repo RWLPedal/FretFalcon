@@ -16,17 +16,19 @@ export interface LinkRecord {
 // ─── Signal kinds ─────────────────────────────────────────────────────────────
 // Extend this enum to add new signal categories.
 export enum SignalKind {
-  Chord   = 'Chord',
-  Key     = 'Key',
-  Tempo   = 'Tempo',
-  Feature = 'Feature',
+  Chord     = 'Chord',
+  Key       = 'Key',
+  Groove    = 'Groove',
+  Feature   = 'Feature',
+  Transport = 'Transport',
 }
 
 export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
-  [SignalKind.Chord]:   '♫',
-  [SignalKind.Key]:     '♭',
-  [SignalKind.Tempo]:   '♩',
-  [SignalKind.Feature]: '◈',
+  [SignalKind.Chord]:     '♫',
+  [SignalKind.Key]:       '♭',
+  [SignalKind.Groove]:    '♩',
+  [SignalKind.Feature]:   '◈',
+  [SignalKind.Transport]: '▶',
 };
 
 // A generic chord signal — different targets interpret it differently:
@@ -50,10 +52,16 @@ export interface KeySignal {
   scaleKey: string;              // DiatonicMode value, e.g. "MAJOR", "DORIAN", "NATURAL_MINOR"
 }
 
-// A tempo signal — carries a BPM value from a metronome or backing track source.
-export interface TempoSignal {
-  kind: SignalKind.Tempo;
+// A groove signal — carries timing context from a metronome or backing track source.
+// beat: 0-indexed beat within the current measure, present on every playback tick.
+// Driven (target) views that receive a beat tick fire their audio/animations immediately
+// and suspend their own timer for the duration of the link.
+export interface GrooveSignal {
+  kind: SignalKind.Groove;
   bpm: number;
+  timeSig: { beats: number; division: number };
+  swing: number;   // 0.0–1.0; 0 = straight
+  beat?: number;   // 0-indexed beat in measure; present during playback ticks
 }
 
 // A feature signal — carries a schedule interval's feature identity and config.
@@ -66,4 +74,11 @@ export interface FeatureSignal {
   config: ReadonlyArray<string>;
 }
 
-export type DriveSignal = ChordSignal | KeySignal | TempoSignal | FeatureSignal;
+// A transport signal — carries play/stop state from a source to linked views.
+// Not cached by LinkManager: newly-linked targets should not inherit stale state.
+export interface TransportSignal {
+  kind: SignalKind.Transport;
+  playing: boolean;
+}
+
+export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | TransportSignal;

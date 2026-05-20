@@ -88,7 +88,7 @@ function buildIconBadges(
 function signalDisplayValue(signals: DriveSignal[], kind: SignalKind): string | null {
   const s = signals.find(sig => sig.kind === kind);
   if (!s) return null;
-  if (s.kind === SignalKind.Tempo) return `${Math.round(s.bpm)} BPM`;
+  if (s.kind === SignalKind.Groove) return `${Math.round(s.bpm)} BPM`;
   if (s.kind === SignalKind.Chord) return s.rootNote || null;
   if (s.kind === SignalKind.Key)   return `${s.rootNote} ${DIATONIC_MODE_LABELS[s.scaleKey as DiatonicMode] ?? s.scaleKey}`;
   return null;

@@ -6,36 +6,33 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 
 *   Add a basic sheet music display tool (consider common notation, potentially MIDI integration).
 *   Implement versioning for modules/features to handle saved data compatibility.
-*   Add a "chord hints" mode showing adjacent/related chord shapes.
-*   Define and implement consistent stroke/fill colors for diagrams.
-*   Improve documentation around the CSV schedule, hinting for supported options by feature class.
-*   Remove guitar-specific references, moving to more generic fret naming.
-*   Allow sub-intervals within a scheduled task.
-*   Support reference/information pages for each feature.
+*   Add a "chord hints" mode showing adjacent/related chord shapes based on the current scale/key.
+*   Allow sub-intervals within a scheduled task (e.g., automatically cycle through keys during an interval).
+*   Improve documentation around the schedule format, with hints for supported options per feature class.
 
 ## Music-Related Features
 
-*   Totally refactor chord library, make it more comprehensive.
-*   Add fretboard visualization modes (e.g., "magic squares", blocks).
-*   Validate existing scales, make sure scales are correct and useful.
-*   Find a suitable TAB format and implement TAB display.
-*   Add rendering/color scheme for CAGED positions.
-*   Add a training mode for specific CAGED positions.
-*   Implement "capo" view - how to translate open chords.
-*   Implement "overall capo" that translates everything, like scales or notes - basically alternate an alternate tuning.
-*   Add a catalog of fret marker icons (besides stars) and use where appropriate.
-*   Support display of licks/TAB notation snippets.
+*   Refactor and expand the chord library (more voicings, inversions, additional chord types).
+*   Add fretboard visualization modes (e.g., "magic squares", block/box patterns).
+*   Find a suitable TAB format and implement TAB/lick display.
+*   Implement an "overall capo" (alternate tuning) that transposes all features — scales, notes, chord shapes — to a given offset.
+*   Add a catalog of fret marker icons (besides stars) and use them where appropriate.
+*   Support display of lick/TAB notation snippets within a practice interval.
 *   Clean up and better define functionality that shows important notes over chord changes.
-*   Add drone tool
+*   Expand scale library (e.g., bebop scales, whole-tone, diminished).
+
+## Audio
+
+*   Add more backing track patterns and drum kit sounds.
+*   Support tempo changes within a backing track pattern.
+*   Add a tuner view using microphone input.
 
 ## Infrastructure & Development
 
 *   Maintain a clear and helpful README.
-*   Decompose some classes to more basic components.
-*   Revisit how generic some implementation is. Over time, the tool has evolved to be fundamentally a fretted instrument tool (rather than a generic practice tool).
 *   Add tests (unit, integration).
 *   Support mobile/responsive design (including rotation).
 *   Support multiple languages (internationalization/i18n).
 *   Implement ARIA support for accessibility.
-*   Refactor/establish a clear hierarchy separating views from features.
+*   Decompose some classes into more basic, reusable components.
 *   Reconcile schedule view and reference view, consolidating into a single view.

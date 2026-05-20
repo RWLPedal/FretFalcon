@@ -40,6 +40,7 @@ const NAV_SECTIONS: NavSection[] = [
             { id: 'metronome-feature',    icon: 'timer',       label: 'Metronome',     viewId: 'instrument_floating_metronome' },
             { id: 'timer-feature',        icon: 'alarm',       label: 'Timer',         viewId: 'floating_timer' },
             { id: 'drum-machine-feature', icon: 'queue_music', label: 'Backing Track', viewId: 'drum_machine' },
+            { id: 'strum-view-feature',   icon: 'music_note',  label: 'Strum',          viewId: 'strum_view' },
             { id: 'drone-feature',        icon: 'graphic_eq',  label: 'Drone',         viewId: 'drone_view' },
         ],
     },

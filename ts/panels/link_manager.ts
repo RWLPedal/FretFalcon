@@ -1,5 +1,5 @@
 // ts/panels/link_manager.ts
-import { HandleSide, LinkRecord, DriveSignal } from './link_types';
+import { HandleSide, LinkRecord, DriveSignal, SignalKind, GrooveSignal, TransportSignal } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';
 import {
@@ -61,7 +61,7 @@ export class LinkManager {
       this.routeSignals(instanceId, signals);
     });
 
-    // Listen for metronome-tempo-changed (real-time BPM signal from MetronomeView)
+    // Listen for metronome-tempo-changed (BPM/config change from MetronomeView)
     viewAreaEl.addEventListener('metronome-tempo-changed', (e: Event) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
@@ -71,6 +71,32 @@ export class LinkManager {
       if (!descriptor) return;
       const signals = descriptor.extractSignals((e as CustomEvent).detail);
       this.routeSignals(instanceId, signals);
+    });
+
+    // Listen for groove-tick (per-beat sync signal from MetronomeView or BackingTrackView)
+    viewAreaEl.addEventListener('groove-tick', (e: Event) => {
+      const instanceId = this.resolveSourceInstanceId(e);
+      if (!instanceId) return;
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail?.bpm !== 'number') return;
+      const signal: GrooveSignal = {
+        kind: SignalKind.Groove,
+        bpm: detail.bpm,
+        timeSig: detail.timeSig ?? { beats: 4, division: 4 },
+        swing: detail.swing ?? 0,
+        beat: typeof detail.beat === 'number' ? detail.beat : undefined,
+      };
+      this.routeBeatSignal(instanceId, signal);
+    });
+
+    // Listen for transport-changed (play/stop state from BackingTrackView or other transport sources)
+    viewAreaEl.addEventListener('transport-changed', (e: Event) => {
+      const instanceId = this.resolveSourceInstanceId(e);
+      if (!instanceId) return;
+      const detail = (e as CustomEvent).detail;
+      if (typeof detail?.playing !== 'boolean') return;
+      const signal: TransportSignal = { kind: SignalKind.Transport, playing: detail.playing };
+      this.routeUncachedSignal(instanceId, signal);
     });
 
     // Listen for feature-state-changed (for configurable features as sources)
@@ -223,9 +249,28 @@ export class LinkManager {
 
   private routeSignals(sourceInstanceId: string, signals: DriveSignal[]): void {
     if (!signals.length) return;
-    this.lastSourceSignals.set(sourceInstanceId, signals);
+    // Merge into cache rather than overwrite, so Groove config updates don't
+    // discard cached Chord/Key signals (and vice versa).
+    const existing = this.lastSourceSignals.get(sourceInstanceId) ?? [];
+    const newKinds = new Set(signals.map(s => s.kind));
+    const merged = [...existing.filter(s => !newKinds.has(s.kind)), ...signals];
+    this.lastSourceSignals.set(sourceInstanceId, merged);
     const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
     outgoing.forEach(link => this.routeSignalsToTarget(link, signals));
+  }
+
+  // Routes a per-beat groove tick without touching the signal cache, so cached
+  // chord/key/groove-config signals remain intact for newly connected targets.
+  private routeBeatSignal(sourceInstanceId: string, signal: GrooveSignal): void {
+    const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
+    outgoing.forEach(link => this.routeSignalsToTarget(link, [signal]));
+  }
+
+  // Routes any signal without caching — for real-time state (transport, beat ticks)
+  // where newly-linked targets should not inherit stale values.
+  private routeUncachedSignal(sourceInstanceId: string, signal: DriveSignal): void {
+    const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
+    outgoing.forEach(link => this.routeSignalsToTarget(link, [signal]));
   }
 
   private routeSignalsToTarget(link: LinkRecord, signals: DriveSignal[]): void {

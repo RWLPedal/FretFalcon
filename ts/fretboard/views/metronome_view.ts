@@ -1,7 +1,7 @@
 // ts/instrument/views/metronome_view.ts
 import { BaseView } from "../../base_view";
 import { AudioController } from "../../audio_controller";
-import { SignalKind, TempoSignal } from "../../panels/link_types";
+import { SignalKind, GrooveSignal } from "../../panels/link_types";
 
 enum BeatState {
   Silent = 0,
@@ -200,10 +200,12 @@ export class MetronomeView extends BaseView {
     this.listen(container, "drive-signal", (e: Event) => {
       const detail = (e as CustomEvent).detail;
       const signal = detail?.signal;
-      if (!signal || signal.kind !== SignalKind.Tempo) return;
-      const tempo = signal as TempoSignal;
+      if (!signal || signal.kind !== SignalKind.Groove) return;
+      const groove = signal as GrooveSignal;
+      // Ignore per-beat ticks — only sync config updates (no beat field)
+      if (groove.beat !== undefined) return;
       this._suppressTempoEvent = true;
-      this.setBpm(tempo.bpm);
+      this.setBpm(groove.bpm);
       this._suppressTempoEvent = false;
     });
     this.listen(container, "link-status-changed", (e: Event) => {
@@ -290,9 +292,27 @@ export class MetronomeView extends BaseView {
 
   private dispatchTempoEvent(): void {
     if (!this.container) return;
+    // Config-change event (no beat): consumed by link_manager → metronome-tempo-changed path
     this.container.dispatchEvent(new CustomEvent("metronome-tempo-changed", {
       bubbles: true,
-      detail: { bpm: this.bpm },
+      detail: {
+        bpm: this.bpm,
+        timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
+        swing: 0,
+      },
+    }));
+  }
+
+  private dispatchGrooveTick(beat: number): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent("groove-tick", {
+      bubbles: true,
+      detail: {
+        bpm: this.bpm,
+        timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
+        swing: 0,
+        beat,
+      },
     }));
   }
 
@@ -359,6 +379,7 @@ export class MetronomeView extends BaseView {
       if (state === BeatState.Accent) this.audioController.playAccentMetronomeClick();
       else if (state === BeatState.Normal) this.audioController.playMetronomeClick();
     }
+    this.dispatchGrooveTick(this.currentTickIndex);
   }
 
   private resetCurrentBeatStyle(): void {

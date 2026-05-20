@@ -2,7 +2,7 @@
 
 PracTempo is a practice timer application designed for musicians, offering scheduled intervals combined with context-specific visual aids and information. It helps structure practice sessions effectively, initially focusing on tools for guitarists. *Think of a highly customizable Pomodoro timer, which can display context and instructions about each task.*
 
-Users can define a practice schedule, and PracTempo tracks the schedule with a timer and notifications. For each practice element PracTempo will display relevant hints like scale diagrams, chord shapes, or other pertinent visual aids.
+Users define a practice schedule, and PracTempo tracks it with a timer and notifications. For each interval, PracTempo displays relevant visual aids like scale diagrams, chord shapes, or other contextual information.
 
 ## Try it out
 
@@ -10,19 +10,35 @@ If you want to see what all the fuss is about, you can try out PracTempo [here](
 
 ## Key Features
 
-*   **Scheduled Practice:** Define custom practice routines with timed intervals and notifications.
-*   **Contextual Hints:** Receive task-specific information and visualizations tailored to the practice item.
-*   **Domain-Specific:** Designed to be extensible for different musical contexts.
+- **Multiple instruments:** Supports guitar (6, 7, or 8 strings, ukulele, mandolins and mandolas).
+- **Left-handed support:** Native support for left-handed chord diagrams and scales. No more mentally rotating shapes in your head.
+- **Scheduled Practice:** Define custom practice routines with timed intervals and completion notifications.
+- **Reference Page:** Browse scales, chords, and other references outside of a practice session.
+- **Contextual Hints:** Receive task-specific visualizations tailored to each practice item.
+- **Floating Panels:** A modular system of draggable, resizable panels for practice aids (metronome, backing track, drone, chord progressions, etc.), with layout saved automatically.
+- **Custom programming:** Configure attributes of panels to flow from one to another - use a backing track to highlight scale and chord tone changes, or use scales to power a chord progression diagram.
+- **Themes:** Choose from multiple distinct visual themes.
+- **Extensible:** Plugin-style feature registry makes it straightforward to add new instruments or practice tools.
 
-## Guitar-Specific Features
+## Fretboard-Specific Features
 
-PracTempo was initially designed for guitar practice (though it is not limited to that). PracTempo includes a growing set of tools specifically for guitar players:
+PracTempo includes a growing set of tools for fretted instrument players:
 
-*   **Fretboard display:** Visualize scales and notes directly on the fretboard.
-*   **Chord Diagrams:** Display standard chord shapes and progressions.
-*   **Triads Diagrams:** Display standard chord shapes and progressions.
-*   **Lefty support:** PracTempo was primarily written by a lefty. As such, diagrams can be flipped.
-*   **Library:** PracTempo has a library of scales and chords. 
+- **Fretboard Display:** Visualize scales and notes directly on an interactive fretboard diagram.
+- **Scale Library:** 30+ scale types, including major, minor, pentatonic, blues, and all seven modes.
+- **Chord Diagrams:** Display standard chord shapes, with support for open and barre chords.
+- **Chord Progressions:** Multi-chord progression visualization with configurable progressions.
+- **Triads:** Display triad shapes across the neck, with multi-triad comparison.
+- **CAGED System:** Visualize CAGED-position chord shapes.
+- **Capo Support:** Capo position selector to translate open chord shapes for guitarists.
+- **Color Legend:** Color-coded scale degrees for quick visual reference.
+
+## Audio Features
+
+- **Metronome:** Visual and audio metronome, available as a standalone floating panel.
+- **Drone:** Continuous pitch generator for tuning and ear training.
+- **Backing Track:** Drum machine with configurable patterns for practicing with a beat.
+- **Strum Patterns:** Strum pattern player with presets.
 
 ## Building
 
@@ -30,29 +46,33 @@ PracTempo is developed using TypeScript and bundled with Webpack.
 
 **Prerequisites:**
 
-*   Node.js and npm
+- Node.js and npm
 
 **Build Steps:**
 
-1.  Navigate to the project's root directory.
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  From the `ts` subdirectory, build the project (outputs bundled JavaScript to `./js/bundle.js`):
-    ```bash
-    npm run build
-    ```
-4.  From the `ts` subdirectory, start the local development server:
-    ```bash
-    npm run start
-    ```
-    This command typically compiles the TypeScript (`main.ts` entry point) and serves the application locally.
-5.  The server will be running at localhost:4000.
+1. Navigate to the project's root directory.
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. From the `ts` subdirectory, build the project (outputs bundled JavaScript to `./js/`):
+   ```bash
+   npm run build
+   ```
+4. From the `ts` subdirectory, start the local development server:
+   ```bash
+   npm run start
+   ```
+   This compiles TypeScript (entry point: `main.ts`) and serves the application locally.
+5. The server will be running at `localhost:4000`.
 
 ## Dependencies
-*   Node.js and npm
-*   Bulma - CSS library used for panelization.
+
+- **Node.js / npm** — runtime and package management
+- **TypeScript** — language and type checking
+- **Webpack / tsify** — bundling
+- **Bulma** — CSS framework for layout and panels
+
 ---
 
-*(Developer Note: For a detailed list of all planned features and tasks, including more granular guitar items, please refer to the `TODO.md` file or the project's issue tracker.)*
+*(Developer Note: For a detailed list of planned features and tasks, please refer to `TODO.md`.)*

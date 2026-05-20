@@ -1,6 +1,6 @@
 // ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
-import { SignalKind, TempoSignal } from '../panels/link_types';
+import { SignalKind } from '../panels/link_types';
 import {
   DrumSoundId,
   DRUM_SOUND_LABELS,
@@ -265,9 +265,10 @@ export class BackingTrackView extends BaseView {
 
     this.listen(container, 'drive-signal', (e: Event) => {
       const signal = (e as CustomEvent).detail?.signal;
-      if (!signal || signal.kind !== SignalKind.Tempo) return;
-      const tempo = signal as TempoSignal;
-      const clamped = Math.max(30, Math.min(200, Math.round(tempo.bpm)));
+      if (!signal || signal.kind !== SignalKind.Groove) return;
+      // Ignore per-beat ticks — only sync BPM from config updates (no beat field)
+      if (signal.beat !== undefined) return;
+      const clamped = Math.max(30, Math.min(200, Math.round(signal.bpm)));
       if (clamped === this.bpm) return;
       this.bpm = clamped;
       if (this.bpmSliderEl)  this.bpmSliderEl.value = String(clamped);
@@ -940,6 +941,7 @@ export class BackingTrackView extends BaseView {
     this.isPlaying = true;
     this.updatePlayButton();
     this.startInterval();
+    this.dispatchTransportChanged(true);
   }
 
   private stopPlayback(): void {
@@ -950,6 +952,15 @@ export class BackingTrackView extends BaseView {
     this.currentMeasure = -1;
     this.isPlaying = false;
     this.updatePlayButton();
+    this.dispatchTransportChanged(false);
+  }
+
+  private dispatchTransportChanged(playing: boolean): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent('transport-changed', {
+      bubbles: true,
+      detail: { playing },
+    }));
   }
 
   private startInterval(): void {
@@ -987,6 +998,13 @@ export class BackingTrackView extends BaseView {
       playHits();
     }
 
+    // Emit a groove-tick on every beat boundary for linked driven views.
+    const stepsPerBeat = Math.max(1, Math.floor(this.steps / 4));
+    if (this.currentStep % stepsPerBeat === 0) {
+      const beat = Math.floor(this.currentStep / stepsPerBeat);
+      this.dispatchGrooveTick(beat);
+    }
+
     if (this.currentStep === 0) {
       this.clearMeasureHighlight();
       this.currentMeasure = (this.currentMeasure + 1) % this.numMeasures;
@@ -995,6 +1013,19 @@ export class BackingTrackView extends BaseView {
       if (chordDeg !== null) this.playChordDrone(chordDeg);
       this.dispatchTickEvent(chordDeg ?? null);
     }
+  }
+
+  private dispatchGrooveTick(beat: number): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent('groove-tick', {
+      bubbles: true,
+      detail: {
+        bpm:    this.bpm,
+        timeSig: { beats: 4, division: 4 },
+        swing:  this.swingAmount,
+        beat,
+      },
+    }));
   }
 
   private dispatchTickEvent(chordDeg: number | null): void {
@@ -1018,6 +1049,9 @@ export class BackingTrackView extends BaseView {
         progRootNote:    this.progRootNote,
         progMode:        this.progMode,
         bpm:             this.bpm,
+        timeSig:         { beats: 4, division: 4 },
+        swing:           this.swingAmount,
+        beat:            0,
       },
     }));
   }

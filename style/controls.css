@@ -25,7 +25,7 @@
   border-color: var(--accent);
   color: var(--text-primary);
 }
-/* In dark/forest themes Bulma's is-light renders white — override it */
+/* In dark/forest themes .is-light renders white — override it */
 :root[data-theme="dark"] .button.is-light,
 :root[data-theme="forest"] .button.is-light {
   background-color: var(--input-bg);

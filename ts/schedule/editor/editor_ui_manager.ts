@@ -160,12 +160,12 @@ export class EditorUIManager {
   private _createButton(
     id: string,
     innerHTML: string,
-    bulmaClasses: string[] = [],
+    extraClasses: string[] = [],
     title: string = ""
   ): HTMLButtonElement {
     const button = document.createElement("button");
     button.id = id;
-    button.classList.add("button", "is-small", ...bulmaClasses);
+    button.classList.add("button", "is-small", ...extraClasses);
     button.innerHTML = innerHTML;
     if (title) button.title = title;
     return button;
