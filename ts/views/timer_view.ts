@@ -1,6 +1,7 @@
 import { BaseView } from '../base_view';
 import { formatDuration, parseDurationString } from '../time_utils';
 import { Status } from '../display_controller';
+import { SignalKind, DriveSignal } from '../panels/link_types';
 
 export class TimerView extends BaseView {
   private duration: number;
@@ -114,6 +115,13 @@ export class TimerView extends BaseView {
 
     this.updateButtonState();
     this.updateRingProgress();
+
+    this.listen(container, 'drive-signal', (e: Event) => {
+      if (this.isScheduleDriven) return;
+      const signal = (e as CustomEvent<{ signal: DriveSignal }>).detail?.signal;
+      if (!signal || signal.kind !== SignalKind.Play) return;
+      if (signal.playing) this.startCountdown(); else this.stopCountdown();
+    });
 
     // Persist initial duration so the wrapper can restore it on reload.
     container.dispatchEvent(new CustomEvent('feature-state-changed', {
@@ -297,6 +305,7 @@ export class TimerView extends BaseView {
     }
     this.isRunning = true;
     this.updateButtonState();
+    this.dispatchTransportChanged(true);
 
     this.timerId = window.setInterval(() => {
       if (this.currentSeconds > 0) {
@@ -317,6 +326,15 @@ export class TimerView extends BaseView {
     }
     this.isRunning = false;
     this.updateButtonState();
+    this.dispatchTransportChanged(false);
+  }
+
+  private dispatchTransportChanged(playing: boolean): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent('transport-changed', {
+      bubbles: true,
+      detail: { playing },
+    }));
   }
 
   // ─── Sounds ────────────────────────────────────────────────────────────────

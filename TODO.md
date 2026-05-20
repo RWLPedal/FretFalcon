@@ -25,14 +25,11 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 
 *   Add more backing track patterns and drum kit sounds.
 *   Support tempo changes within a backing track pattern.
-*   Add a tuner view using microphone input.
 
 ## Infrastructure & Development
 
-*   Maintain a clear and helpful README.
 *   Add tests (unit, integration).
 *   Support mobile/responsive design (including rotation).
 *   Support multiple languages (internationalization/i18n).
-*   Implement ARIA support for accessibility.
 *   Decompose some classes into more basic, reusable components.
 *   Reconcile schedule view and reference view, consolidating into a single view.

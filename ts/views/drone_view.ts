@@ -59,8 +59,13 @@ export class DroneView extends BaseView {
     container.appendChild(wrapper);
 
     this.listen(container, 'drive-signal', (e: Event) => {
-      if (this.noteSelect?.value !== '__driven__') return;
       const { signal } = (e as CustomEvent<{ signal: DriveSignal }>).detail;
+      if (signal.kind === SignalKind.Play) {
+        if (signal.playing) { if (!this.isPlaying) this.togglePlay(); }
+        else { if (this.isPlaying) this.togglePlay(); }
+        return;
+      }
+      if (this.noteSelect?.value !== '__driven__') return;
       if (signal.kind !== SignalKind.Chord) return;
       const rootNote = signal.rootNote as NoteName;
       if (!NOTE_NAMES.includes(rootNote)) return;
@@ -112,6 +117,15 @@ export class DroneView extends BaseView {
       this.isPlaying = true;
     }
     this.updatePlayBtn();
+    this.dispatchTransportChanged();
+  }
+
+  private dispatchTransportChanged(): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent('transport-changed', {
+      bubbles: true,
+      detail: { playing: this.isPlaying },
+    }));
   }
 
   private updatePlayBtn(): void {

@@ -1,5 +1,5 @@
 // ts/panels/link_manager.ts
-import { HandleSide, LinkRecord, DriveSignal, SignalKind, GrooveSignal, TransportSignal } from './link_types';
+import { HandleSide, LinkRecord, DriveSignal, SignalKind, GrooveSignal, PlaySignal } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';
 import {
@@ -95,7 +95,7 @@ export class LinkManager {
       if (!instanceId) return;
       const detail = (e as CustomEvent).detail;
       if (typeof detail?.playing !== 'boolean') return;
-      const signal: TransportSignal = { kind: SignalKind.Transport, playing: detail.playing };
+      const signal: PlaySignal = { kind: SignalKind.Play, playing: detail.playing };
       this.routeUncachedSignal(instanceId, signal);
     });
 

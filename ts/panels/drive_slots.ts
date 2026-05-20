@@ -48,7 +48,7 @@ const SCALE_NAME_TO_MODE: Record<string, DiatonicMode> = {
 
 registerDriveSource({
   viewId: 'drum_machine',
-  emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Groove, SignalKind.Transport],
+  emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Groove, SignalKind.Play],
   extractSignals(detail: any): DriveSignal[] {
     const roman: string | null = detail?.currentRoman ?? null;
     const root: string         = detail?.progRootNote ?? 'C';
@@ -303,7 +303,7 @@ registerDriveTarget({
 
 registerDriveSource({
   viewId: 'instrument_floating_metronome',
-  emittedKinds: [SignalKind.Groove],
+  emittedKinds: [SignalKind.Groove, SignalKind.Play],
   extractSignals(detail: any): DriveSignal[] {
     if (typeof detail?.bpm !== 'number') return [];
     const grooveSignal: GrooveSignal = {
@@ -315,6 +315,14 @@ registerDriveSource({
     };
     return [grooveSignal];
   },
+});
+
+// ─── DroneView as source ──────────────────────────────────────────────────────
+
+registerDriveSource({
+  viewId: 'drone_view',
+  emittedKinds: [SignalKind.Play],
+  extractSignals(_detail: any): DriveSignal[] { return []; },
 });
 
 // ─── DroneView as target ──────────────────────────────────────────────────────
@@ -330,7 +338,16 @@ registerDriveTarget({
   },
 });
 
-// ─── BackingTrackView as groove target ────────────────────────────────────────
+registerDriveTarget({
+  featureTypeName: 'Drone',
+  viewId: 'drone_view',
+  argName: 'Play',
+  label: 'Play/stop (from linked source)',
+  acceptedKinds: [SignalKind.Play],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
+});
+
+// ─── BackingTrackView as groove/play target ───────────────────────────────────
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
@@ -343,7 +360,16 @@ registerDriveTarget({
   },
 });
 
-// ─── MetronomeView as groove target ──────────────────────────────────────────
+registerDriveTarget({
+  featureTypeName: 'BackingTrack',
+  viewId: 'drum_machine',
+  argName: 'Play',
+  label: 'Play/stop (from linked source)',
+  acceptedKinds: [SignalKind.Play],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
+});
+
+// ─── MetronomeView as groove/play target ─────────────────────────────────────
 
 registerDriveTarget({
   featureTypeName: 'Metronome',
@@ -354,6 +380,15 @@ registerDriveTarget({
   resolveValue(_signal: DriveSignal): string | null {
     return null;
   },
+});
+
+registerDriveTarget({
+  featureTypeName: 'Metronome',
+  viewId: 'instrument_floating_metronome',
+  argName: 'Play',
+  label: 'Play/stop (from linked source)',
+  acceptedKinds: [SignalKind.Play],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
 // ─── StrumView as groove source ──────────────────────────────────────────────
@@ -392,12 +427,29 @@ registerDriveTarget({
 registerDriveTarget({
   featureTypeName: 'Strum',
   viewId: 'strum_view',
-  argName: 'Transport',
+  argName: 'Play',
   label: 'Play/stop (from linked source)',
-  acceptedKinds: [SignalKind.Transport],
+  acceptedKinds: [SignalKind.Play],
   resolveValue(_signal: DriveSignal): string | null {
     return null;
   },
+});
+
+// ─── TimerView as play source/target ─────────────────────────────────────────
+
+registerDriveSource({
+  viewId: 'floating_timer',
+  emittedKinds: [SignalKind.Play],
+  extractSignals(_detail: any): DriveSignal[] { return []; },
+});
+
+registerDriveTarget({
+  featureTypeName: 'Timer',
+  viewId: 'floating_timer',
+  argName: 'Play',
+  label: 'Play/stop (from linked source)',
+  acceptedKinds: [SignalKind.Play],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
 // ─── ScheduleFloatingView as source ───────────────────────────────────────────

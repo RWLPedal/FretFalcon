@@ -265,7 +265,12 @@ export class BackingTrackView extends BaseView {
 
     this.listen(container, 'drive-signal', (e: Event) => {
       const signal = (e as CustomEvent).detail?.signal;
-      if (!signal || signal.kind !== SignalKind.Groove) return;
+      if (!signal) return;
+      if (signal.kind === SignalKind.Play) {
+        if (signal.playing) this.startPlayback(); else this.stopPlayback();
+        return;
+      }
+      if (signal.kind !== SignalKind.Groove) return;
       // Ignore per-beat ticks — only sync BPM from config updates (no beat field)
       if (signal.beat !== undefined) return;
       const clamped = Math.max(30, Math.min(200, Math.round(signal.bpm)));

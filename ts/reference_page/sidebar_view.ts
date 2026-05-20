@@ -33,21 +33,22 @@ const NAV_SECTIONS: NavSection[] = [
         ],
     },
     {
-        label: 'Practice',
+        label: 'Practice Tools',
         buttons: [
-            { id: 'schedule-feature',     icon: 'event_note',  label: 'Schedule',      viewId: 'schedule_floating_view' },
-            { id: 'any-feature',          icon: 'smart_display', label: 'Any',          viewId: 'any_floating_view' },
             { id: 'metronome-feature',    icon: 'timer',       label: 'Metronome',     viewId: 'instrument_floating_metronome' },
             { id: 'timer-feature',        icon: 'alarm',       label: 'Timer',         viewId: 'floating_timer' },
             { id: 'drum-machine-feature', icon: 'queue_music', label: 'Backing Track', viewId: 'drum_machine' },
             { id: 'strum-view-feature',   icon: 'music_note',  label: 'Strum',          viewId: 'strum_view' },
             { id: 'drone-feature',        icon: 'graphic_eq',  label: 'Drone',         viewId: 'drone_view' },
+            { id: 'legend-feature', icon: 'palette', label: 'Legend', viewId: 'instrument_color_legend' },
         ],
     },
     {
-        label: 'Tools',
+        label: 'Schedule',
         buttons: [
-            { id: 'legend-feature', icon: 'palette', label: 'Legend', viewId: 'instrument_color_legend' },
+            { id: 'schedule-feature',     icon: 'event_note',  label: 'Schedule Editor',      viewId: 'schedule_floating_view' },
+            { id: 'any-feature',          icon: 'smart_display', label: 'Any',          viewId: 'any_floating_view' },
+            
         ],
     },
 ];
@@ -132,7 +133,7 @@ export class SidebarView {
                         <select id="sidebar-layout-select">
                             <option value="">— select —</option>
                             <option value="default:reference">Reference</option>
-                            <option value="default:practice">Practice (Indie)</option>
+                            <option value="default:backing">Backing track</option>
                         </select>
                     </div>
                 </div>

@@ -91,6 +91,7 @@ function signalDisplayValue(signals: DriveSignal[], kind: SignalKind): string | 
   if (s.kind === SignalKind.Groove) return `${Math.round(s.bpm)} BPM`;
   if (s.kind === SignalKind.Chord) return s.rootNote || null;
   if (s.kind === SignalKind.Key)   return `${s.rootNote} ${DIATONIC_MODE_LABELS[s.scaleKey as DiatonicMode] ?? s.scaleKey}`;
+  if (s.kind === SignalKind.Play)  return s.playing ? 'On' : 'Off';
   return null;
 }
 

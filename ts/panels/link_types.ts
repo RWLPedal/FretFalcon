@@ -20,7 +20,7 @@ export enum SignalKind {
   Key       = 'Key',
   Groove    = 'Groove',
   Feature   = 'Feature',
-  Transport = 'Transport',
+  Play = 'Play',
 }
 
 export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
@@ -28,7 +28,7 @@ export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
   [SignalKind.Key]:       '♭',
   [SignalKind.Groove]:    '♩',
   [SignalKind.Feature]:   '◈',
-  [SignalKind.Transport]: '▶',
+  [SignalKind.Play]: '▶',
 };
 
 // A generic chord signal — different targets interpret it differently:
@@ -76,9 +76,9 @@ export interface FeatureSignal {
 
 // A transport signal — carries play/stop state from a source to linked views.
 // Not cached by LinkManager: newly-linked targets should not inherit stale state.
-export interface TransportSignal {
-  kind: SignalKind.Transport;
+export interface PlaySignal {
+  kind: SignalKind.Play;
   playing: boolean;
 }
 
-export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | TransportSignal;
+export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal;

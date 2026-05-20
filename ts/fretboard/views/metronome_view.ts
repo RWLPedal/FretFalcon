@@ -200,13 +200,13 @@ export class MetronomeView extends BaseView {
     this.listen(container, "drive-signal", (e: Event) => {
       const detail = (e as CustomEvent).detail;
       const signal = detail?.signal;
-      if (!signal || signal.kind !== SignalKind.Groove) return;
-      const groove = signal as GrooveSignal;
-      // Ignore per-beat ticks — only sync config updates (no beat field)
-      if (groove.beat !== undefined) return;
-      this._suppressTempoEvent = true;
-      this.setBpm(groove.bpm);
-      this._suppressTempoEvent = false;
+      if (!signal) return;
+      if (signal.kind === SignalKind.Play) {
+        if (signal.playing) this.start(); else this.stop();
+        return;
+      }
+      if (signal.kind !== SignalKind.Groove) return;
+      this.handleGrooveSignal(signal as GrooveSignal);
     });
     this.listen(container, "link-status-changed", (e: Event) => {
       const detail = (e as CustomEvent).detail;
@@ -256,6 +256,7 @@ export class MetronomeView extends BaseView {
     this.updateMuteButtonState();
     this.updatePlayPauseButtonState();
     this.dispatchTempoEvent();
+    this.dispatchTransportChanged(true);
   }
 
   stop(): void {
@@ -266,6 +267,7 @@ export class MetronomeView extends BaseView {
     }
     this.updateMuteButtonState();
     this.updatePlayPauseButtonState();
+    this.dispatchTransportChanged(false);
   }
 
   destroy(): void {
@@ -314,6 +316,34 @@ export class MetronomeView extends BaseView {
         beat,
       },
     }));
+  }
+
+  private dispatchTransportChanged(playing: boolean): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent("transport-changed", {
+      bubbles: true,
+      detail: { playing },
+    }));
+  }
+
+  private handleGrooveSignal(groove: GrooveSignal): void {
+    this._suppressTempoEvent = true;
+    this.setBpm(groove.bpm);
+    this._suppressTempoEvent = false;
+
+    if (groove.beat === undefined) return; // config-only, done
+    if (groove.beat !== 0) return;         // only sync on bar start
+
+    if (!this.isRunning) {
+      this.currentTickIndex = -1;
+      this.start();
+      this.tick();
+    } else {
+      this.stopInterval();
+      this.currentTickIndex = -1;
+      this.startInterval();
+      this.tick();
+    }
   }
 
   // ─── Progression ────────────────────────────────────────────────────────────

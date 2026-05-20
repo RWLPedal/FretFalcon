@@ -68,10 +68,10 @@ export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
-/** Practice layout centred on an indie rock backing track. The drum machine
+/** Backing track layout centred on an indie rock backing track. The drum machine
  *  loads with a pre-built 8-bar pattern (C Major, 118 BPM). A scale reference
  *  and timer fill the right column so you can stay focused while practising. */
-export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   referenceGrid: { cols: 160, rows: 77 },
   nextZIndex: 124,
   links: [
@@ -137,5 +137,5 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
 export const DEFAULT_CONFIGS: Readonly<Record<string, CurrentPayload>> = Object.freeze({
   empty: EMPTY_CONFIG,
   reference: REFERENCE_LAYOUT,
-  practice: PRACTICE_LAYOUT,
+  backing: BACKING_LAYOUT,
 });

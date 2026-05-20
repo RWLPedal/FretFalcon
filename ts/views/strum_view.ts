@@ -139,7 +139,7 @@ export class StrumView extends BaseView {
       const signal = (e as CustomEvent).detail?.signal as DriveSignal | undefined;
       if (!signal) return;
       if (signal.kind === SignalKind.Groove) this.handleGrooveSignal(signal);
-      else if (signal.kind === SignalKind.Transport) {
+      else if (signal.kind === SignalKind.Play) {
         if (signal.playing) this.start(); else this.stop();
       }
     });
