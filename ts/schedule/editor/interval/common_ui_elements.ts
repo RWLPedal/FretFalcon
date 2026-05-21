@@ -472,19 +472,37 @@ function getDefaultLayerColor(type: UiLayerType): string {
   return LAYER_DEFAULT_COLOR_VARS[type];
 }
 
-function createPaletteColorPicker(initialColor: string, onChange?: () => void): HTMLElement {
+function createPaletteColorPicker(initialColor: string, role: 'fill' | 'stroke', onChange?: () => void): HTMLElement {
+  // Apply a role-aware visual style: fill = solid background, stroke = inset ring.
+  function applyColorStyle(el: HTMLElement, colorVar: string): void {
+    if (colorVar === 'none') {
+      el.style.background = '';
+      el.style.boxShadow = '';
+      el.classList.add("swatch-none");
+    } else if (role === 'stroke') {
+      el.style.background = 'transparent';
+      el.style.boxShadow = `inset 0 0 0 2.5px ${colorVar}`;
+      el.classList.remove("swatch-none");
+    } else {
+      el.style.background = colorVar;
+      el.style.boxShadow = '';
+      el.classList.remove("swatch-none");
+    }
+  }
+
   const wrap = document.createElement("div");
   wrap.classList.add("layer-palette-picker-wrap");
 
   const btn = document.createElement("button");
   btn.type = "button";
   btn.classList.add("layer-palette-btn");
-  btn.title = "Layer color";
+  btn.title = role === 'fill' ? "Fill color" : "Stroke color";
   btn.dataset.colorVar = initialColor;
+  btn.dataset.pickerRole = role;
 
   const preview = document.createElement("span");
   preview.classList.add("layer-palette-swatch-preview");
-  preview.style.background = initialColor;
+  applyColorStyle(preview, initialColor);
   btn.appendChild(preview);
   wrap.appendChild(btn);
 
@@ -495,18 +513,23 @@ function createPaletteColorPicker(initialColor: string, onChange?: () => void): 
   popover.hidden = true;
   document.body.appendChild(popover);
 
-  PALETTE_VARS.forEach((varStr) => {
+  function addSwatch(varStr: string, isNone: boolean): void {
     const paletteBtn = document.createElement("button");
     paletteBtn.type = "button";
     paletteBtn.classList.add("palette-swatch");
     paletteBtn.dataset.var = varStr;
-    paletteBtn.style.background = varStr;
-    paletteBtn.title = varStr;
+    if (isNone) {
+      paletteBtn.classList.add("palette-swatch-none");
+      paletteBtn.title = "None (transparent)";
+    } else {
+      applyColorStyle(paletteBtn, varStr);
+      paletteBtn.title = varStr;
+    }
     if (varStr === initialColor) paletteBtn.classList.add("is-active");
     paletteBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       btn.dataset.colorVar = varStr;
-      preview.style.background = varStr;
+      applyColorStyle(preview, varStr);
       popover.querySelectorAll<HTMLElement>(".palette-swatch").forEach(s =>
         s.classList.toggle("is-active", s.dataset.var === varStr)
       );
@@ -514,7 +537,10 @@ function createPaletteColorPicker(initialColor: string, onChange?: () => void): 
       onChange?.();
     });
     popover.appendChild(paletteBtn);
-  });
+  }
+
+  addSwatch('none', true);
+  PALETTE_VARS.forEach((varStr) => addSwatch(varStr, false));
 
   function openPopover(): void {
     // Close any other open palette popovers
@@ -551,7 +577,7 @@ function createPaletteColorPicker(initialColor: string, onChange?: () => void): 
   // Expose a setter so the layer type change handler can reset the color
   (wrap as any)._setColor = (color: string) => {
     btn.dataset.colorVar = color;
-    preview.style.background = color;
+    applyColorStyle(preview, color);
     popover.querySelectorAll<HTMLElement>(".palette-swatch").forEach(s =>
       s.classList.toggle("is-active", s.dataset.var === color)
     );
@@ -563,19 +589,20 @@ function createPaletteColorPicker(initialColor: string, onChange?: () => void): 
 /** Parses a layer encoded string back into its parts for pre-populating the UI */
 function parseLayerStringForUI(
   layerStr: string
-): { type: LayerType; fields: string[]; color: string } | null {
+): { type: LayerType; fields: string[]; fillColor: string; strokeColor: string } | null {
   const parts = layerStr.split("|");
   if (parts.length < 2) return null;
   const type = parts[0] as LayerType;
-  const color = parts[parts.length - 1];
   if (parts.length < 3) return null;
   if (type === "scale" && parts.length >= 4) {
-    return { type, fields: [parts[1], parts[2]], color };
+    // scale|scaleName|rootNote|fillColor[|strokeColor]
+    return { type, fields: [parts[1], parts[2]], fillColor: parts[3], strokeColor: parts[4] ?? 'none' };
   } else if (type === "chord" && parts.length >= 3) {
-    return { type, fields: [parts[1]], color };
+    // chord|chordKey|fillColor[|strokeColor]
+    return { type, fields: [parts[1]], fillColor: parts[2], strokeColor: parts[3] ?? 'none' };
   } else if (type === "notes" && parts.length >= 3) {
-    // notes field is a comma-separated string of note names
-    return { type, fields: [parts[1]], color };
+    // notes|noteNames|fillColor[|strokeColor]
+    return { type, fields: [parts[1]], fillColor: parts[2], strokeColor: parts[3] ?? 'none' };
   }
   return null;
 }
@@ -600,24 +627,25 @@ function buildLayerFields(
     scaleWrapper.style.maxWidth = "200px";
     const scaleSelect = document.createElement("select");
     scaleSelect.dataset.field = "scaleName";
-    if (initialFields[0] === "driven") {
+    const isDrivenScaleName = initialFields[0] === "driven" || initialFields[0] === "driven_next";
+    if (isDrivenScaleName) {
       const drivenOpt = document.createElement("option");
-      drivenOpt.value = "driven";
-      drivenOpt.text = "⟳ Driven";
+      drivenOpt.value = initialFields[0];
+      drivenOpt.text = initialFields[0] === "driven_next" ? "⟳ Driven (Next)" : "⟳ Driven";
       drivenOpt.style.fontStyle = "italic";
       scaleSelect.appendChild(drivenOpt);
     }
     scaleNames.forEach((name) => {
       const opt = new Option(name, name);
-      if (name === (initialFields[0] ?? "") && initialFields[0] !== "driven") opt.selected = true;
+      if (name === (initialFields[0] ?? "") && !isDrivenScaleName) opt.selected = true;
       scaleSelect.appendChild(opt);
     });
-    if (initialFields[0] === "driven") scaleSelect.value = "driven";
+    if (isDrivenScaleName) scaleSelect.value = initialFields[0];
     scaleSelect.addEventListener("change", () => onChange?.());
     scaleWrapper.appendChild(scaleSelect);
     fieldsContainer.appendChild(scaleWrapper);
 
-    // Root note dropdown — value may be "driven" when restored from a linked save
+    // Root note dropdown — value may be "driven" / "driven_next" when restored from a linked save
     const rootNotes = data.rootNoteOptions ?? [];
     const rootWrapper = document.createElement("div");
     rootWrapper.classList.add("select", "is-small");
@@ -625,25 +653,26 @@ function buildLayerFields(
     rootWrapper.style.width = "80px";
     const rootSelect = document.createElement("select");
     rootSelect.dataset.field = "rootNote";
-    if (initialFields[1] === "driven") {
+    const isDrivenRootNote = initialFields[1] === "driven" || initialFields[1] === "driven_next";
+    if (isDrivenRootNote) {
       const drivenOpt = document.createElement("option");
-      drivenOpt.value = "driven";
-      drivenOpt.text = "⟳ Driven";
+      drivenOpt.value = initialFields[1];
+      drivenOpt.text = initialFields[1] === "driven_next" ? "⟳ Driven (Next)" : "⟳ Driven";
       drivenOpt.style.fontStyle = "italic";
       rootSelect.appendChild(drivenOpt);
     }
     rootNotes.forEach((note) => {
       const opt = new Option(note, note);
-      if (note === (initialFields[1] ?? "") && initialFields[1] !== "driven") opt.selected = true;
+      if (note === (initialFields[1] ?? "") && !isDrivenRootNote) opt.selected = true;
       rootSelect.appendChild(opt);
     });
-    if (initialFields[1] === "driven") rootSelect.value = "driven";
+    if (isDrivenRootNote) rootSelect.value = initialFields[1];
     rootSelect.addEventListener("change", () => onChange?.());
     rootWrapper.appendChild(rootSelect);
     fieldsContainer.appendChild(rootWrapper);
 
   } else if (layerType === "chord") {
-    // Chord key dropdown — value may be "driven" when restored from a linked save
+    // Chord key dropdown — value may be "driven" / "driven_next" when restored from a linked save
     const entries = data.chordEntries ?? [];
     const chordWrapper = document.createElement("div");
     chordWrapper.classList.add("select", "is-small", "is-fullwidth");
@@ -652,19 +681,20 @@ function buildLayerFields(
     chordWrapper.style.maxWidth = "200px";
     const chordSelect = document.createElement("select");
     chordSelect.dataset.field = "chordKey";
-    if (initialFields[0] === "driven") {
+    const isDrivenChordKey = initialFields[0] === "driven" || initialFields[0] === "driven_next";
+    if (isDrivenChordKey) {
       const drivenOpt = document.createElement("option");
-      drivenOpt.value = "driven";
-      drivenOpt.text = "⟳ Driven";
+      drivenOpt.value = initialFields[0];
+      drivenOpt.text = initialFields[0] === "driven_next" ? "⟳ Driven (Next)" : "⟳ Driven";
       drivenOpt.style.fontStyle = "italic";
       chordSelect.appendChild(drivenOpt);
     }
     entries.forEach(({ key, label }) => {
       const opt = new Option(label, key);
-      if (key === (initialFields[0] ?? "") && initialFields[0] !== "driven") opt.selected = true;
+      if (key === (initialFields[0] ?? "") && !isDrivenChordKey) opt.selected = true;
       chordSelect.appendChild(opt);
     });
-    if (initialFields[0] === "driven") chordSelect.value = "driven";
+    if (isDrivenChordKey) chordSelect.value = initialFields[0];
     chordSelect.addEventListener("change", () => onChange?.());
     chordWrapper.appendChild(chordSelect);
     fieldsContainer.appendChild(chordWrapper);
@@ -733,9 +763,10 @@ export function createLayerListInput(
 
   // Tracks whether an incoming link is active so new rows and type-changes get the Driven option.
   let isLinked = false;
+  let isLinkedHasNextSignals = false;
 
-  /** Adds the "⟳ Driven" option (and auto-selects it) to all driven-eligible selects in a row. */
-  function applyLinkedToRow(row: HTMLElement): void {
+  /** Adds the "⟳ Driven" (and optionally "⟳ Driven (Next)") option to all driven-eligible selects in a row, and auto-selects "⟳ Driven". */
+  function applyLinkedToRow(row: HTMLElement, hasNextSignals: boolean): void {
     row.querySelectorAll<HTMLSelectElement>(
       "[data-field='rootNote'], [data-field='chordKey'], [data-field='scaleName']"
     ).forEach(select => {
@@ -745,6 +776,18 @@ export function createLayerListInput(
         opt.text = "⟳ Driven";
         opt.style.fontStyle = "italic";
         select.insertBefore(opt, select.firstChild);
+      }
+      if (hasNextSignals && !select.querySelector<HTMLOptionElement>('option[value="driven_next"]')) {
+        const opt = document.createElement("option");
+        opt.value = "driven_next";
+        opt.text = "⟳ Driven (Next)";
+        opt.style.fontStyle = "italic";
+        const drivenOpt = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+        if (drivenOpt?.nextSibling) {
+          select.insertBefore(opt, drivenOpt.nextSibling);
+        } else {
+          select.appendChild(opt);
+        }
       }
       select.value = "driven";
     });
@@ -797,7 +840,7 @@ export function createLayerListInput(
   }
 
   /** Builds one layer row and appends it to rowsContainer */
-  function addLayerRow(layerType: LayerType, initialFields: string[], color: string): void {
+  function addLayerRow(layerType: LayerType, initialFields: string[], fillColor: string, strokeColor: string): void {
     const row = document.createElement("div");
     row.classList.add("layer-list-row");
     row.draggable = true;
@@ -844,9 +887,12 @@ export function createLayerListInput(
     buildLayerFields(fieldsContainer, layerType, data, initialFields, onChange);
     row.appendChild(fieldsContainer);
 
-    // Color picker
-    const colorPicker = createPaletteColorPicker(color, onChange);
-    row.appendChild(colorPicker);
+    // Fill and stroke color pickers — visually distinguished by button style (solid vs dashed border)
+    const fillColorPicker = createPaletteColorPicker(fillColor, 'fill', onChange);
+    row.appendChild(fillColorPicker);
+
+    const strokeColorPicker = createPaletteColorPicker(strokeColor, 'stroke', onChange);
+    row.appendChild(strokeColorPicker);
 
     // Remove button
     const removeBtn = document.createElement("button");
@@ -860,9 +906,10 @@ export function createLayerListInput(
     // Re-build fields when layer type changes
     typeSelect.addEventListener("change", () => {
       const newType = typeSelect.value as UiLayerType;
-      (colorPicker as any)._setColor?.(getDefaultLayerColor(newType));
+      (fillColorPicker as any)._setColor?.(getDefaultLayerColor(newType));
+      (strokeColorPicker as any)._setColor?.('none');
       buildLayerFields(fieldsContainer, newType, data, [], onChange);
-      if (isLinked) applyLinkedToRow(row);
+      if (isLinked) applyLinkedToRow(row, isLinkedHasNextSignals);
       onChange?.();
     });
 
@@ -875,7 +922,7 @@ export function createLayerListInput(
     if (!val) continue;
     const parsed = parseLayerStringForUI(val);
     if (parsed) {
-      addLayerRow(parsed.type, parsed.fields, parsed.color);
+      addLayerRow(parsed.type, parsed.fields, parsed.fillColor, parsed.strokeColor);
     }
   }
 
@@ -887,42 +934,68 @@ export function createLayerListInput(
   addBtn.classList.add("add-layer-btn");
   addBtn.innerHTML = '<span class="material-icons">add</span>';
   addBtn.onclick = () => {
-    addLayerRow(LayerType.Scale, [], getDefaultLayerColor(LayerType.Scale));
+    addLayerRow(LayerType.Scale, [], getDefaultLayerColor(LayerType.Scale), 'none');
     if (isLinked) {
       const lastRow = rowsContainer.lastElementChild as HTMLElement | null;
-      if (lastRow) applyLinkedToRow(lastRow);
+      if (lastRow) applyLinkedToRow(lastRow, isLinkedHasNextSignals);
     }
     onChange?.();
   };
   listContainer.appendChild(addBtn);
 
-  // Expose a hook so ConfigView can add/remove the "⟳ Driven" option on linked field dropdowns.
-  // linked=true  → add "driven" option to rootNote and chordKey selects; autoSelect=true also selects it.
-  // linked=false → remove "driven" option (reset to first real option if currently selected).
-  (container as any)._setLinked = (linked: boolean, autoSelect: boolean) => {
+  // Expose a hook so ConfigView can add/remove the "⟳ Driven" / "⟳ Driven (Next)" options.
+  // linked=true  → add options to rootNote, chordKey, scaleName selects; autoSelect=true selects "driven".
+  // linked=false → remove driven options (reset to first real option if currently selected).
+  (container as any)._setLinked = (linked: boolean, autoSelect: boolean, hasNextSignals = false) => {
     isLinked = linked;
+    isLinkedHasNextSignals = hasNextSignals;
     let needsNotify = false;
     rowsContainer.querySelectorAll<HTMLSelectElement>("[data-field='rootNote'], [data-field='chordKey'], [data-field='scaleName']").forEach(select => {
-      const existing = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+      const existingDriven = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+      const existingDrivenNext = select.querySelector<HTMLOptionElement>('option[value="driven_next"]');
       if (linked) {
-        if (!existing) {
+        if (!existingDriven) {
           const opt = document.createElement("option");
           opt.value = "driven";
           opt.text = "⟳ Driven";
           opt.style.fontStyle = "italic";
           select.insertBefore(opt, select.firstChild);
         }
-        if (autoSelect && select.value !== "driven") {
+        if (hasNextSignals && !existingDrivenNext) {
+          const opt = document.createElement("option");
+          opt.value = "driven_next";
+          opt.text = "⟳ Driven (Next)";
+          opt.style.fontStyle = "italic";
+          const drivenOpt = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+          if (drivenOpt?.nextSibling) {
+            select.insertBefore(opt, drivenOpt.nextSibling);
+          } else {
+            select.appendChild(opt);
+          }
+        } else if (!hasNextSignals && existingDrivenNext) {
+          if (select.value === "driven_next") {
+            select.value = "driven";
+          }
+          existingDrivenNext.remove();
+        }
+        if (autoSelect && select.value !== "driven" && select.value !== "driven_next") {
           select.value = "driven";
           needsNotify = true;
         }
       } else {
-        if (existing) {
-          if (select.value === "driven") {
-            const first = select.querySelector<HTMLOptionElement>('option:not([value="driven"])');
+        if (existingDrivenNext) {
+          if (select.value === "driven_next") {
+            const first = select.querySelector<HTMLOptionElement>('option:not([value="driven"]):not([value="driven_next"])');
             if (first) { select.value = first.value; needsNotify = true; }
           }
-          existing.remove();
+          existingDrivenNext.remove();
+        }
+        if (existingDriven) {
+          if (select.value === "driven") {
+            const first = select.querySelector<HTMLOptionElement>('option:not([value="driven"]):not([value="driven_next"])');
+            if (first) { select.value = first.value; needsNotify = true; }
+          }
+          existingDriven.remove();
         }
       }
     });
@@ -938,7 +1011,10 @@ export function extractLayerListValues(container: HTMLElement): string[] {
   const rows = container.querySelectorAll<HTMLElement>(".layer-list-row");
   rows.forEach((row) => {
     const type = row.querySelector<HTMLSelectElement>(".layer-type-select")?.value as LayerType | undefined;
-    const color = row.querySelector<HTMLElement>(".layer-palette-btn")?.dataset.colorVar ?? 'var(--dm-palette-1)';
+    const fillColor = row.querySelector<HTMLElement>(".layer-palette-btn[data-picker-role='fill']")?.dataset.colorVar
+      ?? row.querySelector<HTMLElement>(".layer-palette-btn")?.dataset.colorVar
+      ?? 'var(--dm-palette-1)';
+    const strokeColor = row.querySelector<HTMLElement>(".layer-palette-btn[data-picker-role='stroke']")?.dataset.colorVar ?? 'none';
     if (!type) return;
 
     let encoded = "";
@@ -947,11 +1023,11 @@ export function extractLayerListValues(container: HTMLElement): string[] {
         row.querySelector<HTMLSelectElement>("[data-field='scaleName']")?.value ?? "";
       const rootNote =
         row.querySelector<HTMLSelectElement>("[data-field='rootNote']")?.value ?? "";
-      if (scaleName && rootNote) encoded = `scale|${scaleName}|${rootNote}|${color}`;
+      if (scaleName && rootNote) encoded = `scale|${scaleName}|${rootNote}|${fillColor}|${strokeColor}`;
     } else if (type === "chord") {
       const chordKey =
         row.querySelector<HTMLSelectElement>("[data-field='chordKey']")?.value ?? "";
-      if (chordKey) encoded = `chord|${chordKey}|${color}`;
+      if (chordKey) encoded = `chord|${chordKey}|${fillColor}|${strokeColor}`;
     } else if (type === "notes") {
       const activeNotes = Array.from(
         row.querySelectorAll<HTMLButtonElement>(".note-layer-toggle-btn.is-active")
@@ -959,7 +1035,7 @@ export function extractLayerListValues(container: HTMLElement): string[] {
         .map((btn) => btn.dataset.value ?? "")
         .filter((v) => v);
       // Always emit the row (even if no notes selected) to preserve position
-      encoded = `notes|${activeNotes.join(",")}|${color}`;
+      encoded = `notes|${activeNotes.join(",")}|${fillColor}|${strokeColor}`;
     }
     if (encoded) results.push(encoded);
   });

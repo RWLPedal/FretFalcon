@@ -40,7 +40,7 @@ export class DroneView extends BaseView {
     }
     this.noteSelect.addEventListener('change', () => {
       const val = this.noteSelect!.value;
-      if (val === '__driven__') return;
+      if (val === 'driven') return;
       this.note = val as NoteName;
       this.drone.setNote(this.note, DRONE_OCTAVE);
       this.dispatchTitle();
@@ -65,7 +65,7 @@ export class DroneView extends BaseView {
         else { if (this.isPlaying) this.togglePlay(); }
         return;
       }
-      if (this.noteSelect?.value !== '__driven__') return;
+      if (this.noteSelect?.value !== 'driven') return;
       if (signal.kind !== SignalKind.Chord) return;
       const rootNote = signal.rootNote as NoteName;
       if (!NOTE_NAMES.includes(rootNote)) return;
@@ -80,11 +80,11 @@ export class DroneView extends BaseView {
       if (hasIncomingLinks) {
         if (!this.drivenOption) {
           this.drivenOption = document.createElement('option');
-          this.drivenOption.value = '__driven__';
+          this.drivenOption.value = 'driven';
           this.drivenOption.textContent = 'Driven';
           this.noteSelect?.insertBefore(this.drivenOption, this.noteSelect.firstChild);
         }
-        if (this.noteSelect) this.noteSelect.value = '__driven__';
+        if (this.noteSelect) this.noteSelect.value = 'driven';
       } else {
         if (this.drivenOption) {
           this.drivenOption.remove();

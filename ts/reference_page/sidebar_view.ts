@@ -30,6 +30,7 @@ const NAV_SECTIONS: NavSection[] = [
             { id: 'caged-feature',             icon: 'grid_view',       label: 'CAGED',        viewId: 'configurable_instrument_feature', featureTypeName: 'CAGED',           requiredInstruments: ['Guitar'] },
             { id: 'multifret-feature',         icon: 'layers',          label: 'MultiFret',    viewId: 'configurable_instrument_feature', featureTypeName: 'MultiLayerFretboard' },
             { id: 'capo-feature',              icon: 'adjust',          label: 'Capo',         viewId: 'capo_view',                       requiredInstruments: ['Guitar', 'Ukulele', 'Mandolin', 'Mandola'] },
+            { id: 'circle-of-fifths-feature',  icon: 'donut_large',     label: 'Circle of 5ths', viewId: 'circle_of_fifths' },
         ],
     },
     {

@@ -1,5 +1,5 @@
 // ts/panels/link_manager.ts
-import { HandleSide, LinkRecord, DriveSignal, SignalKind, GrooveSignal, PlaySignal } from './link_types';
+import { HandleSide, LinkRecord, DriveSignal, SignalKind, SignalState, GrooveSignal, PlaySignal } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';
 import {
@@ -97,6 +97,18 @@ export class LinkManager {
       if (typeof detail?.playing !== 'boolean') return;
       const signal: PlaySignal = { kind: SignalKind.Play, playing: detail.playing };
       this.routeUncachedSignal(instanceId, signal);
+    });
+
+    // Listen for cof-key-selected (Circle of Fifths key/chord selection)
+    viewAreaEl.addEventListener('cof-key-selected', (e: Event) => {
+      const instanceId = this.resolveSourceInstanceId(e);
+      if (!instanceId) return;
+      const viewId = this.instanceIdToViewId(instanceId);
+      if (!viewId) return;
+      const descriptor = getDriveSourceDescriptor(viewId);
+      if (!descriptor) return;
+      const signals = descriptor.extractSignals((e as CustomEvent).detail);
+      this.routeSignals(instanceId, signals);
     });
 
     // Listen for feature-state-changed (for configurable features as sources)
@@ -249,11 +261,11 @@ export class LinkManager {
 
   private routeSignals(sourceInstanceId: string, signals: DriveSignal[]): void {
     if (!signals.length) return;
-    // Merge into cache rather than overwrite, so Groove config updates don't
-    // discard cached Chord/Key signals (and vice versa).
+    // Merge into cache keyed by (kind, state) so current and next signals of the same
+    // kind coexist, and Groove config updates don't evict cached Chord/Key signals.
     const existing = this.lastSourceSignals.get(sourceInstanceId) ?? [];
-    const newKinds = new Set(signals.map(s => s.kind));
-    const merged = [...existing.filter(s => !newKinds.has(s.kind)), ...signals];
+    const newKeys = new Set(signals.map(s => `${s.kind}:${s.state ?? SignalState.Current}`));
+    const merged = [...existing.filter(s => !newKeys.has(`${s.kind}:${s.state ?? SignalState.Current}`)), ...signals];
     this.lastSourceSignals.set(sourceInstanceId, merged);
     const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
     outgoing.forEach(link => this.routeSignalsToTarget(link, signals));
@@ -313,10 +325,16 @@ export class LinkManager {
   private notifyLinkStatus(instanceId: string): void {
     const targetEl = this.getContentEl(instanceId) ?? this.getWrapperEl(instanceId);
     if (!targetEl) return;
-    const hasIncoming = this.links.some(l => l.targetInstanceId === instanceId);
+    const incoming = this.links.filter(l => l.targetInstanceId === instanceId);
+    const hasIncoming = incoming.length > 0;
+    const hasNextSignals = incoming.some(l => {
+      const viewId = this.instanceIdToViewId(l.sourceInstanceId) ?? '';
+      const ftName = this.instanceIdToFeatureTypeName?.(l.sourceInstanceId) ?? undefined;
+      return getDriveSourceDescriptor(viewId, ftName)?.emitsNextSignals === true;
+    });
     targetEl.dispatchEvent(new CustomEvent('link-status-changed', {
       bubbles: true,
-      detail: { hasIncomingLinks: hasIncoming },
+      detail: { hasIncomingLinks: hasIncoming, hasNextSignals },
     }));
   }
 

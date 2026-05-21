@@ -3,7 +3,7 @@
 // (reference_main.ts) to wire all signal translations.
 
 import { registerDriveSource, registerDriveTarget } from './drive_registry';
-import { SignalKind, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal } from './link_types';
+import { SignalKind, SignalState, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal } from './link_types';
 import { KeyType, DiatonicMode, ChordQuality } from '../fretboard/music_types';
 import { scales } from '../fretboard/scales';
 
@@ -49,6 +49,7 @@ const SCALE_NAME_TO_MODE: Record<string, DiatonicMode> = {
 registerDriveSource({
   viewId: 'drum_machine',
   emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Groove, SignalKind.Play],
+  emitsNextSignals: true,
   extractSignals(detail: any): DriveSignal[] {
     const roman: string | null = detail?.currentRoman ?? null;
     const root: string         = detail?.progRootNote ?? 'C';
@@ -60,6 +61,7 @@ registerDriveSource({
 
     const chordSignal: ChordSignal = {
       kind: SignalKind.Chord,
+      state: SignalState.Current,
       chordKey,
       rootNote: chordRoot,
       keyType: chordKeyType,
@@ -80,6 +82,21 @@ registerDriveSource({
         beat: typeof detail?.beat === 'number' ? detail.beat : undefined,
       };
       signals.push(grooveSignal);
+    }
+    // Next-measure chord signal (if available)
+    const nextChordKey: string | null = detail?.nextChordKey ?? null;
+    const nextRootNote: string | null = detail?.nextRootNote ?? null;
+    const nextRoman: string | null    = detail?.nextRoman ?? null;
+    if (nextChordKey !== null || nextRootNote !== null) {
+      const nextChordSignal: ChordSignal = {
+        kind: SignalKind.Chord,
+        state: SignalState.Next,
+        chordKey: nextChordKey,
+        rootNote: nextRootNote ?? root,
+        keyType: keyTypeFromChordKey(nextChordKey),
+        roman: nextRoman,
+      };
+      signals.push(nextChordSignal);
     }
     return signals;
   },
@@ -158,7 +175,7 @@ registerDriveTarget({
       if (sep !== -1) {
         const suffix = signal.chordKey.slice(sep + 1);
         const suffixMap: Record<string, string> = {
-          MAJ: 'Major', MIN: 'Minor', DOM7: '7', MAJ7: 'Maj7', MIN7: 'Min7',
+          MAJ: 'Major', MIN: 'Minor', DIM: 'Dim', DOM7: '7', MAJ7: 'Maj7', MIN7: 'Min7',
         };
         const resolved = suffixMap[suffix];
         if (resolved) return resolved;
@@ -457,9 +474,11 @@ registerDriveTarget({
 registerDriveSource({
   viewId: 'schedule_floating_view',
   emittedKinds: [SignalKind.Feature],
+  emitsNextSignals: true,
   extractSignals(detail: any): DriveSignal[] {
     const signal: FeatureSignal = {
       kind: SignalKind.Feature,
+      state: detail?.state,   // preserves Current / Next set by ScheduleDisplayAdapter
       categoryName: detail?.categoryName ?? '',
       featureTypeName: detail?.featureTypeName ?? null,
       config: Array.isArray(detail?.config) ? [...detail.config] : [],
@@ -468,15 +487,54 @@ registerDriveSource({
   },
 });
 
-// ─── AnyFloatingView as target ────────────────────────────────────────────────
+// ─── AnyFeature as target ─────────────────────────────────────────────────────
+// AnyFeature renders inside a ConfigurableFeatureView and handles FeatureSignals
+// directly via its own drive-signal listener. The slot declaration here is only
+// for arrow-tooltip display (◈ icon); resolveValue always returns null so
+// ConfigurableFeatureView does not try to drive the State arg via the config system.
 
 registerDriveTarget({
-  featureTypeName: 'Any',
-  viewId: 'any_floating_view',
-  argName: 'Feature',
-  label: 'Feature from linked schedule',
+  featureTypeName: 'AnyFeature',
+  viewId: 'any_feature',
+  argName: '_feature',     // non-existent arg — keeps ConfigurableFeatureView from injecting "Driven"
+  label: 'Feature',
   acceptedKinds: [SignalKind.Feature],
-  resolveValue(_signal: DriveSignal): string | null {
-    return null;
+  resolveValue(_signal: DriveSignal): string | null { return null; },
+});
+
+// ─── CircleOfFifthsView as source ─────────────────────────────────────────────
+// Dispatches 'cof-key-selected' when the user clicks a key wedge or chord chip.
+// Signal 0 = KeySignal (always); Signal 1 = ChordSignal (always, chordKey null when no chord selected).
+
+registerDriveSource({
+  viewId: 'circle_of_fifths',
+  emittedKinds: [SignalKind.Key, SignalKind.Chord],
+  extractSignals(detail: any): DriveSignal[] {
+    const keySignal: KeySignal = {
+      kind:      SignalKind.Key,
+      rootNote:  detail?.root ?? 'C',
+      scaleKey:  detail?.mode ?? DiatonicMode.Ionian,
+    };
+    const chordSignal: ChordSignal = {
+      kind:      SignalKind.Chord,
+      chordKey:  detail?.chordKey ?? null,
+      rootNote:  detail?.chordRoot ?? detail?.root ?? 'C',
+      keyType:   detail?.keyType ?? KeyType.Major,
+      roman:     detail?.roman ?? null,
+    };
+    return [keySignal, chordSignal];
   },
+});
+
+// ─── CircleOfFifthsView as target ─────────────────────────────────────────────
+// The view handles drive-signal directly; resolveValue is unused but required
+// so the view appears as a valid link target with the correct accepted kinds.
+
+registerDriveTarget({
+  featureTypeName: 'CircleOfFifths',
+  viewId: 'circle_of_fifths',
+  argName: '_key',
+  label: 'Key (from linked source)',
+  acceptedKinds: [SignalKind.Key, SignalKind.Chord],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
 });

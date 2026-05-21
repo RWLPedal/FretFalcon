@@ -73,9 +73,11 @@ export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
  *  and timer fill the right column so you can stay focused while practising. */
 export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   referenceGrid: { cols: 160, rows: 77 },
-  nextZIndex: 124,
+  nextZIndex: 136,
   links: [
     { id: "link-3", sourceInstanceId: "fv-1", sourceHandle: "bottom" as const, targetInstanceId: "fv-5", targetHandle: "top" as const },
+    { id: "link-4", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-7", targetHandle: "left" as const },
+    { id: "link-5", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-8", targetHandle: "left" as const },
   ],
   openViews: {
     "fv-1": {
@@ -83,21 +85,23 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       viewId: "drum_machine",
       gridPosition: { col: 17, row: 1 },
       gridSize: { cols: 54, rows: 33 },
-      zIndex: 123,
+      zIndex: 134,
       viewState: {
-        bpm: 75,
+        bpm: 79,
         steps: 16,
         numMeasures: 8,
         progRootNote: "C",
         progMode: "MAJOR",
         measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
         tracks: [
-          ["kick",  null,    null,    null, null,    null, "kick",  null, "kick",   null, null, null, null,    null, null, null],
-          [null,    null,    null,    null, "snare", null, null,    null, null,     null, null, null, "snare", null, null, null],
-          ["hihat", null,    "hihat", null, "hihat", null, "hihat", null, "hihat",  null, "hihat", null, "hihat", null, "hihat", null],
+          ["kick",  null,    null,    null, null,    null, "kick",    null, "kick",    null, null,    null, null,    null,    null,    null],
+          [null,    null,    null,    null, "snare",  null, null,    null,  null,      null, null,    null, "snare", null,    null,    null],
+          ["hihat", null,    "hihat", null, "hihat", null, "hihat",   null, "hihat",   null, "hihat", null, "hihat", null,    "hihat", null],
           ["crash", null,    "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null],
         ],
         bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
+        swingAmount: 0,
+        trackSounds: ["kick", "snare", "hihat", "crash"],
       },
     },
     "fv-4": {
@@ -113,10 +117,14 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       viewId: "configurable_instrument_feature",
       gridPosition: { col: 17, row: 37 },
       gridSize: { cols: 82, rows: 34 },
-      zIndex: 121,
+      zIndex: 131,
       viewState: {
         featureTypeName: "MultiLayerFretboard",
-        config: ["chord|driven|var(--dm-palette-2)", "scale|driven|driven|var(--dm-palette-3)"],
+        config: [
+          "chord|driven|var(--dm-palette-2)|none",
+          "chord|driven_next|none|var(--dm-palette-4)",
+          "scale|driven|driven|var(--dm-palette-3)|none",
+        ],
       },
     },
     "fv-6": {
@@ -126,6 +134,22 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       gridSize: { cols: 15, rows: 8 },
       zIndex: 122,
       viewState: { note: "A" },
+    },
+    "fv-7": {
+      instanceId: "fv-7",
+      viewId: "configurable_instrument_feature",
+      gridPosition: { col: 102, row: 1 },
+      gridSize: { cols: 27, rows: 26 },
+      zIndex: 136,
+      viewState: { featureTypeName: "Chord", config: ["driven", "driven"] },
+    },
+    "fv-8": {
+      instanceId: "fv-8",
+      viewId: "configurable_instrument_feature",
+      gridPosition: { col: 102, row: 30 },
+      gridSize: { cols: 27, rows: 26 },
+      zIndex: 135,
+      viewState: { featureTypeName: "Chord", config: ["driven_next", "driven_next"] },
     },
   },
 });

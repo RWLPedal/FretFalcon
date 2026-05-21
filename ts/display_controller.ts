@@ -22,6 +22,8 @@ export interface IDisplayController {
   renderFeature(feature: Feature): void;
   clearFeature(): void;
   setCurrentCategoryName(categoryName: string): void;
+  /** Optional: emit a next-state FeatureSignal for the upcoming interval. */
+  renderNextFeature?(feature: Feature | null): void;
 }
 
 export class DisplayController implements IDisplayController {

@@ -424,6 +424,9 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent-dim, var(--border));
 }
+.layer-palette-btn[data-picker-role='stroke'] {
+  border-style: dashed;
+}
 
 .layer-palette-swatch-preview {
   display: block;
@@ -460,6 +463,17 @@
 }
 .palette-swatch:hover { transform: scale(1.2); }
 .palette-swatch.is-active { border-color: var(--text-primary); }
+.palette-swatch.palette-swatch-none,
+.layer-palette-swatch-preview.swatch-none {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--border, #888) 0,
+    var(--border, #888) 2px,
+    transparent 2px,
+    transparent 6px
+  ) !important;
+  box-shadow: none !important;
+}
 
 /* Layer List — Add / Remove buttons */
 .add-layer-btn {
@@ -513,4 +527,182 @@
 .drag-over {
   border-top: 2px dashed var(--accent);
   margin-top: -2px;
+}
+
+/* ─── Circle of Fifths ───────────────────────────────────────────────────── */
+.circle-of-fifths-view {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 8px;
+  gap: 4px;
+}
+
+.cof-svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  user-select: none;
+}
+
+/* ── Wedge fills ─────────────────────────────────────────────────────────── */
+.cof-outer-path {
+  fill: color-mix(in srgb, var(--border) 55%, var(--panel-bg));
+  stroke: var(--panel-bg);
+  stroke-width: 2;
+  transition: fill 0.14s;
+}
+.cof-wedge-group:hover .cof-outer-path {
+  fill: color-mix(in srgb, var(--note-root) 14%, var(--panel-bg));
+}
+.cof-wedge-group.cof-wedge--in-key .cof-outer-path {
+  fill: color-mix(in srgb, var(--note-root) 32%, var(--panel-bg));
+}
+.cof-wedge-group.cof-wedge--root .cof-outer-path {
+  fill: var(--note-root);
+}
+
+.cof-inner-path {
+  fill: color-mix(in srgb, var(--border) 38%, var(--panel-bg));
+  stroke: var(--panel-bg);
+  stroke-width: 2;
+  transition: fill 0.14s;
+}
+.cof-inner-group:hover .cof-inner-path {
+  fill: color-mix(in srgb, var(--note-root) 10%, var(--panel-bg));
+}
+.cof-inner-group.cof-inner--in-key .cof-inner-path {
+  fill: color-mix(in srgb, var(--note-root) 22%, var(--panel-bg));
+}
+.cof-inner-group.cof-inner--root .cof-inner-path {
+  fill: var(--note-root);
+}
+
+/* ── Center ──────────────────────────────────────────────────────────────── */
+.cof-center-circle {
+  fill: var(--panel-bg);
+  stroke: var(--border);
+  stroke-width: 1.5;
+}
+.cof-center-dot {
+  fill: var(--note-root);
+}
+.cof-triad-triangle {
+  fill: none;
+  stroke: var(--text-primary);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 4;
+  opacity: 0.4;
+  pointer-events: none;
+}
+
+/* ── SVG text ────────────────────────────────────────────────────────────── */
+.cof-key-text {
+  fill: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+}
+.cof-wedge-group.cof-wedge--root .cof-key-text {
+  fill: var(--panel-bg);
+}
+
+.cof-roman-text,
+.cof-mode-text {
+  fill: var(--text-muted);
+  font-size: 7.5px;
+  pointer-events: none;
+}
+.cof-wedge-group.cof-wedge--root .cof-roman-text,
+.cof-wedge-group.cof-wedge--root .cof-mode-text {
+  fill: color-mix(in srgb, var(--panel-bg) 80%, transparent);
+}
+
+.cof-minor-text {
+  fill: var(--text-primary);
+  font-size: 8.5px;
+  pointer-events: none;
+}
+.cof-inner-group.cof-inner--root .cof-minor-text {
+  fill: var(--panel-bg);
+  font-weight: 600;
+}
+
+/* ── Info bar ────────────────────────────────────────────────────────────── */
+.cof-info-bar {
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 4px 0 2px;
+}
+.cof-info-bar--driven::after {
+  content: ' ·';
+  color: var(--accent);
+  font-size: 0.85em;
+}
+
+/* ── Progression ─────────────────────────────────────────────────────────── */
+.cof-progression-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 2px 0 0;
+}
+
+.cof-progression {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.cof-chord-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 4px 7px;
+  min-width: 34px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.cof-chord-chip:hover {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--input-bg));
+}
+.cof-chord-chip.is-active {
+  border-color: var(--note-root);
+  background: color-mix(in srgb, var(--note-root) 16%, var(--input-bg));
+}
+
+.cof-chip-roman {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.cof-chip-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+.cof-chip-mode {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+.cof-chord-chip.cof-chip--minor .cof-chip-name {
+  color: var(--note-third, var(--text-primary));
+}
+.cof-chord-chip.cof-chip--dim .cof-chip-name {
+  color: var(--text-muted);
 }

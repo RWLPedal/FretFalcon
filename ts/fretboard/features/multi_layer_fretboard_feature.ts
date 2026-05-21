@@ -27,7 +27,7 @@ import {
   compareCagedPositions,
   getCagedTuningOffset,
 } from "./caged_feature";
-import { DriveSignal, ChordSignal, KeySignal, SignalKind } from "../../panels/link_types";
+import { DriveSignal, ChordSignal, KeySignal, SignalKind, SignalState } from "../../panels/link_types";
 import { LayerType } from "./layer_types";
 
 // --- Layer Spec Types ---
@@ -37,19 +37,22 @@ interface ScaleLayer {
   type: LayerType.Scale;
   scaleName: string;
   rootNote: string;   // "driven" → use lastRootSignal
-  color: string;
+  fillColor: string | null;
+  strokeColor: string | null;
 }
 
 interface ChordLayer {
   type: LayerType.Chord;
   chordKey: string;   // "driven" → use lastChordSignal
-  color: string;
+  fillColor: string | null;
+  strokeColor: string | null;
 }
 
 interface NotesLayer {
   type: LayerType.Notes;
   noteNames: string[];
-  color: string;
+  fillColor: string | null;
+  strokeColor: string | null;
 }
 
 interface CagedLayer {
@@ -67,6 +70,11 @@ type LayerSpec = ScaleLayer | ChordLayer | NotesLayer | CagedLayer;
 // CAGED:   "caged|{scaleName}|{rootNote}"
 // Driven:  "driven|chord|{hexColor}" or "driven|scale|{hexColor}"
 
+function parseNullableColor(s: string | undefined): string | null {
+  if (!s || s === 'none') return null;
+  return s;
+}
+
 function parseLayerString(layerStr: string): LayerSpec | null {
   const parts = layerStr.split("|");
   if (parts.length < 2) return null;
@@ -77,20 +85,37 @@ function parseLayerString(layerStr: string): LayerSpec | null {
     return { type: LayerType.Caged, scaleName: parts[1], rootNote: parts[2] };
   }
 
-  // All other types need at least 3 parts and have color as the last part
   if (parts.length < 3) return null;
-  const color = parts[parts.length - 1];
 
   if (type === LayerType.Scale && parts.length >= 4) {
-    return { type: LayerType.Scale, scaleName: parts[1], rootNote: parts[2], color };
-  } else if (type === LayerType.Chord && parts.length >= 3) {
-    return { type: LayerType.Chord, chordKey: parts[1], color };
-  } else if (type === LayerType.Notes && parts.length >= 3) {
+    // scale|scaleName|rootNote|fillColor[|strokeColor]
+    return {
+      type: LayerType.Scale,
+      scaleName: parts[1],
+      rootNote: parts[2],
+      fillColor: parseNullableColor(parts[3]),
+      strokeColor: parseNullableColor(parts[4]),
+    };
+  } else if (type === LayerType.Chord) {
+    // chord|chordKey|fillColor[|strokeColor]
+    return {
+      type: LayerType.Chord,
+      chordKey: parts[1],
+      fillColor: parseNullableColor(parts[2]),
+      strokeColor: parseNullableColor(parts[3]),
+    };
+  } else if (type === LayerType.Notes) {
     const notesStr = parts[1];
     const noteNames = notesStr
       ? notesStr.split(",").map((n) => n.trim()).filter((n) => n.length > 0)
       : [];
-    return { type: LayerType.Notes, noteNames, color };
+    // notes|noteNames|fillColor[|strokeColor]
+    return {
+      type: LayerType.Notes,
+      noteNames,
+      fillColor: parseNullableColor(parts[2]),
+      strokeColor: parseNullableColor(parts[3]),
+    };
   }
   return null;
 }
@@ -113,9 +138,11 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
 
   readonly typeName = MultiLayerFretboardFeature.typeName;
   private readonly layers: LayerSpec[];
-  // Last signals received — used to resolve "driven" sentinel in layer fields
+  // Last signals received — used to resolve "driven" / "driven_next" sentinels in layer fields
   private lastChordSignal: ChordSignal | null = null;
   private lastRootSignal: ChordSignal | KeySignal | null = null;
+  private lastNextChordSignal: ChordSignal | null = null;
+  private lastNextRootSignal: ChordSignal | KeySignal | null = null;
   private fretboardViewInstance: FretboardView;
   private readonly fretCount = 18;
   private driveSignalHandler: ((e: Event) => void) | null = null;
@@ -158,22 +185,45 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     // Listen for drive-signal events forwarded by ConfigurableFeatureView
     this.driveSignalHandler = (e: Event) => {
       const { signal } = (e as CustomEvent<{ signal: DriveSignal; linkId: string }>).detail;
+      const isNextState = (signal.state ?? SignalState.Current) === SignalState.Next;
+
       const hasDrivenRootNote = this.layers.some(l => l.type === LayerType.Scale && (l as ScaleLayer).rootNote === 'driven');
       const hasDrivenScaleName = this.layers.some(l => l.type === LayerType.Scale && (l as ScaleLayer).scaleName === 'driven');
       const hasDrivenChord = this.layers.some(l => l.type === LayerType.Chord && (l as ChordLayer).chordKey === 'driven');
-      if (!hasDrivenRootNote && !hasDrivenScaleName && !hasDrivenChord) return;
+      const hasDrivenNextRootNote = this.layers.some(l => l.type === LayerType.Scale && (l as ScaleLayer).rootNote === 'driven_next');
+      const hasDrivenNextScaleName = this.layers.some(l => l.type === LayerType.Scale && (l as ScaleLayer).scaleName === 'driven_next');
+      const hasDrivenNextChord = this.layers.some(l => l.type === LayerType.Chord && (l as ChordLayer).chordKey === 'driven_next');
+
+      const anyDriven = hasDrivenRootNote || hasDrivenScaleName || hasDrivenChord
+                     || hasDrivenNextRootNote || hasDrivenNextScaleName || hasDrivenNextChord;
+      if (!anyDriven) return;
 
       let changed = false;
-      if (signal.kind === SignalKind.Chord) {
-        if (hasDrivenChord || hasDrivenRootNote) {
-          this.lastChordSignal = signal as ChordSignal;
-          this.lastRootSignal = signal;
-          changed = true;
+      if (isNextState) {
+        if (signal.kind === SignalKind.Chord) {
+          if (hasDrivenNextChord || hasDrivenNextRootNote) {
+            this.lastNextChordSignal = signal as ChordSignal;
+            this.lastNextRootSignal = signal;
+            changed = true;
+          }
+        } else if (signal.kind === SignalKind.Key) {
+          if (hasDrivenNextRootNote || hasDrivenNextScaleName) {
+            this.lastNextRootSignal = signal;
+            changed = true;
+          }
         }
-      } else if (signal.kind === SignalKind.Key) {
-        if (hasDrivenRootNote || hasDrivenScaleName) {
-          this.lastRootSignal = signal;
-          changed = true;
+      } else {
+        if (signal.kind === SignalKind.Chord) {
+          if (hasDrivenChord || hasDrivenRootNote) {
+            this.lastChordSignal = signal as ChordSignal;
+            this.lastRootSignal = signal;
+            changed = true;
+          }
+        } else if (signal.kind === SignalKind.Key) {
+          if (hasDrivenRootNote || hasDrivenScaleName) {
+            this.lastRootSignal = signal;
+            changed = true;
+          }
         }
       }
       if (changed) {
@@ -252,20 +302,39 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   // --- Note Calculation ---
 
   private calculateAndSetNotes(): void {
-    // Build a map keyed by "stringIndex-fret". Layers listed first win (highest precedence).
-    const noteMap = new Map<string, NoteRenderData>();
-
-    this.layers.forEach((layer) => {
-      const layerNotes = this.getLayerNotes(layer);
-      for (const note of layerNotes) {
+    // Collect all notes per position, ordered by layer priority (highest first).
+    const positionNotes = new Map<string, NoteRenderData[]>();
+    for (const layer of this.layers) {
+      for (const note of this.getLayerNotes(layer)) {
         const key = `${note.stringIndex}-${note.fret}`;
-        if (!noteMap.has(key)) {
-          noteMap.set(key, note);
-        }
+        const bucket = positionNotes.get(key);
+        if (bucket) bucket.push(note);
+        else positionNotes.set(key, [note]);
       }
-    });
+    }
 
-    const notesData = Array.from(noteMap.values());
+    // Composite fill and stroke channels independently:
+    // fill   = topmost layer with a non-transparent fillColor
+    // stroke = topmost layer with a non-transparent strokeColor
+    const notesData: NoteRenderData[] = [];
+    for (const notes of positionNotes.values()) {
+      const base = notes[0];
+      const fillNote = notes.find(n => {
+        const f = n.fillColor;
+        return f && f !== 'transparent';
+      });
+      const resolvedFill = fillNote?.fillColor ?? 'transparent';
+      const strokeNote = notes.find(n => n.strokeColor && n.strokeColor !== 'transparent');
+      const resolvedStroke = strokeNote?.strokeColor
+        ?? (resolvedFill !== 'transparent' ? 'rgba(50,50,50,0.7)' : 'transparent');
+      notesData.push({
+        ...base,
+        fillColor: resolvedFill,
+        strokeColor: resolvedStroke,
+        strokeWidth: strokeNote ? (strokeNote.strokeWidth ?? 1) * 2 : base.strokeWidth,
+      });
+    }
+
     requestAnimationFrame(() => {
       this.fretboardViewInstance.setNotes(notesData);
       this.fretboardViewInstance.setLines([]);
@@ -276,20 +345,30 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     switch (layer.type) {
       case LayerType.Scale: return this.getScaleLayerNotes(layer);
       case LayerType.Chord: return this.getChordLayerNotes(layer);
-      case LayerType.Notes: return this.getNoteSetLayerNotes(layer.noteNames, layer.color);
+      case LayerType.Notes: return this.getNoteSetLayerNotes(layer.noteNames, layer.fillColor, layer.strokeColor);
       case LayerType.Caged: return this.getCagedLayerNotes(layer);
       default: return [];
     }
   }
 
   private getScaleLayerNotes(layer: ScaleLayer): NoteRenderData[] {
-    const rootNote = layer.rootNote === 'driven'
+    const rootNote = layer.rootNote === 'driven_next'
+      ? (this.lastNextRootSignal?.rootNote ?? '')
+      : layer.rootNote === 'driven'
       ? (this.lastRootSignal?.rootNote ?? '')
       : layer.rootNote;
     if (!rootNote) return [];
 
     let resolvedScaleName = layer.scaleName;
-    if (resolvedScaleName === 'driven') {
+    if (resolvedScaleName === 'driven_next') {
+      if (!this.lastNextRootSignal) return [];
+      if (this.lastNextRootSignal.kind === SignalKind.Key) {
+        const scale = scales[this.lastNextRootSignal.scaleKey as keyof typeof scales];
+        resolvedScaleName = scale?.name ?? 'Major';
+      } else {
+        resolvedScaleName = this.lastNextRootSignal.keyType === 'Minor' ? 'Natural Minor' : 'Major';
+      }
+    } else if (resolvedScaleName === 'driven') {
       if (!this.lastRootSignal) return [];
       if (this.lastRootSignal.kind === SignalKind.Key) {
         const scale = scales[this.lastRootSignal.scaleKey as keyof typeof scales];
@@ -321,14 +400,16 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
         const intervalLabel = getIntervalLabel(relativeOffset);
         const isRoot = relativeOffset === 0;
 
+        const fill = layer.fillColor ? resolveCssColor(layer.fillColor) : 'transparent';
+        const stroke = layer.strokeColor ? resolveCssColor(layer.strokeColor) : 'transparent';
         notes.push({
           fret: fretIndex,
           stringIndex,
           noteName,
           intervalLabel,
           displayLabel: intervalLabel,
-          fillColor: resolveCssColor(layer.color),
-          strokeColor: isRoot ? "#333" : "rgba(50,50,50,0.7)",
+          fillColor: fill,
+          strokeColor: stroke,
           strokeWidth: isRoot ? 2.0 : 1,
           radiusOverride:
             fretIndex === 0
@@ -341,19 +422,24 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   }
 
   private getChordLayerNotes(layer: ChordLayer): NoteRenderData[] {
-    const chordKey = layer.chordKey === 'driven'
+    const chordKey = layer.chordKey === 'driven_next'
+      ? (this.lastNextChordSignal?.chordKey ?? null)
+      : layer.chordKey === 'driven'
       ? (this.lastChordSignal?.chordKey ?? null)
       : layer.chordKey;
     if (!chordKey) return [];
     const entry = chord_tones_library[chordKey];
     if (!entry || entry.tones.length === 0) return [];
-    return this.getNoteSetLayerNotes(entry.tones, layer.color);
+    return this.getNoteSetLayerNotes(entry.tones, layer.fillColor, layer.strokeColor);
   }
 
   private getNoteSetLayerNotes(
     toneNames: string[],
-    color: string
+    fillColor: string | null,
+    strokeColor: string | null
   ): NoteRenderData[] {
+    const fill = fillColor ? resolveCssColor(fillColor) : 'transparent';
+    const stroke = strokeColor ? resolveCssColor(strokeColor) : 'transparent';
     const toneSet = new Set(toneNames);
     const tuning = this.fretboardConfig.tuning.tuning;
     const notes: NoteRenderData[] = [];
@@ -371,8 +457,8 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
           noteName,
           intervalLabel: noteName,
           displayLabel: noteName,
-          fillColor: resolveCssColor(color),
-          strokeColor: "rgba(50,50,50,0.7)",
+          fillColor: fill,
+          strokeColor: stroke,
           strokeWidth: 1.5,
           radiusOverride:
             fretIndex === 0

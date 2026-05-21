@@ -3,7 +3,7 @@ import { Interval } from './schedule';
 import { IDisplayController, Status } from '../display_controller';
 import { TimerView } from '../views/timer_view';
 import { SchedulePlaybackView } from '../views/schedule_playback_view';
-import { SignalKind, FeatureSignal } from '../panels/link_types';
+import { SignalKind, SignalState, FeatureSignal } from '../panels/link_types';
 
 /**
  * An IDisplayController implementation for the Schedule floating view.
@@ -88,6 +88,17 @@ export class ScheduleDisplayAdapter implements IDisplayController {
       categoryName: this.currentCategoryName,
       featureTypeName: null,
       config: [],
+    };
+    this._dispatchFeatureSignal(signal);
+  }
+
+  renderNextFeature(feature: Feature | null): void {
+    const signal: FeatureSignal = {
+      kind: SignalKind.Feature,
+      state: SignalState.Next,
+      categoryName: this.currentCategoryName,
+      featureTypeName: feature?.typeName ?? null,
+      config: feature ? [...feature.config] : [],
     };
     this._dispatchFeatureSignal(signal);
   }

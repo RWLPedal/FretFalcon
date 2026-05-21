@@ -116,6 +116,10 @@ export class Schedule {
     } else {
       this.display.clearFeature();
     }
+
+    // Emit a next-state signal for the upcoming interval so linked views can preview it.
+    const nextInterval = this.intervals[this.currentIntervalIndex + 1] ?? null;
+    this.display.renderNextFeature?.(nextInterval?.feature ?? null);
   }
 
   setDisplayFinished(): void {

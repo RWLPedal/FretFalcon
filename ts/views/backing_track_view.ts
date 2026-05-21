@@ -1044,6 +1044,22 @@ export class BackingTrackView extends BaseView {
         chordKey = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode);
       }
     }
+
+    // Compute the next measure's chord for next-state signal consumers.
+    const nextMeasureIndex = (this.currentMeasure + 1) % this.numMeasures;
+    const nextChordDeg = this.measureChords[nextMeasureIndex] ?? null;
+    let nextRoman: string | null = null;
+    let nextChordKey: string | null = null;
+    let nextRootNote: string | null = null;
+    if (nextChordDeg !== null) {
+      const nextEntry = getRomansForMode(this.progMode)[nextChordDeg - 1];
+      if (nextEntry) {
+        nextRoman = nextEntry.roman;
+        nextChordKey = resolveAbsoluteChordKey(nextEntry.roman, this.progRootNote, this.progMode);
+        nextRootNote = nextChordKey ? (nextChordKey.split('_')[0] ?? this.progRootNote) : this.progRootNote;
+      }
+    }
+
     this.container.dispatchEvent(new CustomEvent('backing-track-tick', {
       bubbles: true,
       detail: {
@@ -1057,6 +1073,9 @@ export class BackingTrackView extends BaseView {
         timeSig:         { beats: 4, division: 4 },
         swing:           this.swingAmount,
         beat:            0,
+        nextChordKey,
+        nextRootNote,
+        nextRoman,
       },
     }));
   }

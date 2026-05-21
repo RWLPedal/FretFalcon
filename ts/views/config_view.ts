@@ -16,6 +16,7 @@ export class ConfigView {
     private layerListContainers: Map<number, HTMLElement> = new Map();
     // Tracks whether any LayerList arg is currently in linked/driven state.
     private _isLinked = false;
+    private _hasNextSignals = false;
 
     constructor(schema: ConfigurationSchema, container: HTMLElement, callback: ConfigChangeCallback) {
         this.schema = schema;
@@ -49,7 +50,7 @@ export class ConfigView {
                     createLayerListInput(listEl, arg, layerValues, () => this.notifyChange());
                     if (this._isLinked) {
                         const fn = (listEl as any)._setLinked;
-                        if (typeof fn === 'function') fn(true, false);
+                        if (typeof fn === 'function') fn(true, false, this._hasNextSignals);
                     }
                 }
                 return;
@@ -122,26 +123,65 @@ export class ConfigView {
     }
 
     /**
-     * Shows or hides the "⟳ Driven" sentinel option in the named arg's select element.
-     * Call with visible=true when an incoming link exists on this window.
+     * Shows or hides "⟳ Driven" (and optionally "⟳ Driven (Next)") sentinel options in the
+     * named arg's select element. Pass hasNext=true when the connected source emits next signals.
      */
-    public setDrivenVisible(argName: string, visible: boolean): void {
+    public setDrivenVisible(argName: string, visible: boolean, hasNext = false): void {
         const select = this.container.querySelector<HTMLSelectElement>(`select[data-arg-name="${argName}"]`);
         if (select) {
-            const existing = select.querySelector<HTMLOptionElement>('option[value="__driven__"]');
-            if (visible && !existing) {
-                const opt = document.createElement('option');
-                opt.value = '__driven__';
-                opt.text = '⟳ Driven';
-                opt.style.fontStyle = 'italic';
-                select.insertBefore(opt, select.firstChild);
-            } else if (!visible && existing) {
-                if (select.value === '__driven__') {
-                    const first = select.querySelector<HTMLOptionElement>('option:not([value="__driven__"])');
-                    if (first) select.value = first.value;
+            const existingCurrent = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+            const existingNext    = select.querySelector<HTMLOptionElement>('option[value="driven_next"]');
+            if (visible) {
+                // Insert "⟳ Driven" at top if not present
+                if (!existingCurrent) {
+                    const opt = document.createElement('option');
+                    opt.value = 'driven';
+                    opt.text = '⟳ Driven';
+                    opt.style.fontStyle = 'italic';
+                    select.insertBefore(opt, select.firstChild);
                 }
-                existing.remove();
-                // Sync argValues so buildFlatConfig no longer emits the sentinel.
+                // Insert "⟳ Driven (Next)" directly after "⟳ Driven" if source supports it
+                if (hasNext && !existingNext) {
+                    const optNext = document.createElement('option');
+                    optNext.value = 'driven_next';
+                    optNext.text = '⟳ Driven (Next)';
+                    optNext.style.fontStyle = 'italic';
+                    const afterCurrent = select.querySelector<HTMLOptionElement>('option[value="driven"]');
+                    if (afterCurrent?.nextSibling) {
+                        select.insertBefore(optNext, afterCurrent.nextSibling);
+                    } else {
+                        select.appendChild(optNext);
+                    }
+                } else if (!hasNext && existingNext) {
+                    // Source no longer emits next — remove the option, fall back if selected
+                    if (select.value === 'driven_next') {
+                        const first = select.querySelector<HTMLOptionElement>('option:not([value="driven_next"])');
+                        if (first) { select.value = first.value; }
+                    }
+                    existingNext.remove();
+                }
+                // Restore a sentinel that was stored by setConfig before the option existed in the DOM.
+                if (typeof this.schema !== 'string') {
+                    const argIndex = this.schema.args.findIndex(a => a.name === argName);
+                    if (argIndex !== -1) {
+                        const saved = this.argValues.get(argIndex);
+                        if ((saved === 'driven' || saved === 'driven_next') &&
+                            select.querySelector(`option[value="${saved}"]`)) {
+                            select.value = saved as string;
+                        }
+                    }
+                }
+            } else {
+                // Remove both sentinel options
+                for (const opt of [existingCurrent, existingNext]) {
+                    if (!opt) continue;
+                    if (select.value === opt.value) {
+                        const first = select.querySelector<HTMLOptionElement>(`option:not([value="${opt.value}"])`);
+                        if (first) select.value = first.value;
+                    }
+                    opt.remove();
+                }
+                // Sync argValues so buildFlatConfig no longer emits a sentinel.
                 if (typeof this.schema !== 'string') {
                     const argIndex = this.schema.args.findIndex(a => a.name === argName);
                     if (argIndex !== -1) this.argValues.set(argIndex, select.value);
@@ -151,7 +191,8 @@ export class ConfigView {
         }
         // LayerList arg: track state and delegate to the container's _setLinked hook
         this._isLinked = visible;
-        this._callLayerListLinked(argName, visible, false);
+        this._hasNextSignals = hasNext;
+        this._callLayerListLinked(argName, visible, false, hasNext);
     }
 
     /**
@@ -164,29 +205,36 @@ export class ConfigView {
         if (typeof this.schema === 'string') return;
         const select = this.container.querySelector<HTMLSelectElement>(`select[data-arg-name="${argName}"]`);
         if (select) {
-            if (select.value === '__driven__') return;
+            if (select.value === 'driven' || select.value === 'driven_next') return;
             let argIndex = -1;
             this.schema.args.forEach((arg, i) => { if (arg.name === argName) argIndex = i; });
             if (argIndex === -1) return;
-            this.setDrivenVisible(argName, true);
-            select.value = '__driven__';
-            this.argValues.set(argIndex, '__driven__');
+            // Ensure "⟳ Driven" option exists without disturbing "⟳ Driven (Next)" if present.
+            if (!select.querySelector('option[value="driven"]')) {
+                const opt = document.createElement('option');
+                opt.value = 'driven';
+                opt.text = '⟳ Driven';
+                opt.style.fontStyle = 'italic';
+                select.insertBefore(opt, select.firstChild);
+            }
+            select.value = 'driven';
+            this.argValues.set(argIndex, 'driven');
             this.notifyChange();
             return;
         }
         // LayerList arg: show driven options and auto-select them
         this._isLinked = true;
-        this._callLayerListLinked(argName, true, true);
+        this._callLayerListLinked(argName, true, true, this._hasNextSignals);
     }
 
-    private _callLayerListLinked(argName: string, linked: boolean, autoSelect: boolean): void {
+    private _callLayerListLinked(argName: string, linked: boolean, autoSelect: boolean, hasNext = false): void {
         if (typeof this.schema === 'string') return;
         const argIndex = this.schema.args.findIndex(a => a.name === argName);
         if (argIndex === -1) return;
         const listEl = this.layerListContainers.get(argIndex);
         if (!listEl) return;
         const fn = (listEl as any)._setLinked;
-        if (typeof fn === 'function') fn(linked, autoSelect);
+        if (typeof fn === 'function') fn(linked, autoSelect, hasNext);
     }
 
     /**
@@ -221,7 +269,7 @@ export class ConfigView {
         const select = this.container.querySelector<HTMLSelectElement>(`select[data-arg-name="${argName}"]`);
         if (!select) return;
         // Only apply if the select is currently in driven mode
-        if (select.value !== '__driven__') return;
+        if (select.value !== 'driven') return;
         // Carry the driven value on a data attribute (used by buildDrivenConfig externally)
         select.dataset.drivenValue = value;
 
@@ -244,6 +292,21 @@ export class ConfigView {
                 this.rebuildToggleButtons(controlledArg, controlledIndex, value, advCb?.checked ?? false);
             }
         }
+    }
+
+    /**
+     * Reflects a live next-state driven value in the select display.
+     * Only updates when the select is currently showing driven_next.
+     */
+    public applyDrivenNextValue(argName: string, value: string): void {
+        const select = this.container.querySelector<HTMLSelectElement>(`select[data-arg-name="${argName}"]`);
+        if (!select) return;
+        if (select.value !== 'driven_next') return;
+        select.dataset.drivenNextValue = value;
+        if (typeof this.schema === 'string') return;
+        const argIndex = this.schema.args.findIndex(a => a.name === argName);
+        if (argIndex < 0) return;
+        this.argValues.set(argIndex, value);
     }
 
     public render(): void {

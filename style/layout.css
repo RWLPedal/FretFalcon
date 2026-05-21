@@ -647,6 +647,11 @@ body.is-zen-mode .config-compact {
   color: var(--clr-primary, #2C4A7C);
   font-weight: bold;
 }
+.link-signal-next {
+  color: var(--clr-text-muted, #888);
+  font-weight: normal;
+  opacity: 0.75;
+}
 .link-signal-emitted-only,
 .link-signal-accepted-only {
   opacity: 0.5;

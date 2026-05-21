@@ -6,6 +6,8 @@ export interface DriveSourceDescriptor {
   featureTypeName?: string; // set for configurable features e.g. 'MultiLayerFretboard'
   /** Declarative list of SignalKinds this source can emit. Used for arrow tooltip display. */
   emittedKinds: SignalKind[];
+  /** When true, this source can emit next-state signals in addition to current-state signals. */
+  emitsNextSignals?: boolean;
   /**
    * Returns an ordered array of signals from this source's current state.
    * Index matters: signals[i] is routed to the i-th outgoing link.

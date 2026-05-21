@@ -2,7 +2,7 @@
 // Owns a single SVG arrow group and its hover tooltip.
 // Extracted from LinkOverlay so metadata-aware rendering can live here.
 
-import { HandleSide, LinkRecord, SignalKind, DriveSignal, SIGNAL_KIND_ICON, DiatonicMode } from './link_types';
+import { HandleSide, LinkRecord, SignalKind, SignalState, DriveSignal, SIGNAL_KIND_ICON, DiatonicMode } from './link_types';
 import { DIATONIC_MODE_LABELS } from '../fretboard/music_types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -85,14 +85,18 @@ function buildIconBadges(
 
 // ─── Tooltip helpers ──────────────────────────────────────────────────────────
 
-function signalDisplayValue(signals: DriveSignal[], kind: SignalKind): string | null {
-  const s = signals.find(sig => sig.kind === kind);
-  if (!s) return null;
+function signalValue(s: DriveSignal): string | null {
   if (s.kind === SignalKind.Groove) return `${Math.round(s.bpm)} BPM`;
   if (s.kind === SignalKind.Chord) return s.rootNote || null;
   if (s.kind === SignalKind.Key)   return `${s.rootNote} ${DIATONIC_MODE_LABELS[s.scaleKey as DiatonicMode] ?? s.scaleKey}`;
   if (s.kind === SignalKind.Play)  return s.playing ? 'On' : 'Off';
   return null;
+}
+
+function signalsByKind(signals: DriveSignal[], kind: SignalKind): { current: DriveSignal | null; next: DriveSignal | null } {
+  const current = signals.find(s => s.kind === kind && (s.state ?? SignalState.Current) === SignalState.Current) ?? null;
+  const next    = signals.find(s => s.kind === kind && s.state === SignalState.Next) ?? null;
+  return { current, next };
 }
 
 // ─── LinkArrow ────────────────────────────────────────────────────────────────
@@ -217,13 +221,34 @@ export class LinkArrow {
     const acceptedOnly = acceptedKinds.filter(k => !emittedKinds.includes(k));
 
     for (const kind of matched) {
-      const value = signalDisplayValue(lastSignals, kind);
-      const row = document.createElement('div');
-      row.className = 'link-signal-row link-signal-matched';
-      row.textContent = value
-        ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${value}`
-        : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
-      this.tooltipContent.appendChild(row);
+      const { current, next } = signalsByKind(lastSignals, kind);
+
+      if (current) {
+        const row = document.createElement('div');
+        row.className = 'link-signal-row link-signal-matched';
+        const val = signalValue(current);
+        row.textContent = val
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        this.tooltipContent.appendChild(row);
+      }
+
+      if (next) {
+        const row = document.createElement('div');
+        row.className = 'link-signal-row link-signal-matched link-signal-next';
+        const val = signalValue(next);
+        row.textContent = val
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        this.tooltipContent.appendChild(row);
+      }
+
+      if (!current && !next) {
+        const row = document.createElement('div');
+        row.className = 'link-signal-row link-signal-matched';
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        this.tooltipContent.appendChild(row);
+      }
     }
 
     if (DEBUG_SHOW_ALL_SIGNAL_KINDS) {

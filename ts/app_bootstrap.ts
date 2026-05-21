@@ -6,12 +6,14 @@ import { TimerView } from "./views/timer_view";
 import { DroneView } from "./views/drone_view";
 import { ScheduleFloatingView } from "./views/schedule_floating_view";
 import { AnyFloatingView } from "./views/any_floating_view";
+import { AnyFeature } from "./fretboard/features/any_feature";
 import { BackingTrackView } from "./views/backing_track_view";
 import { CapoView } from "./fretboard/views/capo_view";
 import { ConfigurableFeatureView } from "./views/configurable_feature_view";
 import { ColorLegendView } from "./fretboard/views/color_legend_view";
 import { MetronomeView } from "./fretboard/views/metronome_view";
 import { StrumView } from "./views/strum_view";
+import { CircleOfFifthsView } from "./views/circle_of_fifths_view";
 import { NotesFeature } from "./fretboard/features/notes_feature";
 import { ChordProgressionFeature } from "./fretboard/features/chord_progression_feature";
 import { InstrumentIntervalSettings } from "./fretboard/fretboard_interval_settings";
@@ -59,6 +61,21 @@ export function registerBuiltins(): void {
         showInMenu: false,
         createView: (initialState?: any, appSettings?: AppSettings) =>
             new AnyFloatingView(initialState, appSettings!),
+    });
+
+    registerFloatingView({
+        viewId: "any_feature",
+        displayName: "Any Feature",
+        categoryName: "Practice",
+        defaultWidth: 420,
+        defaultHeight: 550,
+        showInMenu: false,
+        supportsConfigToggle: true,
+        createView: (initialState?: any, appSettings?: AppSettings) =>
+            new ConfigurableFeatureView(
+                { categoryName: 'Instrument', featureTypeName: AnyFeature.typeName, ...initialState },
+                appSettings!
+            ),
     });
 
     registerFloatingView({
@@ -181,6 +198,14 @@ export function registerBuiltins(): void {
             );
             return new MetronomeView(120, audioController);
         },
+    });
+
+    registerFloatingView({
+        viewId: "circle_of_fifths",
+        displayName: "Circle of Fifths",
+        categoryName: "Theory",
+        defaultWidth: 360,
+        createView: (initialState?: any) => new CircleOfFifthsView(initialState),
     });
 
     registerFloatingView({
