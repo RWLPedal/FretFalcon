@@ -286,6 +286,54 @@
   color: var(--accent-dim);
 }
 
+/* ── Toggle Switch ──────────────────────────────────────────────────────── */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  margin-top: calc(0.5em - 1px);
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-switch__slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background-color: var(--border);
+  border-radius: 22px;
+  transition: background-color 0.15s;
+}
+.toggle-switch__slider::before {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  left: 3px;
+  top: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.15s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch input:checked + .toggle-switch__slider { background-color: var(--accent); }
+.toggle-switch input:checked + .toggle-switch__slider::before { transform: translateX(16px); }
+
+.toggle-switch--sm {
+  width: 28px;
+  height: 16px;
+}
+.toggle-switch--sm .toggle-switch__slider::before {
+  width: 10px;
+  height: 10px;
+}
+.toggle-switch--sm input:checked + .toggle-switch__slider::before { transform: translateX(12px); }
+
 /* ── Settings Modal — themed colors ─────────────────────────────────────── */
 /* Structural layout (position, flex, sizing) is in layout.css */
 .modal-card { background-color: var(--settings-bg); }

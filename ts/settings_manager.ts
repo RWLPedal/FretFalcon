@@ -1,7 +1,7 @@
 import { AppSettings } from "./settings";
 import { InstrumentCategory } from "./fretboard/fretboard_category";
 import { DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
-import { Theme } from "./theme_manager";
+import { ThemeSwatchPicker } from "./views/theme_swatch_picker";
 
 type PageType = 'practice' | 'reference';
 type SaveCallback = (newSettings: AppSettings) => void;
@@ -40,19 +40,13 @@ const GLOBAL_SETTINGS_HTML = `
 <div class="field is-horizontal">
   <div class="field-label is-normal"><label class="label">Theme</label></div>
   <div class="field-body"><div class="field"><div class="control">
-      <div class="select is-fullwidth"><select id="theme-select">
-          <option value="warm">Warm</option>
-          <option value="moss">Moss</option>
-          <option value="dark">Dark</option>
-          <option value="sigil">Sigil</option>
-          <option value="neon">Neon</option>
-      </select></div>
+      <div id="theme-picker-mount"></div>
   </div></div></div>
 </div>
 <div class="field is-horizontal">
   <div class="field-label is-normal"><label class="label" for="show-grid-checkbox">Show Grid</label></div>
   <div class="field-body"><div class="field"><div class="control">
-      <label class="checkbox" style="padding-top:calc(0.5em - 1px)"><input type="checkbox" id="show-grid-checkbox"></label>
+      <label class="toggle-switch"><input type="checkbox" id="show-grid-checkbox"><span class="toggle-switch__slider"></span></label>
   </div></div></div>
 </div>
 <hr>
@@ -64,6 +58,7 @@ export class SettingsManager {
     private pageType: PageType;
     private modalEl: HTMLElement | null = null;
     private onSave: SaveCallback;
+    private themePicker: ThemeSwatchPicker | null = null;
 
     constructor(settings: AppSettings, pageType: PageType, onSave: SaveCallback) {
         this.settings = settings;
@@ -105,26 +100,28 @@ export class SettingsManager {
     public updateSettings(settings: AppSettings): void {
         this.settings = settings;
         if (this.isOpen()) {
-            const themeSelect = this.modalEl?.querySelector('#theme-select') as HTMLSelectElement | null;
-            if (themeSelect) themeSelect.value = settings.theme;
+            this.themePicker?.setValue(settings.theme);
             const showGridEl = this.modalEl?.querySelector('#show-grid-checkbox') as HTMLInputElement | null;
             if (showGridEl) showGridEl.checked = !!settings.showGrid;
         }
     }
 
     private populate(): void {
-        const body = this.modalEl.querySelector('.modal-card-body');
+        const body = this.modalEl.querySelector('.modal-card-body') as HTMLElement;
+        if (!body) return;
         let content = '';
 
         if (this.pageType === 'practice') {
             content += PRACTICE_SETTINGS_HTML;
         }
-        
+
         content += GLOBAL_SETTINGS_HTML;
         body.innerHTML = content;
-        
-        // Populate fields
-        (body.querySelector("#theme-select") as HTMLSelectElement).value = this.settings.theme;
+
+        const themeMount = body.querySelector('#theme-picker-mount') as HTMLElement;
+        this.themePicker = new ThemeSwatchPicker(this.settings.theme, 'normal');
+        themeMount.appendChild(this.themePicker.el);
+
         (body.querySelector("#show-grid-checkbox") as HTMLInputElement).checked = !!this.settings.showGrid;
         if (this.pageType === 'practice') {
             (body.querySelector("#warmup-input") as HTMLInputElement).value = String(this.settings.practice.warmupPeriod);
@@ -223,13 +220,13 @@ export class SettingsManager {
                 const checkboxElement = document.createElement("input");
                 checkboxElement.id = inputId;
                 checkboxElement.type = "checkbox";
-                checkboxElement.classList.add("checkbox");
                 checkboxElement.checked = !!currentValue;
-                const checkboxLabel = document.createElement("label");
-                checkboxLabel.classList.add("checkbox");
-                checkboxLabel.style.paddingTop = "calc(0.5em - 1px)";
-                checkboxLabel.appendChild(checkboxElement);
-                control.appendChild(checkboxLabel);
+                const toggleLabel = document.createElement("label");
+                toggleLabel.classList.add("toggle-switch");
+                const slider = document.createElement("span");
+                slider.classList.add("toggle-switch__slider");
+                toggleLabel.append(checkboxElement, slider);
+                control.appendChild(toggleLabel);
                 inputElement = checkboxElement;
                 if (item.triggersRebuild) {
                     checkboxElement.addEventListener("change", () => {
@@ -290,7 +287,7 @@ export class SettingsManager {
         const newSettings: AppSettings = JSON.parse(JSON.stringify(this.settings));
 
         // 1. Update global settings (Theme + Grid)
-        newSettings.theme = (this.modalEl.querySelector("#theme-select") as HTMLSelectElement).value as Theme;
+        newSettings.theme = this.themePicker?.getValue() ?? this.settings.theme;
         newSettings.showGrid = (this.modalEl.querySelector("#show-grid-checkbox") as HTMLInputElement).checked;
 
         // 2. Update page-specific settings

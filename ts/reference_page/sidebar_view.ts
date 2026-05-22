@@ -2,7 +2,8 @@
 import { VolumeControl } from '../views/volume_control';
 import { AppSettings } from '../settings';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
-import { Theme, themeNames } from '../theme_manager';
+import { Theme } from '../theme_manager';
+import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 import { NAV_SECTIONS } from './nav_sections';
 
 export class SidebarView {
@@ -70,11 +71,6 @@ export class SidebarView {
 
         html += `</nav>`;
 
-        const swatchesHtml = themeNames.map(t =>
-            `<button class="theme-swatch theme-swatch--${t.key}${currentTheme === t.key ? ' is-active' : ''}"
-                data-theme="${t.key}" title="${t.title}"></button>`
-        ).join('');
-
         const collapseIcon = this.isCollapsed ? 'chevron_right' : 'chevron_left';
         const collapseTitle = this.isCollapsed ? 'Expand sidebar' : 'Collapse sidebar';
         html += `
@@ -91,7 +87,7 @@ export class SidebarView {
                 </div>
                 <div class="sidebar-theme-picker">
                     <span class="sidebar-theme-label">Theme</span>
-                    ${swatchesHtml}
+                    <div id="sidebar-theme-picker-mount"></div>
                 </div>
                 <div class="sidebar-tools-bar">
                     <button id="save-layout-button" class="topbar-icon-button" title="Save window layout">
@@ -117,6 +113,12 @@ export class SidebarView {
         this.container.innerHTML = html;
         this.applyCollapsedState();
         this.applyZenMode();
+
+        const themeMount = this.container.querySelector<HTMLElement>('#sidebar-theme-picker-mount');
+        if (themeMount) {
+            const picker = new ThemeSwatchPicker(currentTheme, 'compact', (theme) => this.onThemeChange?.(theme));
+            themeMount.appendChild(picker.el);
+        }
 
         // Wire collapse toggle
         const collapseBtn = document.getElementById('sidebar-collapse-btn');
@@ -171,15 +173,6 @@ export class SidebarView {
             });
         }
 
-        // Wire theme swatches
-        this.container.querySelectorAll<HTMLButtonElement>('.theme-swatch').forEach((swatch) => {
-            swatch.addEventListener('click', () => {
-                const theme = swatch.dataset.theme as Theme;
-                if (theme && this.onThemeChange) {
-                    this.onThemeChange(theme);
-                }
-            });
-        });
     }
 
     private applyCollapsedState(): void {

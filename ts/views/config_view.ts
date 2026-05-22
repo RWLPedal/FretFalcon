@@ -369,17 +369,25 @@ export class ConfigView {
     }
 
     private renderCheckbox(parent: HTMLElement, arg: ConfigurationSchemaArg): void {
-        const cbLabel = document.createElement('label');
-        cbLabel.classList.add('config-checkbox-label');
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('config-checkbox-label');
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = arg.name;
 
         const cb = document.createElement('input');
         cb.type = 'checkbox';
         cb.dataset.argName = arg.name;
         if (arg.controlsArgName) cb.dataset.controlsArgName = arg.controlsArgName;
 
-        cbLabel.appendChild(cb);
-        cbLabel.append(` ${arg.name}`);
-        parent.appendChild(cbLabel);
+        const toggleLabel = document.createElement('label');
+        toggleLabel.classList.add('toggle-switch', 'toggle-switch--sm');
+        const slider = document.createElement('span');
+        slider.classList.add('toggle-switch__slider');
+        toggleLabel.append(cb, slider);
+
+        wrapper.append(textSpan, toggleLabel);
+        parent.appendChild(wrapper);
         // No argValues entry — checkbox is purely UI state.
     }
 

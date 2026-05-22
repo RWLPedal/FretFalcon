@@ -1,8 +1,9 @@
 import { AppSettings } from '../settings';
-import { Theme, themeNames } from '../theme_manager';
+import { Theme } from '../theme_manager';
 import { INSTRUMENT_TUNINGS, InstrumentName } from '../fretboard/fretboard';
 import { FretboardColorScheme } from '../fretboard/colors';
 import { INSTRUMENT_OPTIONS, COLOR_SCHEME_OPTIONS } from '../fretboard/fretboard_category';
+import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 
 type Draft = {
     instrument: InstrumentName;
@@ -146,34 +147,9 @@ export class MobileSettingsDrawer {
         label.textContent = 'Theme';
         section.appendChild(label);
 
-        const swatchRow = document.createElement('div');
-        swatchRow.className = 'mobile-settings-swatch-row';
-
-        for (const t of themeNames) {
-            const btn = document.createElement('button');
-            btn.className = 'theme-swatch theme-swatch--' + t.key + (currentTheme === t.key ? ' is-active' : '');
-            btn.dataset.theme = t.key;
-            btn.title = t.title;
-
-            const wrap = document.createElement('div');
-            wrap.className = 'mobile-settings-swatch-wrap';
-
-            const swatchLabel = document.createElement('span');
-            swatchLabel.className = 'mobile-settings-swatch-label';
-            swatchLabel.textContent = t.title;
-
-            wrap.append(btn, swatchLabel);
-            wrap.addEventListener('click', () => {
-                swatchRow.querySelectorAll<HTMLElement>('.theme-swatch').forEach(s => {
-                    s.classList.toggle('is-active', s.dataset.theme === t.key);
-                });
-                this._emitTheme(t.key);
-            });
-
-            swatchRow.appendChild(wrap);
-        }
-
-        section.appendChild(swatchRow);
+        const picker = new ThemeSwatchPicker(currentTheme, 'normal', (theme) => this._emitTheme(theme));
+        picker.el.style.padding = '4px 16px 8px';
+        section.appendChild(picker.el);
         return section;
     }
 

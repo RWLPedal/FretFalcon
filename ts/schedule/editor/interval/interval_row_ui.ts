@@ -308,15 +308,17 @@ function populateArgsFromSchema(
     if (uiType === UiComponentType.Checkbox) {
       // --- Checkbox: UI-only, does NOT consume a value from currentValues ---
       label.textContent = labelText;
-      const cbLabel = document.createElement("label");
-      cbLabel.classList.add("checkbox", "is-small");
       const cb = document.createElement("input");
       cb.type = "checkbox";
       cb.name = arg.name;
       cb.classList.add("config-feature-checkbox");
       if (arg.controlsArgName) cb.dataset.controlsArgName = arg.controlsArgName;
-      cbLabel.appendChild(cb);
-      inputsContainer.appendChild(cbLabel);
+      const toggleLabel = document.createElement("label");
+      toggleLabel.classList.add("toggle-switch", "toggle-switch--sm");
+      const slider = document.createElement("span");
+      slider.classList.add("toggle-switch__slider");
+      toggleLabel.append(cb, slider);
+      inputsContainer.appendChild(toggleLabel);
       // valueIndex intentionally NOT incremented
     } else if (uiType === UiComponentType.LayerList) {
       // --- Layer List (MultiLayerFretboard) ---

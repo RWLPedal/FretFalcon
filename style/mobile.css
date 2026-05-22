@@ -646,32 +646,6 @@
   outline-offset: 1px;
 }
 
-/* Theme swatches — larger for touch */
-.mobile-settings-swatch-row {
-  display: flex;
-  gap: 20px;
-  padding: 4px 16px 8px;
-  flex-wrap: wrap;
-}
-.mobile-settings-swatch-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 5px;
-  cursor: pointer;
-}
-.mobile-settings-swatch-wrap .theme-swatch {
-  width: 28px;
-  height: 28px;
-}
-.mobile-settings-swatch-label {
-  font-size: 0.6rem;
-  font-family: 'DM Mono', monospace;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-}
 
 /* Handedness toggle pill */
 .mobile-settings-toggle-group {

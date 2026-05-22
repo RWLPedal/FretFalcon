@@ -129,15 +129,10 @@
 .config-compact .config-checkbox-label {
   font-size: 0.72rem;
   color: var(--text-muted);
-  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   user-select: none;
-}
-.config-compact .config-checkbox-label input[type="checkbox"] {
-  accent-color: var(--accent);
-  cursor: pointer;
 }
 
 /* ─── Schedule Editor ────────────────────────────────────────────────────── */
