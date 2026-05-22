@@ -6,7 +6,24 @@ import { NoteName, NOTE_NAMES } from '../fretboard/music_types';
 
 export { NoteName, NOTE_NAMES } from '../fretboard/music_types';
 
-export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle';
+export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'guitar';
+
+// Cache PeriodicWave per AudioContext so we only build it once.
+const _guitarWaveCache = new WeakMap<AudioContext, PeriodicWave>();
+
+/**
+ * Returns a PeriodicWave approximating a plucked steel-string guitar:
+ * strong fundamental with harmonics falling off naturally.
+ */
+export function getGuitarWave(ctx: AudioContext): PeriodicWave {
+  const cached = _guitarWaveCache.get(ctx);
+  if (cached) return cached;
+  const real = new Float32Array([0, 1, 0.5, 0.25, 0.14, 0.08, 0.05, 0.03, 0.02]);
+  const imag = new Float32Array(9).fill(0);
+  const wave = ctx.createPeriodicWave(real, imag);
+  _guitarWaveCache.set(ctx, wave);
+  return wave;
+}
 
 export interface PlayNoteOptions {
   /** Duration in seconds (default: 0.5) */
@@ -94,7 +111,11 @@ export function playFrequency(frequency: number, options: PlayNoteOptions = {}):
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = wave;
+    if (wave === 'guitar') {
+      osc.setPeriodicWave(getGuitarWave(ctx));
+    } else {
+      osc.type = wave;
+    }
     osc.frequency.value = frequency;
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -142,7 +163,7 @@ export class SustainedNote {
 
   start(note: NoteName, octave = 4, options: SustainedNoteOptions = {}): void {
     this.destroy();
-    const { wave = 'sine', volume = 0.5 } = options;
+    const { wave = 'guitar', volume = 0.625 } = options;
     this.baseVolume = volume;
     try {
       const ctx = getContext();
@@ -152,7 +173,11 @@ export class SustainedNote {
       gain.connect(ctx.destination);
 
       const osc = ctx.createOscillator();
-      osc.type = wave;
+      if (wave === 'guitar') {
+        osc.setPeriodicWave(getGuitarWave(ctx));
+      } else {
+        osc.type = wave;
+      }
       osc.frequency.value = noteToFrequency(note, octave);
       osc.connect(gain);
       osc.start();

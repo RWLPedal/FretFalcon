@@ -9,6 +9,7 @@ import {
 } from '../sounds/drum_sounds';
 import { chord_tones_library } from '../fretboard/chords';
 import { volumeManager } from '../sounds/volume_manager';
+import { getGuitarWave } from '../sounds/note_sounds';
 import {
   CHORD_ROOTS,
   getRomansForMode,
@@ -34,6 +35,8 @@ interface DrumPreset {
   bassTrack: BassStep[];
   numMeasures?: 4 | 8 | 12;
   measureChords?: (number | null)[];  // scale degree numbers 1–7, null = rest
+  progMode?: DiatonicMode;
+  swingAmount?: number;              // 0.0–0.5; undefined = leave slider untouched
 }
 
 // ─── Chord tone frequency helper ───────────────────────────────────────────────
@@ -104,7 +107,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 4, 5, 1],
   },
   {
-    name: 'Funk', bpm: 100, steps: 16, numMeasures: 4,
+    name: 'Funk', bpm: 100, steps: 16, numMeasures: 4, swingAmount: 0.08,
     tracks: [
       ['kick', null, null, 'kick', null, null, 'kick', null, null, null, 'kick', null, null, 'kick', null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, 'snare', null],
@@ -126,7 +129,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 5, 6, 4],
   },
   {
-    name: 'Blues Shuffle', bpm: 90, steps: 16, numMeasures: 12,
+    name: 'Blues Shuffle', bpm: 90, steps: 16, numMeasures: 12, swingAmount: 0.30,
     tracks: [
       ['kick', null, null, null, null, null, null, null, 'tom', null, null, null, null, null, null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
@@ -148,7 +151,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
   },
   {
-    name: 'Jazz Swing', bpm: 160, steps: 16, numMeasures: 8,
+    name: 'Jazz Swing', bpm: 160, steps: 16, numMeasures: 8, swingAmount: 0.33,
     tracks: [
       [null, null, null, null, null, null, null, null, null, null, null, null, 'kick', null, null, null],
       [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
@@ -157,6 +160,58 @@ const PRESETS: DrumPreset[] = [
     ],
     bassTrack: [1, null, null, null, 2, null, null, null, 5, null, null, null, 4, null, null, null],
     measureChords: [1, 6, 2, 5, 1, 6, 2, 5],
+  },
+  {
+    // Reggae one-drop: kick only on beat 3, hihat on offbeats, skank shaker on 8ths
+    name: 'Reggae', bpm: 80, steps: 16, numMeasures: 4, swingAmount: 0,
+    progMode: DiatonicMode.Mixolydian,
+    tracks: [
+      ['kick', null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+      [null, null, null, null, null, null, null, null, 'snare', null, null, null, null, null, null, null],
+      [null, null, 'hihat', null, null, null, 'hihat', null, null, null, 'hihat', null, null, null, 'hihat', null],
+      [null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker'],
+    ],
+    bassTrack: [1, null, null, null, 4, null, null, null, null, null, null, null, 7, null, null, null],
+    measureChords: [1, 4, 7, 4],
+  },
+  {
+    // Afrobeat: syncopated kick, interlocking 16th hihats, Dorian tonality
+    name: 'Afrobeat', bpm: 105, steps: 16, numMeasures: 8, swingAmount: 0.12,
+    progMode: DiatonicMode.Dorian,
+    tracks: [
+      ['kick', null, null, 'kick', null, null, 'kick', null, null, 'kick', null, null, 'kick', null, null, null],
+      [null, null, null, null, 'snare', null, null, 'snare', null, null, null, null, 'snare', null, null, null],
+      ['hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat'],
+      [null, null, null, null, null, null, null, null, null, null, 'open_hihat', null, null, null, 'open_hihat', null],
+    ],
+    bassTrack: [1, null, null, null, null, null, 3, null, 5, null, null, null, null, null, null, null],
+    measureChords: [1, 4, 1, 5, 1, 4, 2, 5],
+  },
+  {
+    // Gypsy Jazz: la pompe 2-beat feel, walking bass, Dorian minor with major IV
+    name: 'Gypsy Jazz', bpm: 200, steps: 16, numMeasures: 8,
+    progMode: DiatonicMode.Dorian, swingAmount: 0.35,
+    tracks: [
+      ['kick', null, null, null, null, null, null, null, 'kick', null, null, null, null, null, null, null],
+      [null, null, null, null, 'snare', null, null, null, null, null, null, null, 'snare', null, null, null],
+      ['hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null, 'hihat', null],
+      [null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null],
+    ],
+    bassTrack: [1, null, null, null, null, null, null, null, 2, null, null, null, null, null, null, null],
+    measureChords: [1, 1, 4, 4, 2, 5, 1, 1],
+  },
+  {
+    // Dream Pop: sparse kick, steady hihats, Lydian I–II shimmer
+    name: 'Dream Pop', bpm: 95, steps: 16, numMeasures: 8,
+    progMode: DiatonicMode.Lydian,
+    tracks: [
+      [null, null, null, null, 'kick', null, null, null, null, null, null, null, 'kick', null, null, null],
+      [null, null, null, null, null, null, null, null, 'snare', null, null, null, null, null, null, 'snare'],
+      ['hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat', 'hihat'],
+      [null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker', null, 'shaker'],
+    ],
+    bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, null, null],
+    measureChords: [1, 2, 5, 5, 1, 2, 6, 5],
   },
 ];
 
@@ -172,6 +227,8 @@ export class BackingTrackView extends BaseView {
   private bassTrack: BassStep[] = [];
   private trackSounds: DrumSoundId[] = [...DEFAULT_TRACK_SOUNDS];
   private selectedBassDegree: number | null = null;
+  private activePresetIndex: number | null = null;
+  private presetSelectEl: HTMLSelectElement | null = null;
   private isPlaying: boolean = false;
   private currentStep: number = -1;
   private intervalId: number | null = null;
@@ -183,6 +240,10 @@ export class BackingTrackView extends BaseView {
   private selectedChordDeg: number | null = null; // 1–7, null = erase tool
   private measureChords: (number | null)[] = []; // degree numbers 1–7, null = rest
   private currentMeasure: number = -1;
+
+  // Layout
+  private activeLayout: 'horizontal' | 'vertical' = 'horizontal';
+  private gridResizeObserver: ResizeObserver | null = null;
 
   // Tempo target state
   private isTempoTarget: boolean = false;
@@ -227,6 +288,7 @@ export class BackingTrackView extends BaseView {
     this.trackSounds = this.resolveTrackSounds(initialState?.trackSounds, initialState?.tracks);
     this.initTracks(initialState?.tracks);
     this.initBassTrack(initialState?.bassTrack);
+    this.activePresetIndex = this.findMatchingPresetIndex();
   }
 
   // Accepts either degree numbers (new) or Roman numeral strings (legacy import).
@@ -242,6 +304,35 @@ export class BackingTrackView extends BaseView {
     });
     while (parsed.length < size) parsed.push(null);
     return parsed;
+  }
+
+  private findMatchingPresetIndex(): number | null {
+    const tracksJson = JSON.stringify(this.tracks);
+    const bassJson   = JSON.stringify(this.bassTrack);
+    const chordsJson = JSON.stringify(this.measureChords);
+    for (let i = 0; i < PRESETS.length; i++) {
+      const p = PRESETS[i];
+      if ((p.steps ?? 16) !== this.steps || (p.numMeasures ?? 4) !== this.numMeasures) continue;
+      const pt: TrackData[] = [];
+      for (let t = 0; t < NUM_TRACKS; t++) {
+        const row: TrackData = new Array(this.steps).fill(null);
+        if (p.tracks?.[t]) {
+          for (let s = 0; s < Math.min(p.tracks[t].length, this.steps); s++) row[s] = p.tracks[t][s];
+        }
+        pt.push(row);
+      }
+      const pb: BassStep[] = new Array(this.steps).fill(null);
+      if (p.bassTrack) {
+        for (let s = 0; s < Math.min(p.bassTrack.length, this.steps); s++) pb[s] = p.bassTrack[s];
+      }
+      const nm = p.numMeasures ?? 4;
+      const pc: (number | null)[] = (p.measureChords ?? []).slice(0, nm);
+      while (pc.length < nm) pc.push(null);
+      if (JSON.stringify(pt) === tracksJson && JSON.stringify(pb) === bassJson && JSON.stringify(pc) === chordsJson) {
+        return i;
+      }
+    }
+    return null;
   }
 
   // ─── View interface ──────────────────────────────────────────────────────────
@@ -261,6 +352,17 @@ export class BackingTrackView extends BaseView {
     this.rebuildGrid();
 
     container.appendChild(wrapper);
+
+    this.gridResizeObserver = new ResizeObserver(entries => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      const needed: 'vertical' | 'horizontal' = w <= 480 ? 'vertical' : 'horizontal';
+      if (needed !== this.activeLayout) {
+        this.activeLayout = needed;
+        this.rebuildGrid();
+      }
+    });
+    this.gridResizeObserver.observe(wrapper);
+
     this.dispatchStateChange();
 
     this.listen(container, 'drive-signal', (e: Event) => {
@@ -291,6 +393,8 @@ export class BackingTrackView extends BaseView {
   }
 
   destroy(): void {
+    this.gridResizeObserver?.disconnect();
+    this.gridResizeObserver = null;
     this.stopPlayback();
     this.gridEl              = null;
     this.cellEls             = [];
@@ -303,6 +407,7 @@ export class BackingTrackView extends BaseView {
     this.swingDisplayEl      = null;
     this.barsBtns.clear();
     this.trackDropdowns      = [];
+    this.presetSelectEl      = null;
     this.chordToolSelectEl   = null;
     this.progRootSelectEl    = null;
     this.progModeSelectEl    = null;
@@ -351,7 +456,13 @@ export class BackingTrackView extends BaseView {
     const presetWrap = document.createElement('div');
     presetWrap.classList.add('select', 'is-small');
     const sel = document.createElement('select');
-    PRESETS.forEach((p, i) => sel.appendChild(new Option(p.name, String(i))));
+    this.presetSelectEl = sel;
+    sel.appendChild(new Option('Preset…', ''));
+    PRESETS.forEach((p, i) => {
+      const opt = new Option(p.name, String(i));
+      if (i === this.activePresetIndex) opt.selected = true;
+      sel.appendChild(opt);
+    });
     sel.addEventListener('change', () => {
       const idx = parseInt(sel.value, 10);
       if (!isNaN(idx)) this.applyPreset(PRESETS[idx]);
@@ -512,6 +623,16 @@ export class BackingTrackView extends BaseView {
     this.chordMeasureCellEls = [];
     this.trackDropdowns      = [];
 
+    if (this.activeLayout === 'vertical') {
+      this.rebuildGridVertical();
+    } else {
+      this.rebuildGridHorizontal();
+    }
+  }
+
+  private rebuildGridHorizontal(): void {
+    if (!this.gridEl) return;
+
     // Header row — beat numbers
     const headerRow = document.createElement('div');
     headerRow.classList.add('dm-row', 'dm-header-row');
@@ -547,6 +668,110 @@ export class BackingTrackView extends BaseView {
 
     this.buildBassRow();
     this.buildProgRow();
+  }
+
+  private rebuildGridVertical(): void {
+    if (!this.gridEl) return;
+    const spm = this.steps / this.numMeasures; // steps per measure
+
+    const drumCols = Array(NUM_TRACKS).fill('28px').join(' ');
+    this.gridEl.style.display              = 'grid';
+    this.gridEl.style.gridTemplateColumns  = `48px 20px ${drumCols} 28px`;
+    this.gridEl.style.gap                  = '2px';
+    this.gridEl.style.alignItems           = 'stretch';
+
+    // ── Header row ─────────────────────────────────────────────────
+    this.gridEl.appendChild(this.makeVHeaderCell('Chord'));
+    this.gridEl.appendChild(this.makeVHeaderCell(''));
+    for (let t = 0; t < NUM_TRACKS; t++) {
+      const cell = this.makeVHeaderCell(
+        DRUM_SOUND_LABELS[this.trackSounds[t]].slice(0, 1).toUpperCase()
+      );
+      cell.title = DRUM_SOUND_LABELS[this.trackSounds[t]];
+      this.gridEl.appendChild(cell);
+    }
+    this.gridEl.appendChild(this.makeVBassHeader());
+
+    // ── Chord measure cells (col 1, spanning spm rows each) ────────
+    for (let m = 0; m < this.numMeasures; m++) {
+      const cell = document.createElement('div');
+      cell.classList.add('dm-v-measure-cell');
+      cell.style.gridRow    = `${2 + m * spm} / span ${spm}`;
+      cell.style.gridColumn = '1';
+      this.updateMeasureCellAppearance(cell, this.measureChords[m]);
+      cell.addEventListener('click', () => this.handleMeasureCellClick(m));
+      this.chordMeasureCellEls.push(cell);
+      this.gridEl.appendChild(cell);
+    }
+
+    // ── Step rows ──────────────────────────────────────────────────
+    for (let t = 0; t < NUM_TRACKS; t++) this.cellEls.push([]);
+
+    for (let s = 0; s < this.steps; s++) {
+      const gridRow        = s + 2;
+      const isMeasureStart = s > 0 && s % spm === 0;
+
+      // Beat number (col 2)
+      const beatNum = document.createElement('div');
+      beatNum.classList.add('dm-v-beat-num');
+      beatNum.textContent      = String((s % spm) + 1);
+      beatNum.style.gridRow    = String(gridRow);
+      beatNum.style.gridColumn = '2';
+      if (isMeasureStart) beatNum.classList.add('dm-v-measure-start');
+      this.stepNumEls.push(beatNum);
+      this.gridEl.appendChild(beatNum);
+
+      // Drum cells (cols 3..2+NUM_TRACKS)
+      for (let t = 0; t < NUM_TRACKS; t++) {
+        const cell = document.createElement('div');
+        cell.classList.add('dm-v-cell');
+        cell.style.gridRow    = String(gridRow);
+        cell.style.gridColumn = String(t + 3);
+        if (isMeasureStart) cell.classList.add('dm-v-measure-start');
+        this.updateCellAppearance(cell, this.tracks[t][s]);
+        cell.addEventListener('click', () => this.handleCellClick(t, s));
+        this.cellEls[t].push(cell);
+        this.gridEl.appendChild(cell);
+      }
+
+      // Bass cell (col 3+NUM_TRACKS)
+      const bassCell = document.createElement('div');
+      bassCell.classList.add('dm-v-cell', 'dm-v-bass-cell');
+      bassCell.style.gridRow    = String(gridRow);
+      bassCell.style.gridColumn = String(NUM_TRACKS + 3);
+      if (isMeasureStart) bassCell.classList.add('dm-v-measure-start');
+      this.updateBassCellAppearance(bassCell, this.bassTrack[s]);
+      bassCell.addEventListener('click', () => this.handleBassCellClick(s));
+      this.bassCellEls.push(bassCell);
+      this.gridEl.appendChild(bassCell);
+    }
+  }
+
+  private makeVHeaderCell(text: string): HTMLElement {
+    const el = document.createElement('div');
+    el.classList.add('dm-v-hdr');
+    el.textContent = text;
+    return el;
+  }
+
+  private makeVBassHeader(): HTMLElement {
+    const wrap = document.createElement('div');
+    wrap.classList.add('dm-v-hdr', 'dm-v-bass-hdr');
+    const sel = document.createElement('select');
+    sel.classList.add('dm-v-bass-select');
+    sel.title = 'Bass degree to paint';
+    sel.appendChild(new Option('B', ''));
+    for (let d = 1; d <= 7; d++) {
+      const opt = new Option(String(d), String(d));
+      if (d === this.selectedBassDegree) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    sel.addEventListener('change', () => {
+      const val = sel.value;
+      this.selectedBassDegree = val ? parseInt(val, 10) : null;
+    });
+    wrap.appendChild(sel);
+    return wrap;
   }
 
   private buildBassRow(): void {
@@ -840,6 +1065,7 @@ export class BackingTrackView extends BaseView {
   // ─── Steps / preset / state changes ──────────────────────────────────────────
 
   private applyPreset(preset: DrumPreset): void {
+    this.activePresetIndex = PRESETS.indexOf(preset);
     const wasPlaying = this.isPlaying;
     if (wasPlaying) this.stopPlayback();
     this.bpm   = preset.bpm;
@@ -847,6 +1073,16 @@ export class BackingTrackView extends BaseView {
     if (preset.numMeasures) {
       this.numMeasures = preset.numMeasures;
       this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === this.numMeasures));
+    }
+    if (preset.progMode) {
+      this.progMode = preset.progMode;
+      if (this.progModeSelectEl) this.progModeSelectEl.value = this.progMode;
+    }
+    if (typeof preset.swingAmount === 'number') {
+      this.swingAmount = Math.min(0.5, Math.max(0, preset.swingAmount));
+      const swingPct = Math.round(this.swingAmount * 100);
+      if (this.swingSliderEl)  this.swingSliderEl.value  = String(swingPct);
+      if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${swingPct}%`;
     }
     if (Array.isArray(preset.measureChords)) {
       this.measureChords = preset.measureChords.slice(0, this.numMeasures);
@@ -862,6 +1098,10 @@ export class BackingTrackView extends BaseView {
     if (this.bpmSliderEl)  this.bpmSliderEl.value = String(this.bpm);
     if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(this.bpm);
     this.rebuildGrid();
+    if (this.presetSelectEl && this.activePresetIndex !== null) {
+      this.presetSelectEl.value = String(this.activePresetIndex);
+    }
+    this.rebuildChordToolOptions();
     if (wasPlaying) this.startPlayback();
     this.dispatchStateChange();
   }
@@ -891,6 +1131,7 @@ export class BackingTrackView extends BaseView {
     this.trackSounds = this.resolveTrackSounds(state.trackSounds, state.tracks);
     this.initTracks(state.tracks);
     this.initBassTrack(state.bassTrack);
+    this.activePresetIndex = this.findMatchingPresetIndex();
     this.currentStep    = -1;
     this.currentMeasure = -1;
 
@@ -904,6 +1145,9 @@ export class BackingTrackView extends BaseView {
     this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === this.numMeasures));
 
     this.rebuildGrid();
+    if (this.presetSelectEl && this.activePresetIndex !== null) {
+      this.presetSelectEl.value = String(this.activePresetIndex);
+    }
     this.rebuildChordToolOptions();
 
     if (wasPlaying) this.startPlayback();
@@ -1143,15 +1387,15 @@ export class BackingTrackView extends BaseView {
 
       const osc  = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type            = 'triangle';
+      osc.setPeriodicWave(getGuitarWave(ctx));
       osc.frequency.value = freq;
       osc.connect(gain);
       gain.connect(ctx.destination);
 
+      const peak = 0.35 * masterVol;
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.28 * masterVol, now + 0.012);
-      gain.gain.setValueAtTime(0.28 * masterVol, now + noteDur * 0.7);
-      gain.gain.linearRampToValueAtTime(0, now + noteDur);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.005);
+      gain.gain.setTargetAtTime(0, now + 0.005, noteDur * 0.55);
 
       osc.start(now);
       osc.stop(now + noteDur);
@@ -1172,12 +1416,11 @@ export class BackingTrackView extends BaseView {
 
     const stepMs     = (60000 * 4) / this.bpm / this.steps;
     const measureSec = (stepMs * this.steps) / 1000;
-    const fadeSec    = Math.min(0.12, measureSec * 0.08);
 
     try {
       const ctx       = volumeManager.getAudioContext();
       const masterVol = volumeManager.getVolume();
-      const chordVol  = 0.18 * masterVol;
+      const peak      = 0.225 * masterVol;
       const now       = ctx.currentTime;
 
       chordEntry.tones.forEach((toneName, i) => {
@@ -1187,15 +1430,14 @@ export class BackingTrackView extends BaseView {
 
         const osc  = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'triangle';
+        osc.setPeriodicWave(getGuitarWave(ctx));
         osc.frequency.value = freq;
         osc.connect(gain);
         gain.connect(ctx.destination);
 
         gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(chordVol, now + fadeSec);
-        gain.gain.setValueAtTime(chordVol, now + measureSec - fadeSec);
-        gain.gain.linearRampToValueAtTime(0, now + measureSec);
+        gain.gain.linearRampToValueAtTime(peak, now + 0.008);
+        gain.gain.setTargetAtTime(0, now + 0.008, measureSec * 0.6);
 
         osc.start(now);
         osc.stop(now + measureSec);
