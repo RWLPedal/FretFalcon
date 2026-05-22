@@ -29,17 +29,25 @@ import { CagedFeature } from "./features/caged_feature";
 import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
 import { AnyFeature } from "./features/any_feature";
 
+export const INSTRUMENT_OPTIONS: { value: InstrumentName; text: string }[] = [
+  { value: "Guitar",          text: "Guitar" },
+  { value: "Bass",            text: "Bass (4-string, EADG)" },
+  { value: "Ukulele",         text: "Ukulele (4-string, GCEA)" },
+  { value: "Mandola",         text: "Mandola (4-string, CGDA)" },
+  { value: "Mandolin",        text: "Mandolin (4-string, GDAE)" },
+  { value: "7-String Guitar", text: "7-String Guitar (BEADGBE)" },
+  { value: "8-String Guitar", text: "8-String Guitar (F#BEADGBE)" },
+];
+
+export const COLOR_SCHEME_OPTIONS: { value: FretboardColorScheme; text: string }[] = [
+  { value: "interval", text: "Interval Colors (Default)" },
+  { value: "note", text: "Note Name Colors" },
+  { value: "simplified", text: "Simplified (Root Only)" },
+];
+
 // Helper function to generate UI Schema
 function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
-  const instrumentOptions: { value: InstrumentName; text: string }[] = [
-    { value: "Guitar",          text: "Guitar" },
-    { value: "Bass",            text: "Bass (4-string, EADG)" },
-    { value: "Ukulele",         text: "Ukulele (4-string, GCEA)" },
-    { value: "Mandola",         text: "Mandola (4-string, CGDA)" },
-    { value: "Mandolin",        text: "Mandolin (4-string, GDAE)" },
-    { value: "7-String Guitar", text: "7-String Guitar (BEADGBE)" },
-    { value: "8-String Guitar", text: "8-String Guitar (F#BEADGBE)" },
-  ];
+  const instrumentOptions = INSTRUMENT_OPTIONS;
   const handednessOptions = [
     { value: "right", text: "Right-Handed" },
     { value: "left", text: "Left-Handed" },
@@ -48,11 +56,7 @@ function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
     { value: "vertical", text: "Vertical (Default)" },
     { value: "horizontal", text: "Horizontal" },
   ];
-  const colorSchemeOptions: { value: FretboardColorScheme; text: string }[] = [
-    { value: "interval", text: "Interval Colors (Default)" },
-    { value: "note", text: "Note Name Colors" },
-    { value: "simplified", text: "Simplified (Root Only)" },
-  ];
+  const colorSchemeOptions = COLOR_SCHEME_OPTIONS;
   return [
     {
       key: "instrument",

@@ -10,6 +10,7 @@ import '../panels/drive_slots'; // registers all drive sources/targets as a side
 import { registerBuiltins } from '../app_bootstrap';
 import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
+import { MobileController } from '../mobile/mobile_controller';
 
 class ReferencePage {
     private floatingViewManager: FloatingViewManager;
@@ -17,6 +18,7 @@ class ReferencePage {
     private settingsManager: SettingsManager;
     private sidebarView: SidebarView | null = null;
     private themeManager: ThemeManager;
+    private mobileController: MobileController | null = null;
 
     constructor() {
         registerBuiltins();
@@ -61,6 +63,15 @@ class ReferencePage {
 
         this.applySettings();
         this.floatingViewManager.restoreViewsFromState();
+
+        const mobileRoot = document.getElementById('mobile-layout');
+        if (mobileRoot) {
+            this.mobileController = new MobileController(
+                mobileRoot,
+                this.settings,
+                (newSettings) => this.saveSettings(newSettings),
+            );
+        }
     }
 
     private _wireSettingsButton(): void {
@@ -95,6 +106,7 @@ class ReferencePage {
             if (this.floatingViewManager) {
                 this.floatingViewManager.applySettingsChange(newSettings);
             }
+            this.mobileController?.applySettings(newSettings);
             // Refresh sidebar so instrument-dependent buttons update.
             if (this.sidebarView) {
                 this.sidebarView.refresh(newSettings);
