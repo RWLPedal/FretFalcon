@@ -4,6 +4,7 @@
   OPEN_NOTE_RADIUS_FACTOR,
 } from "./fretboard_utils";
 import { FretboardColorScheme, getColor as getColorFromScheme } from "./colors";
+import { FretboardLabelDisplay } from "./fretboard_settings";
 import { playFrequency } from "../sounds/note_sounds";
 
 export enum NoteIcon {
@@ -132,6 +133,7 @@ export class FretboardConfig {
     public readonly handedness: "right" | "left" = "right",
     public readonly orientation: "vertical" | "horizontal" = "vertical",
     public readonly colorScheme: FretboardColorScheme = "interval",
+    public readonly labelDisplay: FretboardLabelDisplay = "interval",
     public readonly markerDots = [
       0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 2, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0,
     ],

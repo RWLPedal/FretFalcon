@@ -103,6 +103,7 @@ export abstract class InstrumentFeature implements Feature {
       guitarGlobalSettings.handedness,
       guitarGlobalSettings.orientation,
       guitarGlobalSettings.colorScheme,
+      guitarGlobalSettings.labelDisplay ?? "interval",
       undefined, // markerDots
       undefined, // sideNumbers
       stringWidths,

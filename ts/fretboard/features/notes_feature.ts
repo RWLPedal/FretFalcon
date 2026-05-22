@@ -136,37 +136,46 @@ export class NotesFeature extends InstrumentFeature {
 
   /** Calculates all note data and passes it to the FretboardView instance. */
   private calculateAndSetNotes(fretCount: number): void {
-    // Unchanged
-    // ... (Implementation from previous response) ...
     const notesData: NoteRenderData[] = [];
-    const rootNoteIndex = this.rootNoteName
-      ? getKeyIndex(this.rootNoteName)
-      : -1;
-    const schemeOverride: FretboardColorScheme = this.rootNoteName
-      ? "interval"
-      : "note";
+    const rootNoteIndex = this.rootNoteName ? getKeyIndex(this.rootNoteName) : -1;
+    const hasRoot = rootNoteIndex !== -1;
     const config = this.fretboardConfig;
+    const labelDisplay = config.labelDisplay;
+
     for (let stringIndex = 0; stringIndex < config.tuning.tuning.length; stringIndex++) {
       const stringTuning = config.tuning.tuning[stringIndex];
       for (let fretIndex = 0; fretIndex <= fretCount; fretIndex++) {
         const noteOffsetFromA = (stringTuning + fretIndex) % 12;
         const noteName = NOTE_NAMES_FROM_A[noteOffsetFromA] ?? "?";
         let intervalLabel = "?";
-        if (rootNoteIndex !== -1) {
+        if (hasRoot) {
           const noteRelativeToKey = (noteOffsetFromA - rootNoteIndex + 12) % 12;
           intervalLabel = getIntervalLabel(noteRelativeToKey);
         }
+
+        // Without a root, interval colors/labels are meaningless — force note coloring.
+        // With a root, let the global colorScheme flow through (no override).
+        const colorSchemeOverride: FretboardColorScheme | undefined = hasRoot ? undefined : "note";
+
+        // Label: always fall back to note name when no root (interval would show "?")
+        let displayLabel: string;
+        if (!hasRoot || labelDisplay === "note") {
+          displayLabel = noteName;
+        } else if (labelDisplay === "none") {
+          displayLabel = "";
+        } else {
+          displayLabel = intervalLabel;
+        }
+
         notesData.push({
           fret: fretIndex,
-          stringIndex: stringIndex,
-          noteName: noteName,
-          intervalLabel: intervalLabel,
-          displayLabel: noteName,
-          colorSchemeOverride: schemeOverride,
+          stringIndex,
+          noteName,
+          intervalLabel,
+          displayLabel,
+          colorSchemeOverride,
           radiusOverride:
-            fretIndex === 0
-              ? config.noteRadiusPx * OPEN_NOTE_RADIUS_FACTOR
-              : undefined,
+            fretIndex === 0 ? config.noteRadiusPx * OPEN_NOTE_RADIUS_FACTOR : undefined,
         });
       }
     }

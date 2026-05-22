@@ -160,6 +160,7 @@ export class TriadFeature extends InstrumentFeature {
       guitarGlobalSettings.handedness,
       guitarGlobalSettings.orientation,
       guitarGlobalSettings.colorScheme,
+      guitarGlobalSettings.labelDisplay ?? "interval",
       undefined,
       undefined,
       undefined,

@@ -460,7 +460,7 @@ export class CagedFeature extends InstrumentFeature {
             noteName,
             intervalLabel,
             displayLabel,
-            fillColor:   getColorFromScheme("interval", noteName, intervalLabel),
+            fillColor:   getColorFromScheme(this.fretboardConfig.colorScheme, noteName, intervalLabel),
             strokeColor: "rgba(30, 30, 30, 0.4)",
             strokeWidth: 1,
             radiusOverride:

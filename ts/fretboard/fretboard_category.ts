@@ -16,7 +16,7 @@ import { TriadFeature } from "./features/triad_feature";
 import { MetronomeFeature } from "./features/metronome_feature";
 
 // Import Guitar Settings related items
-import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "./fretboard_settings";
+import { DEFAULT_INSTRUMENT_SETTINGS, FretboardLabelDisplay, InstrumentSettings } from "./fretboard_settings";
 import {
   InstrumentIntervalSettings,
   InstrumentIntervalSettingsJSON,
@@ -45,6 +45,12 @@ export const COLOR_SCHEME_OPTIONS: { value: FretboardColorScheme; text: string }
   { value: "simplified", text: "Simplified (Root Only)" },
 ];
 
+export const LABEL_DISPLAY_OPTIONS: { value: FretboardLabelDisplay; text: string }[] = [
+  { value: "interval", text: "Interval (R, 3, 5…)" },
+  { value: "note", text: "Note Name (C, F#…)" },
+  { value: "none", text: "None (dots only)" },
+];
+
 // Helper function to generate UI Schema
 function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
   const instrumentOptions = INSTRUMENT_OPTIONS;
@@ -57,6 +63,7 @@ function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
     { value: "horizontal", text: "Horizontal" },
   ];
   const colorSchemeOptions = COLOR_SCHEME_OPTIONS;
+  const labelDisplayOptions = LABEL_DISPLAY_OPTIONS;
   return [
     {
       key: "instrument",
@@ -97,6 +104,13 @@ function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
       type: "select",
       options: colorSchemeOptions,
       description: "How notes on the fretboard are colored.",
+    },
+    {
+      key: "labelDisplay",
+      label: "Note Label",
+      type: "select",
+      options: labelDisplayOptions,
+      description: "What text is shown inside each note dot.",
     },
   ];
 }

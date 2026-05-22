@@ -207,33 +207,40 @@ export class ScaleFeature extends InstrumentFeature {
         let colorSchemeOverride: "note" | "interval" | undefined = undefined;
         let displayLabel: string = noteName;
 
+        const labelDisplay = this.fretboardConfig.labelDisplay;
+
         if (highlightingActive) {
           if (isNoteHighlighted) {
             shouldRender = true;
-            colorSchemeOverride = "note"; // resolved at render time against current theme
+            colorSchemeOverride = "note"; // semantic: show note identity for highlighted notes
             strokeWidth = 1.5;
             strokeColor = isNoteInScale
               ? IN_SCALE_HIGHLIGHT_STROKE
               : OUT_OF_SCALE_HIGHLIGHT_STROKE;
+            displayLabel = labelDisplay === "note" ? noteName
+              : labelDisplay === "none" ? ""
+              : getIntervalLabel(noteRelativeToKey);
           } else if (isNoteInScale) {
             shouldRender = true;
-            fillColor = NON_HIGHLIGHTED_SCALE_COLOR; // fixed grey, theme-independent
+            fillColor = NON_HIGHLIGHTED_SCALE_COLOR; // fixed grey for non-highlighted scale notes
             strokeColor = DEFAULT_STROKE;
             strokeWidth = 1;
-            displayLabel = ""; // Hide label for non-highlighted scale notes in highlight mode
+            displayLabel = ""; // always hide label for non-highlighted background notes
           }
         } else {
-          // No highlighting, default interval coloring
+          // No highlighting — use global color scheme and label settings
           if (isNoteInScale) {
             shouldRender = true;
             const intervalLabel = getIntervalLabel(noteRelativeToKey);
-            colorSchemeOverride = "interval"; // resolved at render time against current theme
+            // colorSchemeOverride left undefined: global colorScheme flows through
             strokeColor =
               intervalLabel === "R"
                 ? IN_SCALE_HIGHLIGHT_STROKE
                 : DEFAULT_STROKE;
             strokeWidth = intervalLabel === "R" ? 2.0 : 1;
-            displayLabel = intervalLabel; // Show interval label in this mode
+            displayLabel = labelDisplay === "note" ? noteName
+              : labelDisplay === "none" ? ""
+              : intervalLabel;
           }
         }
 
