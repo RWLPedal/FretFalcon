@@ -5,6 +5,7 @@ import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 import { NAV_SECTIONS } from './nav_sections';
+import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 
 export class SidebarView {
     private container: HTMLElement;
@@ -80,8 +81,7 @@ export class SidebarView {
                     <div class="select is-fullwidth">
                         <select id="sidebar-layout-select">
                             <option value="">— select —</option>
-                            <option value="default:reference">Reference</option>
-                            <option value="default:backing">Backing track</option>
+                            ${DEFAULT_CONFIG_OPTIONS.map(o => `<option value="default:${o.key}">${o.label}</option>`).join('')}
                         </select>
                     </div>
                 </div>

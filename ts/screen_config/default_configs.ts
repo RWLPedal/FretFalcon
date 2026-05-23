@@ -154,6 +154,105 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
+// ─── Practice layout schedule data ───────────────────────────────────────────
+
+// #floating-view-area covers the full page width; the sidebar occupies the
+// first 192px (16 grid units at GRID_UNIT=12). All views start at col ≥ 17.
+const _MINOR_WORKOUT_SCHEDULE = JSON.stringify({
+  name: "A Minor Workout",
+  items: [
+    { rowType: "group", level: 1, name: "Warmup" },
+    {
+      rowType: "interval", duration: "3:00",
+      task: "Fretboard survey — no labels, find the notes by ear",
+      categoryName: "Instrument", featureTypeName: "Notes",
+      featureArgsList: ["None"], intervalSettings: {},
+    },
+    { rowType: "group", level: 1, name: "Scales" },
+    {
+      rowType: "interval", duration: "4:00",
+      task: "Natural minor — all positions, ascending & descending",
+      categoryName: "Instrument", featureTypeName: "Scale",
+      featureArgsList: ["Minor", "A"], intervalSettings: {},
+    },
+    {
+      rowType: "interval", duration: "4:00",
+      task: "Minor pentatonic — all five positions",
+      categoryName: "Instrument", featureTypeName: "Scale",
+      featureArgsList: ["Minor Pentatonic", "A"], intervalSettings: {},
+    },
+    {
+      rowType: "interval", duration: "3:00",
+      task: "Minor blues — add the blue note to the pentatonic",
+      categoryName: "Instrument", featureTypeName: "Scale",
+      featureArgsList: ["Minor Blues", "A"], intervalSettings: {},
+    },
+    {
+      rowType: "interval", duration: "3:00",
+      task: "Harmonic minor — raised 7th gives the classical sound",
+      categoryName: "Instrument", featureTypeName: "Scale",
+      featureArgsList: ["Harmonic Minor", "A"], intervalSettings: {},
+    },
+    { rowType: "group", level: 1, name: "Triads" },
+    {
+      rowType: "interval", duration: "5:00",
+      task: "Minor triad shapes — root, 1st and 2nd inversion",
+      categoryName: "Instrument", featureTypeName: "Triad Shapes",
+      featureArgsList: ["A", "Minor"], intervalSettings: {},
+    },
+    {
+      rowType: "interval", duration: "5:00",
+      task: "Relative major triads (C Major) — same notes, different root",
+      categoryName: "Instrument", featureTypeName: "Triad Shapes",
+      featureArgsList: ["C", "Major"], intervalSettings: {},
+    },
+    {
+      rowType: "interval", duration: "4:00",
+      task: "Diminished triads (B°) — the tension chord of A minor",
+      categoryName: "Instrument", featureTypeName: "Triad Shapes",
+      featureArgsList: ["B", "Diminished"], intervalSettings: {},
+    },
+  ],
+}, null, 2);
+
+/** Practice layout: schedule (play mode) drives an Any view that renders the
+ *  current interval's feature. A metronome below the Any view is also linked
+ *  to it so groove/tempo changes propagate to whatever feature is displayed. */
+export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+  referenceGrid: { cols: 160, rows: 77 },
+  nextZIndex: 105,
+  links: [
+    { id: "link-1", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-2", targetHandle: "left" as const },
+    { id: "link-2", sourceInstanceId: "fv-3", sourceHandle: "top" as const, targetInstanceId: "fv-2", targetHandle: "bottom" as const },
+  ],
+  openViews: {
+    "fv-1": {
+      instanceId: "fv-1",
+      viewId: "schedule_floating_view",
+      gridPosition: { col: 17, row: 1 },
+      gridSize: { cols: 52, rows: 70 },
+      zIndex: 100,
+      viewState: { mode: "play", scheduleJSON: _MINOR_WORKOUT_SCHEDULE },
+    },
+    "fv-2": {
+      instanceId: "fv-2",
+      viewId: "any_floating_view",
+      gridPosition: { col: 70, row: 1 },
+      gridSize: { cols: 56, rows: 50 },
+      zIndex: 101,
+      viewState: {},
+    },
+    "fv-3": {
+      instanceId: "fv-3",
+      viewId: "instrument_floating_metronome",
+      gridPosition: { col: 70, row: 55 },
+      gridSize: { cols: 20, rows: 16 },
+      zIndex: 102,
+      viewState: {},
+    },
+  },
+});
+
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 /** All built-in presets. Keys are accessed via the "default:" namespace in
@@ -162,4 +261,13 @@ export const DEFAULT_CONFIGS: Readonly<Record<string, CurrentPayload>> = Object.
   empty: EMPTY_CONFIG,
   reference: REFERENCE_LAYOUT,
   backing: BACKING_LAYOUT,
+  practice: PRACTICE_LAYOUT,
 });
+
+/** Ordered list of presets to show in UI pickers. "empty" is intentionally
+ *  omitted — it is a programmatic fallback, not a user-facing choice. */
+export const DEFAULT_CONFIG_OPTIONS: ReadonlyArray<{ key: string; label: string }> = [
+  { key: "reference", label: "Reference" },
+  { key: "backing",   label: "Backing track" },
+  { key: "practice",  label: "Practice" },
+];

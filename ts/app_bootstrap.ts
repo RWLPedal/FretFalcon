@@ -45,8 +45,8 @@ export function registerBuiltins(): void {
         viewId: "schedule_floating_view",
         displayName: "Schedule",
         categoryName: "Practice",
-        defaultWidth: 480,
-        defaultHeight: 640,
+        defaultWidth: 960,
+        defaultHeight: 800,
         showInMenu: false,
         createView: (initialState?: any, appSettings?: AppSettings) =>
             new ScheduleFloatingView(initialState, appSettings!),

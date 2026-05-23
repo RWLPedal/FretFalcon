@@ -74,6 +74,20 @@ export class ScheduleFloatingView extends BaseView {
     this._buildPlayUI();
 
     this._applyModeUI();
+
+    // When restoring in play mode, pre-build the schedule so the upcoming list
+    // is populated immediately. Deferred so onWindowSpawned() registers this
+    // wrapper first — otherwise the signal can't be attributed to a source and
+    // won't be cached for replay by initialize().
+    if (this.mode === 'play' && this.editor) {
+      Promise.resolve().then(() => {
+        const schedule = this._buildSchedule();
+        if (schedule) {
+          this.currentSchedule = schedule;
+          this.currentSchedule.prepare();
+        }
+      });
+    }
   }
 
   // ─── Editor setup ──────────────────────────────────────────────────────────

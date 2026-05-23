@@ -5,6 +5,7 @@ import { Feature } from '../feature';
 import { getFeatureTypeDescriptor } from '../feature_registry';
 import { instrumentCategory } from '../fretboard/fretboard_category';
 import { DriveSignal, SignalKind, FeatureSignal } from '../panels/link_types';
+import { InstrumentSettings } from '../fretboard/fretboard_settings';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
 const PLACEHOLDER_REST = '(Rest)';
@@ -63,6 +64,15 @@ export class AnyFloatingView extends BaseView {
     this._showPlaceholder(PLACEHOLDER_UNLINKED);
   }
 
+  /** Choose orientation based on the container's aspect ratio. Falls back to
+   *  the global setting if the container has not been laid out yet (0×0). */
+  private _autoOrientation(): "vertical" | "horizontal" {
+    const w = this.featureContainer?.clientWidth ?? 0;
+    const h = this.featureContainer?.clientHeight ?? 0;
+    if (w === 0 && h === 0) return this.appSettings.instrumentSettings?.orientation ?? "vertical";
+    return w >= h ? "horizontal" : "vertical";
+  }
+
   private _handleFeatureSignal(signal: FeatureSignal): void {
     this._clearFeature();
 
@@ -83,10 +93,18 @@ export class AnyFloatingView extends BaseView {
 
       const maxCanvasHeight = this.featureContainer?.clientHeight || (this.container?.clientHeight ?? 600);
 
+      const settingsForFeature: AppSettings = {
+        ...this.appSettings,
+        instrumentSettings: {
+          ...this.appSettings.instrumentSettings,
+          orientation: this._autoOrientation(),
+        } as InstrumentSettings,
+      };
+
       this.currentFeature = descriptor.createFeature(
         signal.config,
         this.audioController,
-        this.appSettings,
+        settingsForFeature,
         intervalSettings,
         maxCanvasHeight,
         signal.categoryName

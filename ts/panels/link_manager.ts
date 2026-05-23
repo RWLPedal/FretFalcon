@@ -168,6 +168,12 @@ export class LinkManager {
     }
     this.scheduleRedraw();
     this.notifyAllLinkStatuses();
+    // Replay any signals that sources emitted before links were established
+    // (e.g. a schedule prepared during render() before initialize() ran).
+    for (const link of this.links) {
+      const cached = this.lastSourceSignals.get(link.sourceInstanceId);
+      if (cached?.length) this.routeSignalsToTarget(link, cached);
+    }
   }
 
   // ─── Window lifecycle ──────────────────────────────────────────────────────
