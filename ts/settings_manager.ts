@@ -1,6 +1,8 @@
 import { AppSettings } from "./settings";
 import { InstrumentCategory } from "./fretboard/fretboard_category";
 import { DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
+import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard/fretboard";
+import { TuningEditor } from "./fretboard/tuning_editor";
 import { ThemeSwatchPicker } from "./views/theme_swatch_picker";
 
 type PageType = 'practice' | 'reference';
@@ -59,11 +61,15 @@ export class SettingsManager {
     private modalEl: HTMLElement | null = null;
     private onSave: SaveCallback;
     private themePicker: ThemeSwatchPicker | null = null;
+    private tuningEditor: TuningEditor | null = null;
+    private category: InstrumentCategory;
 
     constructor(settings: AppSettings, pageType: PageType, onSave: SaveCallback) {
         this.settings = settings;
         this.pageType = pageType;
         this.onSave = onSave;
+        this.category = new InstrumentCategory();
+        this.category.updateCustomTunings(settings.customTunings);
         this.injectModal();
     }
 
@@ -99,6 +105,7 @@ export class SettingsManager {
 
     public updateSettings(settings: AppSettings): void {
         this.settings = settings;
+        this.category.updateCustomTunings(settings.customTunings);
         if (this.isOpen()) {
             this.themePicker?.setValue(settings.theme);
             const showGridEl = this.modalEl?.querySelector('#show-grid-checkbox') as HTMLInputElement | null;
@@ -137,15 +144,15 @@ export class SettingsManager {
         }
         container.innerHTML = "";
 
-        const category = new InstrumentCategory();
-        const schemaItems = category.getGlobalSettingsUISchema();
-        const categoryName = category.getName();
+        this.category.updateCustomTunings(this.settings.customTunings);
+        const schemaItems = this.category.getGlobalSettingsUISchema();
+        const categoryName = this.category.getName();
         if (!schemaItems || schemaItems.length === 0) return;
 
         const initialDraft = this.getInstrumentSettings();
 
         const categoryHeader = document.createElement("h5");
-        categoryHeader.textContent = `${category.getDisplayName()} Settings`;
+        categoryHeader.textContent = `${this.category.getDisplayName()} Settings`;
         categoryHeader.classList.add("title", "is-6", "category-settings-header", "mt-4");
         container.appendChild(categoryHeader);
 
@@ -261,7 +268,58 @@ export class SettingsManager {
             fieldDiv.appendChild(fieldLabel);
             fieldDiv.appendChild(fieldBody);
             sectionEl.appendChild(fieldDiv);
+
+            // Mount TuningEditor immediately after the tuning dropdown row
+            if (item.key === "tuning") {
+                this._mountTuningEditor(sectionEl, draft, sectionEl, schemaItems, categoryName);
+            }
         });
+    }
+
+    private _mountTuningEditor(
+        mountAfterEl: HTMLElement,
+        draft: Record<string, any>,
+        sectionEl: HTMLElement,
+        schemaItems: import("./feature").SettingsUISchemaItem[],
+        categoryName: string
+    ): void {
+        const instrument = (draft.instrument as InstrumentName) ?? InstrumentName.Guitar;
+        const instrumentDef = INSTRUMENTS[instrument];
+        if (!instrumentDef) return;
+
+        const allTunings = getAvailableTunings(instrument, this.settings.customTunings);
+        const tuningName: string = draft.tuning ?? instrumentDef.defaultTuning.name;
+        const initialTuning = allTunings.find(t => t.name === tuningName) ?? instrumentDef.defaultTuning;
+
+        this.tuningEditor = new TuningEditor(
+            instrumentDef,
+            initialTuning,
+            allTunings,
+            {
+                onSave: (name, notes) => {
+                    if (!this.settings.customTunings) this.settings.customTunings = {};
+                    const existing = this.settings.customTunings[instrument] ?? [];
+                    const idx = existing.findIndex(t => t.name === name);
+                    if (idx >= 0) existing[idx] = { name, notes };
+                    else existing.push({ name, notes });
+                    this.settings.customTunings[instrument] = existing;
+                    this.category.updateCustomTunings(this.settings.customTunings);
+                    // Re-render so dropdown picks up new tuning
+                    const newDraft = this._readSectionDraft(sectionEl, draft);
+                    newDraft.tuning = name;
+                    this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
+                },
+                onDelete: (name) => {
+                    if (!this.settings.customTunings?.[instrument]) return;
+                    this.settings.customTunings[instrument] = this.settings.customTunings[instrument]!.filter(t => t.name !== name);
+                    this.category.updateCustomTunings(this.settings.customTunings);
+                    const newDraft = this._readSectionDraft(sectionEl, draft);
+                    newDraft.tuning = instrumentDef.defaultTuning.name;
+                    this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
+                },
+            }
+        );
+        mountAfterEl.appendChild(this.tuningEditor.el);
     }
 
     /** Reads current form values within a category section into a draft object. */

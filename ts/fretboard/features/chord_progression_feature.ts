@@ -21,6 +21,7 @@ import {
   addHeader,
   clearAllChildren,
 } from "../fretboard_utils";
+import { InstrumentName } from "../fretboard";
 import { DiatonicMode, ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from "../music_types";
 import { scales } from "../scales";
 import { getChordInKey } from "../progressions";
@@ -47,7 +48,10 @@ const LABELS_BY_MODE = buildLabelsByMode();
 export class ChordProgressionFeature extends InstrumentFeature {
   static readonly typeName = "Chord Progression";
   static readonly displayName = "Chord Progression";
-  static readonly requiredInstruments = ["Guitar", "Mandolin", "Mandola"] as const;
+  static readonly requiredInstruments = [
+    InstrumentName.Guitar, InstrumentName.Mandolin, InstrumentName.Mandola,
+    InstrumentName.TenorGuitar, InstrumentName.TenorBanjo,
+  ] as const;
   static readonly description =
     "Displays chord diagrams for a Roman numeral progression (e.g., I-IV-V) in a specified key and mode.";
 

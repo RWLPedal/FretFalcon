@@ -387,7 +387,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     const keyIndex = getKeyIndex(rootNote);
     if (keyIndex === -1) return [];
 
-    const tuning = this.fretboardConfig.tuning.tuning;
+    const tuning = this.fretboardConfig.tuning.notes;
     const notes: NoteRenderData[] = [];
 
     for (let stringIndex = 0; stringIndex < tuning.length; stringIndex++) {
@@ -441,7 +441,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     const fill = fillColor ? resolveCssColor(fillColor) : 'transparent';
     const stroke = strokeColor ? resolveCssColor(strokeColor) : 'transparent';
     const toneSet = new Set(toneNames);
-    const tuning = this.fretboardConfig.tuning.tuning;
+    const tuning = this.fretboardConfig.tuning.notes;
     const notes: NoteRenderData[] = [];
 
     for (let stringIndex = 0; stringIndex < tuning.length; stringIndex++) {
@@ -472,7 +472,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
 
   private getCagedLayerNotes(layer: CagedLayer): NoteRenderData[] {
     // CAGED patterns are only defined for 6-string guitar.
-    if (this.fretboardConfig.tuning.tuning.length !== 6) return [];
+    if (this.fretboardConfig.tuning.notes.length !== 6) return [];
 
     const scaleKey =
       scale_names[layer.scaleName as keyof typeof scale_names] ??
@@ -488,7 +488,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     const tuningOffset = getCagedTuningOffset(this.fretboardConfig.tuning);
     const cagedLookup = buildCagedLookup(relativeMajorKeyIndex, this.fretCount, tuningOffset);
 
-    const tuning = this.fretboardConfig.tuning.tuning;
+    const tuning = this.fretboardConfig.tuning.notes;
     const notes: NoteRenderData[] = [];
 
     for (let stringIndex = 0; stringIndex < tuning.length; stringIndex++) {

@@ -86,7 +86,8 @@ export class ScheduleEditor {
     this.rowManager = new RowManager(
       this.uiManager.configEntriesContainerEl,
       this.selectionManager,
-      () => this.appSettings?.instrumentSettings?.instrument ?? 'Guitar'
+      () => this.appSettings?.instrumentSettings?.instrument ?? 'Guitar',
+      () => this.appSettings?.instrumentSettings?.tuning
     );
     this.clipboardManager = new ClipboardManager(
       this.selectionManager,
@@ -319,7 +320,8 @@ export class ScheduleEditor {
         return errorDiv;
       }
       const instrument = this.appSettings?.instrumentSettings?.instrument ?? 'Guitar';
-      return buildIntervalRowElement(intervalData, categoryName, instrument);
+      const tuning = this.appSettings?.instrumentSettings?.tuning;
+      return buildIntervalRowElement(intervalData, categoryName, instrument, tuning);
     }
     console.warn("Trying to build unknown row type:", rowData);
     return null;

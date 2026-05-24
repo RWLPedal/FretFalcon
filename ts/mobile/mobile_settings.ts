@@ -1,8 +1,8 @@
 import { AppSettings } from '../settings';
 import { Theme } from '../theme_manager';
-import { INSTRUMENT_TUNINGS, InstrumentName } from '../fretboard/fretboard';
+import { INSTRUMENTS, InstrumentName, getAvailableTunings } from '../fretboard/fretboard';
 import { FretboardColorScheme } from '../fretboard/colors';
-import { INSTRUMENT_OPTIONS, COLOR_SCHEME_OPTIONS } from '../fretboard/fretboard_category';
+import { COLOR_SCHEME_OPTIONS } from '../fretboard/fretboard_category';
 import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 
 type Draft = {
@@ -17,7 +17,7 @@ export class MobileSettingsDrawer {
     private overlayEl!: HTMLElement;
     private built = false;
     private draft: Draft = {
-        instrument: 'Guitar',
+        instrument: InstrumentName.Guitar,
         handedness: 'right',
         tuning: 'Standard',
         colorScheme: 'interval',
@@ -86,7 +86,7 @@ export class MobileSettingsDrawer {
 
         const settings = this.getSettings();
         this.draft = {
-            instrument: (settings.instrumentSettings?.instrument ?? 'Guitar') as InstrumentName,
+            instrument: (settings.instrumentSettings?.instrument ?? InstrumentName.Guitar) as InstrumentName,
             handedness: (settings.instrumentSettings?.handedness ?? 'right') as 'right' | 'left',
             tuning: settings.instrumentSettings?.tuning ?? 'Standard',
             colorScheme: (settings.instrumentSettings?.colorScheme ?? 'interval') as FretboardColorScheme,
@@ -163,15 +163,15 @@ export class MobileSettingsDrawer {
         section.appendChild(label);
 
         // Instrument select
+        const instrumentOptions = Object.values(INSTRUMENTS).map(i => ({ value: i.name as string, text: i.displayText }));
         section.appendChild(this._buildRow('Instrument',
             this._buildSelect(
-                INSTRUMENT_OPTIONS.map(o => ({ value: o.value, text: o.text })),
+                instrumentOptions,
                 this.draft.instrument,
                 (val) => {
                     this.draft.instrument = val as InstrumentName;
-                    const tunings = INSTRUMENT_TUNINGS[this.draft.instrument] ?? INSTRUMENT_TUNINGS['Guitar'];
-                    const firstTuning = Object.keys(tunings)[0] ?? 'Standard';
-                    this.draft.tuning = firstTuning;
+                    const inst = INSTRUMENTS[this.draft.instrument as InstrumentName];
+                    this.draft.tuning = inst?.defaultTuning.name ?? 'Standard';
                     this._emitDraft();
                     const tuningContainer = section.querySelector<HTMLElement>('[data-tuning-container]');
                     if (tuningContainer) {
@@ -212,8 +212,9 @@ export class MobileSettingsDrawer {
     }
 
     private _buildTuningSelect(): HTMLSelectElement {
-        const tunings = INSTRUMENT_TUNINGS[this.draft.instrument] ?? INSTRUMENT_TUNINGS['Guitar'];
-        const options = Object.keys(tunings).map(k => ({ value: k, text: k }));
+        const settings = this.getSettings();
+        const tunings = getAvailableTunings(this.draft.instrument as InstrumentName, settings.customTunings);
+        const options = tunings.map(t => ({ value: t.name, text: t.name }));
         return this._buildSelect(options, this.draft.tuning, (val) => {
             this.draft.tuning = val;
             this._emitDraft();

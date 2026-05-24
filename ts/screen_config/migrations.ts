@@ -17,6 +17,7 @@ import {
   CurrentPayload,
   V0Payload,
   V1Payload,
+  V2Payload,
   VersionedScreenConfig,
 } from "./screen_config_types";
 
@@ -53,8 +54,10 @@ function migrateV0ToV1(raw: V0Payload): V1Payload {
   };
 }
 
-// Future migrations go here:
-// function migrateV1ToV2(v1: V1Payload): V2Payload { ... }
+/** V1 → V2: adds customTunings field (empty by default). */
+function migrateV1ToV2(v1: V1Payload): V2Payload {
+  return { ...v1, customTunings: {} };
+}
 
 // ─── Migration chain ──────────────────────────────────────────────────────────
 
@@ -62,7 +65,7 @@ function migrateV0ToV1(raw: V0Payload): V1Payload {
 // MIGRATIONS[0] = V0→V1, MIGRATIONS[1] = V1→V2, etc.
 const MIGRATIONS: Array<(payload: unknown) => unknown> = [
   (p) => migrateV0ToV1(p as V0Payload),
-  // (p) => migrateV1ToV2(p as V1Payload),
+  (p) => migrateV1ToV2(p as V1Payload),
 ];
 
 // ─── Envelope detection ───────────────────────────────────────────────────────

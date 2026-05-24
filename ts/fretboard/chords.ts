@@ -236,13 +236,15 @@ export const mandola_chord_library: Record<string, Chord> = {
   G7: new Chord("G7", [2, 0, 3, 2], [2, 0, 3, 1], undefined, CT.DOM7, N.G),
 };
 
-import type { InstrumentName } from "./fretboard";
+import { InstrumentName } from "./fretboard";
 
 export const CHORD_LIBRARIES: Partial<Record<InstrumentName, Record<string, Chord>>> = {
-  "Guitar":   chord_library,
-  "Ukulele":  ukulele_chord_library,
-  "Mandolin": mandolin_chord_library,
-  "Mandola":  mandola_chord_library,
+  [InstrumentName.Guitar]:      chord_library,
+  [InstrumentName.Ukulele]:     ukulele_chord_library,
+  [InstrumentName.Mandolin]:    mandolin_chord_library,
+  [InstrumentName.Mandola]:     mandola_chord_library,
+  [InstrumentName.TenorGuitar]: mandola_chord_library, // CGDA — same intervals as Mandola
+  [InstrumentName.TenorBanjo]:  mandola_chord_library, // CGDA — same intervals as Mandola
 };
 
 /** Returns the chord library appropriate for the given instrument. */

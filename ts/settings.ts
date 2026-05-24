@@ -6,6 +6,11 @@ import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fre
 
 export type { InstrumentSettings };
 
+export interface CustomTuning {
+  name: string;
+  notes: number[]; // pitch-class semitones, A=0; length must match instrument stringCount
+}
+
 /** Defines the structure for all application-level settings. */
 export interface AppSettings {
   theme: Theme;
@@ -13,6 +18,7 @@ export interface AppSettings {
   reference: ReferenceSettings;
   instrumentSettings: InstrumentSettings;
   showGrid: boolean;
+  customTunings?: Partial<Record<string, CustomTuning[]>>; // keyed by InstrumentName string value
 }
 
 export const SETTINGS_STORAGE_KEY = "categoryTimerAppSettings";
@@ -42,6 +48,7 @@ export function loadSettings(): AppSettings {
         ...(stored.reference ? { reference: { ...defaults.reference, ...stored.reference } }        : {}),
         instrumentSettings:    { ...defaults.instrumentSettings, ...(stored.instrumentSettings ?? {}) },
         ...(stored.showGrid !== undefined ? { showGrid: stored.showGrid } : {}),
+        ...(stored.customTunings ? { customTunings: stored.customTunings } : {}),
       };
     }
   } catch (e) {

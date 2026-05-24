@@ -29,7 +29,7 @@ import { NoteName } from "../music_types";
  */
 function getChordNotes(chord: Chord, config: FretboardConfig): string[] {
   const notes = new Set<NoteName>();
-  const tuning = config.tuning.tuning;
+  const tuning = config.tuning.notes;
   for (let i = 0; i < chord.strings.length; i++) {
     const fret = chord.strings[i];
     if (fret >= 0 && i < tuning.length) {
@@ -136,7 +136,7 @@ export class ChordDiagramView extends BaseView {
       stringIndex < this.chord.strings.length;
       stringIndex++
     ) {
-      if (stringIndex >= config.tuning.tuning.length) continue;
+      if (stringIndex >= config.tuning.notes.length) continue;
 
       const fret = this.chord.strings[stringIndex]; // Actual fret (-1, 0, or >0)
       const finger = this.chord.fingers[stringIndex];
@@ -155,7 +155,7 @@ export class ChordDiagramView extends BaseView {
 
         if (!isMuted) {
           const noteOffsetFromA =
-            (config.tuning.tuning[stringIndex] + fret) % 12;
+            (config.tuning.notes[stringIndex] + fret) % 12;
           noteName = NOTE_NAMES_FROM_A[noteOffsetFromA] ?? "?";
           if (chordRootIndex !== -1) {
             const noteRelativeToKey =

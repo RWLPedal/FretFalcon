@@ -9,8 +9,9 @@ import { BaseView } from "../../base_view";
 import { InstrumentFeature } from "../fretboard_base";
 import {
   FretboardConfig,
-  AVAILABLE_TUNINGS,
+  resolveTuning,
   STANDARD_TUNING,
+  InstrumentName,
 } from "../fretboard";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
@@ -121,7 +122,7 @@ class TriadQualityRowView extends BaseView {
 export class TriadFeature extends InstrumentFeature {
   static readonly typeName = "Triad Shapes";
   static readonly displayName = "Triad Shapes (3-String Sets)";
-  static readonly requiredInstruments = ["Guitar"] as const;
+  static readonly requiredInstruments = [InstrumentName.Guitar] as const;
   static readonly defaultWidth = 415;
   static readonly defaultHeight = 685;
   static readonly description =
@@ -156,7 +157,7 @@ export class TriadFeature extends InstrumentFeature {
 
     // Reference config at default scale — base dimensions for the layout algorithm.
     const baseFretboardConfig = new FretboardConfig(
-      AVAILABLE_TUNINGS[guitarGlobalSettings.tuning] ?? STANDARD_TUNING,
+      resolveTuning(guitarGlobalSettings.instrument as InstrumentName ?? InstrumentName.Guitar, guitarGlobalSettings.tuning),
       guitarGlobalSettings.handedness,
       guitarGlobalSettings.orientation,
       guitarGlobalSettings.colorScheme,

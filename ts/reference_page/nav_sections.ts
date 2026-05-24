@@ -23,6 +23,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { id: 'scales-feature',            icon: 'show_chart',      label: 'Scales',          viewId: 'configurable_instrument_feature', featureTypeName: 'Scale' },
             { id: 'chords-feature',            icon: 'grid_on',         label: 'Chords',          viewId: 'configurable_instrument_feature', featureTypeName: 'Chord',           requiredInstruments: ['Guitar', 'Ukulele', 'Mandolin', 'Mandola'] },
             { id: 'triads-feature',            icon: 'change_history',  label: 'Triads',          viewId: 'configurable_instrument_feature', featureTypeName: 'Triad Shapes',    requiredInstruments: ['Guitar'] },
+            { id: 'nearby-triads-feature',     icon: 'swap_horiz',      label: 'Nearby Triads',   viewId: 'configurable_instrument_feature', featureTypeName: 'Nearby Triads',   requiredInstruments: ['Guitar'] },
             { id: 'chord-progression-feature', icon: 'arrow_forward',   label: 'Progression',     viewId: 'instrument_chord_progression',                                        requiredInstruments: ['Guitar', 'Mandolin', 'Mandola'] },
             { id: 'caged-feature',             icon: 'grid_view',       label: 'CAGED',           viewId: 'configurable_instrument_feature', featureTypeName: 'CAGED',           requiredInstruments: ['Guitar'] },
             { id: 'multifret-feature',         icon: 'layers',          label: 'MultiFret',       viewId: 'configurable_instrument_feature', featureTypeName: 'MultiLayerFretboard' },

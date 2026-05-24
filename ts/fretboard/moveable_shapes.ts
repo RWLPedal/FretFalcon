@@ -233,9 +233,11 @@ export const mandolin_moveable_chord_library: MoveableChordTemplate[] = [
 export const mandola_moveable_chord_library: MoveableChordTemplate[] = mandolin_moveable_chord_library;
 
 export const MOVEABLE_CHORD_LIBRARIES: Partial<Record<InstrumentName, MoveableChordTemplate[]>> = {
-  "Guitar":   guitar_moveable_chord_library,
-  "Mandolin": mandolin_moveable_chord_library,
-  "Mandola":  mandola_moveable_chord_library,
+  [InstrumentName.Guitar]:      guitar_moveable_chord_library,
+  [InstrumentName.Mandolin]:    mandolin_moveable_chord_library,
+  [InstrumentName.Mandola]:     mandola_moveable_chord_library,
+  [InstrumentName.TenorGuitar]: mandola_moveable_chord_library, // CGDA — same shapes as Mandola
+  [InstrumentName.TenorBanjo]:  mandola_moveable_chord_library, // CGDA — same shapes as Mandola
 };
 
 /** Infers ChordType from a chord name string. */
@@ -282,7 +284,7 @@ export function getMoveableShapes(
   for (const template of library) {
     if (template.chordType !== effectiveType) continue;
 
-    const openNote = tuning.tuning[template.rootStringIndex];
+    const openNote = tuning.notes[template.rootStringIndex];
     const rootFret = ((rootNoteIndex - openNote) + 12) % 12;
 
     const strings = template.stringOffsets.map((offset) =>
@@ -325,7 +327,7 @@ export function getMoveableGuitarShapes(
   tuning: Tuning,
   chordType?: ChordType
 ): MoveableChordResult[] {
-  return getMoveableShapes("Guitar", chordName, tuning, chordType);
+  return getMoveableShapes(InstrumentName.Guitar, chordName, tuning, chordType);
 }
 
 /** @deprecated Use getEasiestMoveableShape("Guitar", ...) */
@@ -334,5 +336,5 @@ export function getEasiestMoveableGuitarShape(
   tuning: Tuning,
   chordType?: ChordType
 ): MoveableChordResult | null {
-  return getEasiestMoveableShape("Guitar", chordName, tuning, chordType);
+  return getEasiestMoveableShape(InstrumentName.Guitar, chordName, tuning, chordType);
 }

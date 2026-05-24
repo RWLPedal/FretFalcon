@@ -186,7 +186,7 @@ export class ScaleFeature extends InstrumentFeature {
   private calculateAndSetScaleNotes(): void {
     const notesData: NoteRenderData[] = [];
     const config = this.fretboardConfig;
-    const tuning = config.tuning.tuning;
+    const tuning = config.tuning.notes;
     const fretCount = this.fretCount;
     const highlightingActive = this.highlightNotes.size > 0;
 

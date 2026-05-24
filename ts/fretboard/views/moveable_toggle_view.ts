@@ -18,7 +18,7 @@ export class MoveableToggleView extends BaseView {
   private readonly moveableViews: ChordDiagramView[];
   readonly hasMoveableShapes: boolean;
 
-  constructor(chords: ReadonlyArray<Chord>, fretboardConfig: FretboardConfig, initialIsMoveable: boolean = false, instrumentName: InstrumentName = "Guitar") {
+  constructor(chords: ReadonlyArray<Chord>, fretboardConfig: FretboardConfig, initialIsMoveable: boolean = false, instrumentName: InstrumentName = InstrumentName.Guitar) {
     super();
     this.isMoveable = initialIsMoveable;
     this.staticViews = chords.map(

@@ -23,21 +23,13 @@ import {
 } from "./fretboard_interval_settings";
 
 // Helper function imports (for settings UI schema)
-import { INSTRUMENT_TUNINGS, InstrumentName } from "./fretboard";
+import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard";
+import type { CustomTuning } from "../settings";
 import { FretboardColorScheme } from "./colors";
 import { CagedFeature } from "./features/caged_feature";
 import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
 import { AnyFeature } from "./features/any_feature";
-
-export const INSTRUMENT_OPTIONS: { value: InstrumentName; text: string }[] = [
-  { value: "Guitar",          text: "Guitar" },
-  { value: "Bass",            text: "Bass (4-string, EADG)" },
-  { value: "Ukulele",         text: "Ukulele (4-string, GCEA)" },
-  { value: "Mandola",         text: "Mandola (4-string, CGDA)" },
-  { value: "Mandolin",        text: "Mandolin (4-string, GDAE)" },
-  { value: "7-String Guitar", text: "7-String Guitar (BEADGBE)" },
-  { value: "8-String Guitar", text: "8-String Guitar (F#BEADGBE)" },
-];
+import { NearbyTriadsFeature } from "./features/nearby_triads_feature";
 
 export const COLOR_SCHEME_OPTIONS: { value: FretboardColorScheme; text: string }[] = [
   { value: "interval", text: "Interval Colors (Default)" },
@@ -51,9 +43,10 @@ export const LABEL_DISPLAY_OPTIONS: { value: FretboardLabelDisplay; text: string
   { value: "none", text: "None (dots only)" },
 ];
 
-// Helper function to generate UI Schema
-function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
-  const instrumentOptions = INSTRUMENT_OPTIONS;
+function getInstrumentGlobalSettingsUISchema(
+  customTunings?: Partial<Record<string, CustomTuning[]>>
+): SettingsUISchemaItem[] {
+  const instrumentOptions = Object.values(INSTRUMENTS).map(i => ({ value: i.name as string, text: i.displayText }));
   const handednessOptions = [
     { value: "right", text: "Right-Handed" },
     { value: "left", text: "Left-Handed" },
@@ -92,10 +85,10 @@ function getInstrumentGlobalSettingsUISchema(): SettingsUISchemaItem[] {
       label: "Tuning",
       type: "select",
       getDynamicOptions: (draft) => {
-        const instrument = (draft.instrument as InstrumentName) ?? "Guitar";
-        const tunings = INSTRUMENT_TUNINGS[instrument] ?? INSTRUMENT_TUNINGS["Guitar"];
-        return Object.keys(tunings).map((key) => ({ value: key, text: key }));
+        const instrument = (draft.instrument as InstrumentName) ?? InstrumentName.Guitar;
+        return getAvailableTunings(instrument, customTunings).map(t => ({ value: t.name, text: t.name }));
       },
+      triggersRebuild: true,
       description: "Select the tuning (options depend on the selected instrument).",
     },
     {
@@ -119,6 +112,7 @@ export class InstrumentCategory implements Category {
   private readonly name = "Instrument";
   private readonly displayName = "Instrument Tools";
   private readonly featureTypes: Map<string, FeatureTypeDescriptor>;
+  private customTunings?: Partial<Record<string, CustomTuning[]>>;
 
   constructor() {
     // Instantiate the map of features provided by this category
@@ -141,6 +135,7 @@ export class InstrumentCategory implements Category {
         MultiLayerFretboardFeature as unknown as FeatureTypeDescriptor,
       ],
       [AnyFeature.typeName, AnyFeature as unknown as FeatureTypeDescriptor],
+      [NearbyTriadsFeature.typeName, NearbyTriadsFeature as unknown as FeatureTypeDescriptor],
     ]);
   }
 
@@ -176,9 +171,12 @@ export class InstrumentCategory implements Category {
     );
   }
 
+  updateCustomTunings(customTunings: Partial<Record<string, CustomTuning[]>> | undefined): void {
+    this.customTunings = customTunings;
+  }
+
   getGlobalSettingsUISchema(): SettingsUISchemaItem[] {
-    // Return the schema for the Guitar category's global settings
-    return getInstrumentGlobalSettingsUISchema();
+    return getInstrumentGlobalSettingsUISchema(this.customTunings);
   }
 
   /** Returns a default set of intervals for a simple guitar schedule */

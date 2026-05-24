@@ -14,7 +14,7 @@ export type { LinkRecord };
 /** The schema version this build of the app reads and writes. Bump when the
  *  payload shape changes in a breaking way, and add a migration step in
  *  migrations.ts. See SCREEN_CONFIG_FORMAT.md for the full checklist. */
-export const CURRENT_SCREEN_CONFIG_VERSION = 1;
+export const CURRENT_SCREEN_CONFIG_VERSION = 2;
 
 // ─── V0: legacy (unversioned) ─────────────────────────────────────────────────
 
@@ -65,12 +65,20 @@ export interface V1Payload {
   links: LinkRecord[];
 }
 
+// ─── V2: adds customTunings for export/import ─────────────────────────────────
+
+export interface V2Payload extends V1Payload {
+  /** User-defined custom tunings, keyed by InstrumentName string value.
+   *  Included in exports so custom tunings travel with the layout. */
+  customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>;
+}
+
 // ─── Current version alias ────────────────────────────────────────────────────
 
 /** The payload type at the current schema version. Update this alias (and only
  *  this alias) when bumping to a new version — the rest of the app uses
  *  CurrentPayload and remains unaffected. */
-export type CurrentPayload = V1Payload;
+export type CurrentPayload = V2Payload;
 
 // ─── Storage envelope ─────────────────────────────────────────────────────────
 

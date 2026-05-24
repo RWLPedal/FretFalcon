@@ -18,15 +18,18 @@ export class RowManager {
   private configEntriesContainerEl: HTMLElement;
   private selectionManager: SelectionManager;
   private getInstrument: () => string;
+  private getTuning: () => string | undefined;
 
   constructor(
     configEntriesContainerEl: HTMLElement,
     selectionManager: SelectionManager,
-    getInstrument?: () => string
+    getInstrument?: () => string,
+    getTuning?: () => string | undefined
   ) {
     this.configEntriesContainerEl = configEntriesContainerEl;
     this.selectionManager = selectionManager;
     this.getInstrument = getInstrument ?? (() => "Guitar");
+    this.getTuning = getTuning ?? (() => undefined);
     this._addRowCopyHandler();
   }
 
@@ -73,7 +76,7 @@ export class RowManager {
     }
 
     // Pass the category name string and data to the builder function
-    const newRowElement = buildIntervalRowElement(newRowUIData, categoryName, this.getInstrument());
+    const newRowElement = buildIntervalRowElement(newRowUIData, categoryName, this.getInstrument(), this.getTuning());
     this.insertRowElement(newRowElement, insertAfterElement); // Insert into DOM
     return newRowElement;
   }

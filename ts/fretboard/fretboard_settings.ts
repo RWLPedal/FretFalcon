@@ -19,7 +19,7 @@ export interface InstrumentSettings {
 
 /** Default values for Instrument settings. */
 export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
-  instrument: "Guitar",
+  instrument: InstrumentName.Guitar,
   handedness: "right",
   orientation: "vertical",
   tuning: "Standard",

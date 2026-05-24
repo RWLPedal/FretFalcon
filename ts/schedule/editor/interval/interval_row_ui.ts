@@ -42,7 +42,8 @@ import {
 export function buildIntervalRowElement(
   initialData: IntervalRowData,
   categoryName: string,
-  instrument?: string
+  instrument?: string,
+  tuningName?: string
 ): HTMLElement {
   const entryDiv = document.createElement("div");
   entryDiv.classList.add("config-entry-row", "schedule-row");
@@ -105,7 +106,8 @@ export function buildIntervalRowElement(
   const featureTypeDiv = createFeatureTypeDropdownCell(
     initialData.featureTypeName,
     categoryName,
-    instrument
+    instrument,
+    tuningName
   );
   const featureArgsDiv = createCell(
     "feature-args-cell",
@@ -160,7 +162,8 @@ export function buildIntervalRowElement(
 function createFeatureTypeDropdownCell(
   selectedTypeName: string,
   categoryName: string,
-  instrument?: string
+  instrument?: string,
+  tuningName?: string
 ): HTMLDivElement {
   const cellDiv = createCell("feature-type-cell");
   const selectWrapper = document.createElement("div");
@@ -170,9 +173,8 @@ function createFeatureTypeDropdownCell(
 
   select.appendChild(new Option("None", ""));
 
-  // Filter feature types by instrument if provided
   const availableTypes: FeatureTypeDescriptor[] = instrument
-    ? getAvailableFeatureTypesForInstrument(categoryName, instrument)
+    ? getAvailableFeatureTypesForInstrument(categoryName, instrument, tuningName)
     : getAvailableFeatureTypes(categoryName);
   const category = instrumentCategory;
 

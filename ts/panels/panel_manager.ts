@@ -517,14 +517,22 @@ export class FloatingViewManager {
   }
 
   public exportStateJson(): string {
-    return this.screenConfigManager.exportJson(this._buildStrippedPayload());
+    const payload = {
+      ...this._buildStrippedPayload(),
+      ...(this.appSettings.customTunings ? { customTunings: this.appSettings.customTunings } : {}),
+    };
+    return this.screenConfigManager.exportJson(payload);
   }
 
-  public importStateJson(json: string): void {
+  public importStateJson(json: string, onCustomTuningsImported?: (ct: AppSettings['customTunings']) => void): void {
     const migrated = this.screenConfigManager.importJson(json);
     if (!migrated) {
       console.error("importStateJson: could not parse or migrate the provided JSON.");
       return;
+    }
+
+    if (migrated.customTunings && onCustomTuningsImported) {
+      onCustomTuningsImported(migrated.customTunings as AppSettings['customTunings']);
     }
 
     const instanceIds = Array.from(this.activeViews.keys());

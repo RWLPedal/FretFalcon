@@ -14,7 +14,7 @@ export const TRIAD_INTERVALS: { [key in TriadQuality]: number[] } = {
 };
 
 /** Defines a relative triad shape for a specific 3-string group. */
-interface RelativeTriadShape {
+export interface RelativeTriadShape {
   quality: TriadQuality;
   inversion: TriadInversion;
   stringGroup: [number, number, number]; // Absolute indices [low, mid, high]
@@ -25,7 +25,7 @@ interface RelativeTriadShape {
 }
 
 // --- Revised Catalog of Relative Triad Shapes ---
-const TRIAD_SHAPE_CATALOG: RelativeTriadShape[] = [
+export const TRIAD_SHAPE_CATALOG: RelativeTriadShape[] = [
   // === MAJOR === (R=0, M3=4, P5=7)
   // --- EAD [0,1,2] ---
   { quality: "Major", inversion: "Root", stringGroup: [0, 1, 2], relativeFrets: [3, 2, 0], rootStringIndexInGroup: 0 },
@@ -140,7 +140,7 @@ export function getTriadNotesAndLinesForGroup(
 
   const allNotesForGroup: NoteRenderData[] = [];
   const allLinesForGroup: LineData[] = [];
-  const tuning = fretboardConfig.tuning.tuning;
+  const tuning = fretboardConfig.tuning.notes;
   const scaledStartPx = START_PX * fretboardConfig.scaleFactor;
 
   // Instantiate a temporary Fretboard object ONLY for coordinate calculations

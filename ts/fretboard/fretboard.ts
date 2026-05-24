@@ -28,6 +28,7 @@ export interface NoteRenderData {
   colorSchemeOverride?: FretboardColorScheme; // Override global scheme for this note
   radiusOverride?: number; // Scaled override for radius (e.g., open notes)
   opacity?: number; // 0–1, defaults to 1
+  dashed?: boolean; // draw stroke as a dashed circle
   // Coords are calculated internally, not passed in
 }
 
@@ -147,7 +148,7 @@ export class FretboardConfig {
     globalScaleMultiplier: number = 1.2,
     estimatedFretCount: number = 18
   ) {
-    this.stringWidths = stringWidths ?? defaultStringWidths(tuning.tuning.length);
+    this.stringWidths = stringWidths ?? defaultStringWidths(tuning.notes.length);
 
     // estimatedBaseSpan: exact span (string direction) at scaleFactor=1.
     // getRequiredWidth/Height on the span axis = scaleFactor * estimatedBaseSpan, so the
@@ -190,7 +191,7 @@ export class FretboardConfig {
   }
 
   get stringCount(): number {
-    return this.tuning.tuning.length;
+    return this.tuning.notes.length;
   }
 
   getStringWidths(): Array<number> {
@@ -242,77 +243,170 @@ export class FretboardConfig {
 }
 
 // --- Tuning Definitions ---
-export class Tuning {
-  constructor(
-    public readonly tuning: Array<number>,
-    /** MIDI note number for each open string (C4=60, A4=69). Used for audio playback. */
-    public readonly openStringMidi?: ReadonlyArray<number>
-  ) {}
+export interface Tuning {
+  readonly name: string;
+  readonly notes: ReadonlyArray<number>; // pitch-class semitones, A=0
+  readonly openStringMidi?: ReadonlyArray<number>;
 }
 
-// Guitar tunings (6-string, semitones with A=0)
-export const STANDARD_TUNING              = new Tuning([7, 0, 5, 10, 2, 7],        [40, 45, 50, 55, 59, 64]); // E-A-D-G-B-E
-export const DROP_D_TUNING                = new Tuning([5, 0, 5, 10, 2, 7],        [38, 45, 50, 55, 59, 64]); // D-A-D-G-B-E
-export const BARITONE_B_STANDARD_TUNING   = new Tuning([2, 7, 0, 5, 9, 2],         [35, 40, 45, 50, 54, 59]); // B-E-A-D-F#-B
-export const BARITONE_A_STANDARD_TUNING   = new Tuning([0, 5, 10, 3, 7, 0],        [33, 38, 43, 48, 52, 57]); // A-D-G-C-E-A
+// Shared 4-string tunings (used across multiple instruments)
+export const CGDA_TUNING: Tuning        = { name: "CGDA",         notes: [3, 10, 5, 0],              openStringMidi: [48, 55, 62, 69] };  // C-G-D-A
+export const GDAE_TUNING: Tuning        = { name: "GDAE",         notes: [10, 5, 0, 7],              openStringMidi: [55, 62, 69, 76] };  // G-D-A-E
+
+// Guitar tunings (6-string)
+export const STANDARD_TUNING: Tuning            = { name: "Standard",            notes: [7, 0, 5, 10, 2, 7],        openStringMidi: [40, 45, 50, 55, 59, 64] }; // E-A-D-G-B-E
+export const DROP_D_TUNING: Tuning               = { name: "Drop D",              notes: [5, 0, 5, 10, 2, 7],        openStringMidi: [38, 45, 50, 55, 59, 64] }; // D-A-D-G-B-E
+export const DADGAD_TUNING: Tuning               = { name: "DADGAD",              notes: [5, 0, 5, 10, 0, 5],        openStringMidi: [38, 45, 50, 55, 57, 62] }; // D-A-D-G-A-D
+export const OPEN_G_TUNING: Tuning               = { name: "Open G",              notes: [5, 10, 5, 10, 2, 5],       openStringMidi: [38, 43, 50, 55, 59, 62] }; // D-G-D-G-B-D
+export const BARITONE_B_STANDARD_TUNING: Tuning  = { name: "Baritone B Standard", notes: [2, 7, 0, 5, 9, 2],         openStringMidi: [35, 40, 45, 50, 54, 59] }; // B-E-A-D-F#-B
+export const BARITONE_A_STANDARD_TUNING: Tuning  = { name: "Baritone A Standard", notes: [0, 5, 10, 3, 7, 0],        openStringMidi: [33, 38, 43, 48, 52, 57] }; // A-D-G-C-E-A
 
 // Bass tunings (4-string)
-export const BASS_STANDARD_TUNING         = new Tuning([7, 0, 5, 10],              [28, 33, 38, 43]);          // E-A-D-G
+export const BASS_EADG_TUNING: Tuning   = { name: "EADG",         notes: [7, 0, 5, 10],             openStringMidi: [28, 33, 38, 43] };  // E-A-D-G
+export const BASS_BEAD_TUNING: Tuning   = { name: "BEAD (Drop)",  notes: [2, 7, 0, 5],              openStringMidi: [23, 28, 33, 38] };  // B-E-A-D
 
 // Ukulele tunings (4-string)
-export const UKULELE_GCEA_TUNING          = new Tuning([10, 3, 7, 0],              [67, 60, 64, 69]);          // G-C-E-A (high G)
+export const UKULELE_GCEA_TUNING: Tuning = { name: "GCEA",        notes: [10, 3, 7, 0],             openStringMidi: [67, 60, 64, 69] };  // G-C-E-A (high G)
 
-// Mandolin-family tunings (4-string, tuned in 5ths)
-export const MANDOLA_TUNING               = new Tuning([3, 10, 5, 0],              [48, 55, 62, 69]);          // C-G-D-A
-export const MANDOLIN_TUNING              = new Tuning([10, 5, 0, 7],              [55, 62, 69, 76]);          // G-D-A-E
+// Bouzouki tunings (4-course)
+export const BOUZOUKI_GDAD_TUNING: Tuning = { name: "GDAD",       notes: [10, 5, 0, 5],             openStringMidi: [43, 50, 57, 62] };  // G-D-A-D
+export const BOUZOUKI_GDGD_TUNING: Tuning = { name: "GDGD",       notes: [10, 5, 10, 5],            openStringMidi: [43, 50, 55, 62] };  // G-D-G-D
 
 // Extended-range guitar tunings
-export const GUITAR_7_STANDARD_TUNING     = new Tuning([2, 7, 0, 5, 10, 2, 7],    [35, 40, 45, 50, 55, 59, 64]);     // B-E-A-D-G-B-E
-export const GUITAR_8_STANDARD_TUNING     = new Tuning([9, 2, 7, 0, 5, 10, 2, 7], [30, 35, 40, 45, 50, 55, 59, 64]); // F#-B-E-A-D-G-B-E
+export const GUITAR_7_STANDARD_TUNING: Tuning = { name: "Standard (BEADGBE)",   notes: [2, 7, 0, 5, 10, 2, 7],    openStringMidi: [35, 40, 45, 50, 55, 59, 64] };     // B-E-A-D-G-B-E
+export const GUITAR_8_STANDARD_TUNING: Tuning = { name: "Standard (F#BEADGBE)", notes: [9, 2, 7, 0, 5, 10, 2, 7], openStringMidi: [30, 35, 40, 45, 50, 55, 59, 64] }; // F#-B-E-A-D-G-B-E
 
 // --- Instrument / Tuning Organization ---
-export type InstrumentName =
-  | "Guitar"
-  | "Bass"
-  | "Ukulele"
-  | "Mandola"
-  | "Mandolin"
-  | "7-String Guitar"
-  | "8-String Guitar";
+export enum InstrumentName {
+  Guitar         = "Guitar",
+  Bass           = "Bass",
+  Ukulele        = "Ukulele",
+  Mandolin       = "Mandolin",
+  Mandola        = "Mandola",
+  TenorGuitar    = "Tenor Guitar",
+  TenorBanjo     = "Tenor Banjo",
+  IrishBouzouki  = "Irish Bouzouki",
+  SevenStrGuitar = "7-String Guitar",
+  EightStrGuitar = "8-String Guitar",
+}
 
-export const INSTRUMENT_TUNINGS: Record<InstrumentName, Record<string, Tuning>> = {
-  "Guitar": {
-    "Standard":            STANDARD_TUNING,
-    "Drop D":              DROP_D_TUNING,
-    "Baritone B Standard": BARITONE_B_STANDARD_TUNING,
-    "Baritone A Standard": BARITONE_A_STANDARD_TUNING,
+export interface Instrument {
+  readonly name: InstrumentName;
+  readonly displayText: string;
+  readonly stringCount: number; // courses count as strings
+  readonly defaultTuning: Tuning;
+  readonly availableTunings: ReadonlyArray<Tuning>;
+}
+
+export const INSTRUMENTS: Record<InstrumentName, Instrument> = {
+  [InstrumentName.Guitar]: {
+    name: InstrumentName.Guitar,
+    displayText: "Guitar (6-string)",
+    stringCount: 6,
+    defaultTuning: STANDARD_TUNING,
+    availableTunings: [STANDARD_TUNING, DROP_D_TUNING, DADGAD_TUNING, OPEN_G_TUNING, BARITONE_B_STANDARD_TUNING, BARITONE_A_STANDARD_TUNING],
   },
-  "Bass": {
-    "EADG (Standard)": BASS_STANDARD_TUNING,
+  [InstrumentName.Bass]: {
+    name: InstrumentName.Bass,
+    displayText: "Bass (4-string)",
+    stringCount: 4,
+    defaultTuning: BASS_EADG_TUNING,
+    availableTunings: [BASS_EADG_TUNING, BASS_BEAD_TUNING],
   },
-  "Ukulele": {
-    "GCEA (Standard)": UKULELE_GCEA_TUNING,
+  [InstrumentName.Ukulele]: {
+    name: InstrumentName.Ukulele,
+    displayText: "Ukulele (4-string)",
+    stringCount: 4,
+    defaultTuning: UKULELE_GCEA_TUNING,
+    availableTunings: [UKULELE_GCEA_TUNING],
   },
-  "Mandola": {
-    "CGDA (Standard)": MANDOLA_TUNING,
+  [InstrumentName.Mandolin]: {
+    name: InstrumentName.Mandolin,
+    displayText: "Mandolin (4-course)",
+    stringCount: 4,
+    defaultTuning: GDAE_TUNING,
+    availableTunings: [GDAE_TUNING],
   },
-  "Mandolin": {
-    "GDAE (Standard)": MANDOLIN_TUNING,
+  [InstrumentName.Mandola]: {
+    name: InstrumentName.Mandola,
+    displayText: "Mandola (4-course)",
+    stringCount: 4,
+    defaultTuning: CGDA_TUNING,
+    availableTunings: [CGDA_TUNING],
   },
-  "7-String Guitar": {
-    "Standard (BEADGBE)": GUITAR_7_STANDARD_TUNING,
+  [InstrumentName.TenorGuitar]: {
+    name: InstrumentName.TenorGuitar,
+    displayText: "Tenor Guitar (4-string)",
+    stringCount: 4,
+    defaultTuning: CGDA_TUNING,
+    availableTunings: [CGDA_TUNING, GDAE_TUNING],
   },
-  "8-String Guitar": {
-    "Standard (F#BEADGBE)": GUITAR_8_STANDARD_TUNING,
+  [InstrumentName.TenorBanjo]: {
+    name: InstrumentName.TenorBanjo,
+    displayText: "Tenor Banjo (4-string)",
+    stringCount: 4,
+    defaultTuning: CGDA_TUNING,
+    availableTunings: [CGDA_TUNING, GDAE_TUNING],
+  },
+  [InstrumentName.IrishBouzouki]: {
+    name: InstrumentName.IrishBouzouki,
+    displayText: "Irish Bouzouki (4-course)",
+    stringCount: 4,
+    defaultTuning: BOUZOUKI_GDAD_TUNING,
+    availableTunings: [BOUZOUKI_GDAD_TUNING, BOUZOUKI_GDGD_TUNING],
+  },
+  [InstrumentName.SevenStrGuitar]: {
+    name: InstrumentName.SevenStrGuitar,
+    displayText: "7-String Guitar",
+    stringCount: 7,
+    defaultTuning: GUITAR_7_STANDARD_TUNING,
+    availableTunings: [GUITAR_7_STANDARD_TUNING],
+  },
+  [InstrumentName.EightStrGuitar]: {
+    name: InstrumentName.EightStrGuitar,
+    displayText: "8-String Guitar",
+    stringCount: 8,
+    defaultTuning: GUITAR_8_STANDARD_TUNING,
+    availableTunings: [GUITAR_8_STANDARD_TUNING],
   },
 };
 
-// Flat alias for backward compatibility — saved schedules with tuning:"Standard" etc. still resolve.
+/** Returns all available tunings for an instrument, including any user-defined custom tunings. */
+export function getAvailableTunings(
+  instrument: InstrumentName,
+  customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>
+): Tuning[] {
+  const builtIn = [...(INSTRUMENTS[instrument]?.availableTunings ?? [])];
+  const custom = (customTunings?.[instrument] ?? []).map(ct => ({ name: ct.name, notes: ct.notes }));
+  return [...builtIn, ...custom];
+}
+
+/** Looks up a Tuning by name for a given instrument, falling back to the instrument's default. */
+export function resolveTuning(
+  instrument: InstrumentName,
+  tuningName: string,
+  customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>
+): Tuning {
+  const all = getAvailableTunings(instrument, customTunings);
+  return all.find(t => t.name === tuningName) ?? INSTRUMENTS[instrument]?.defaultTuning ?? STANDARD_TUNING;
+}
+
+// Backward-compat aliases (used by chord_feature.ts and others still referencing old names)
+/** @deprecated Use INSTRUMENTS registry instead */
+export const INSTRUMENT_TUNINGS: Record<string, Record<string, Tuning>> = Object.fromEntries(
+  Object.values(INSTRUMENTS).map(inst => [
+    inst.name,
+    Object.fromEntries(inst.availableTunings.map(t => [t.name, t]))
+  ])
+);
+/** @deprecated Use getAvailableTunings instead */
 export const AVAILABLE_TUNINGS: Record<string, Tuning> = Object.assign(
   {},
-  ...Object.values(INSTRUMENT_TUNINGS)
+  ...Object.values(INSTRUMENTS).map(inst =>
+    Object.fromEntries(inst.availableTunings.map(t => [t.name, t]))
+  )
 );
-export type TuningName = keyof typeof AVAILABLE_TUNINGS;
+export type TuningName = string;
 
 // --- Fretboard Class ---
 export class Fretboard {
@@ -673,7 +767,7 @@ export class Fretboard {
    * the actual note positions on the fretboard.
    */
   private _computeRectSegments(rect: RoundedRectData): RoundedRectData[] {
-    const tuning = this.config.tuning.tuning;
+    const tuning = this.config.tuning.notes;
     const segments: RoundedRectData[] = [];
     let segStart = rect.stringStart;
     let cumulativeOffset = 0;
@@ -994,6 +1088,7 @@ export class Fretboard {
           }
 
           // Draw Circle(s)
+          if (noteData.dashed) ctx.setLineDash([4, 3]);
           this._drawCircle(
             ctx,
             x,
@@ -1012,10 +1107,7 @@ export class Fretboard {
               : undefined;
 
           if (!drawIconType) {
-            if (
-              noteData.displayLabel !== undefined &&
-              noteData.displayLabel !== ""
-            ) {
+            if (noteData.displayLabel !== undefined) {
               contentToDraw = noteData.displayLabel;
             } else {
               contentToDraw = noteData.noteName;

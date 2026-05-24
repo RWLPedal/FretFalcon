@@ -15,7 +15,7 @@ import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
 import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
-import { NoteRenderData, PolygonData, Tuning } from "../fretboard";
+import { NoteRenderData, PolygonData, Tuning, InstrumentName, STANDARD_TUNING } from "../fretboard";
 import {
   getKeyIndex,
   NOTE_NAMES_FROM_A,
@@ -183,10 +183,10 @@ export const CAGED_REFERENCE_PATTERNS: CagedReferencePattern[] = [
 export function getCagedTuningOffset(tuning: Tuning): number {
   const STANDARD_INTERVALS = [5, 5, 5, 4, 5]; // P4-P4-P4-M3-P4
   for (let i = 0; i < 5; i++) {
-    const interval = ((tuning.tuning[i + 1] - tuning.tuning[i]) + 12) % 12;
+    const interval = ((tuning.notes[i + 1] - tuning.notes[i]) + 12) % 12;
     if (interval !== STANDARD_INTERVALS[i]) return 0;
   }
-  return (7 - tuning.tuning[0] + 12) % 12;
+  return (7 - tuning.notes[0] + 12) % 12;
 }
 
 /**
@@ -224,7 +224,10 @@ export function buildCagedLookup(
 export class CagedFeature extends InstrumentFeature {
   static readonly typeName = "CAGED";
   static readonly displayName = "CAGED Scale Shapes";
-  static readonly requiredInstruments = ["Guitar"] as const;
+  static readonly requiredInstruments = [InstrumentName.Guitar] as const;
+  static isCompatibleWithTuning(_instrument: string, tuningName: string): boolean {
+    return tuningName === STANDARD_TUNING.name;
+  }
   static readonly description =
     "Displays scale notes in a given key with semi-transparent overlays showing the five CAGED shape regions. Toggle individual shapes to focus on them.";
 
@@ -399,7 +402,7 @@ export class CagedFeature extends InstrumentFeature {
   /** Populates _noteBaseData and _shapeToPoints from the CAGED lookup. */
   private _computeShapeData(): void {
     const config    = this.fretboardConfig;
-    const tuning    = config.tuning.tuning;
+    const tuning    = config.tuning.notes;
     const fretCount = this.fretCount;
 
     const isMinorScale        = this.scaleType.toLowerCase().includes("minor");

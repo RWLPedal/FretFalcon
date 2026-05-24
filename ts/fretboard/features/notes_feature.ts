@@ -142,8 +142,8 @@ export class NotesFeature extends InstrumentFeature {
     const config = this.fretboardConfig;
     const labelDisplay = config.labelDisplay;
 
-    for (let stringIndex = 0; stringIndex < config.tuning.tuning.length; stringIndex++) {
-      const stringTuning = config.tuning.tuning[stringIndex];
+    for (let stringIndex = 0; stringIndex < config.tuning.notes.length; stringIndex++) {
+      const stringTuning = config.tuning.notes[stringIndex];
       for (let fretIndex = 0; fretIndex <= fretCount; fretIndex++) {
         const noteOffsetFromA = (stringTuning + fretIndex) % 12;
         const noteName = NOTE_NAMES_FROM_A[noteOffsetFromA] ?? "?";

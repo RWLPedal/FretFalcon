@@ -19,8 +19,9 @@ import { View } from "../view";
 import { MetronomeView } from "./views/metronome_view";
 import {
   FretboardConfig,
-  INSTRUMENT_TUNINGS,
+  INSTRUMENTS,
   InstrumentName,
+  resolveTuning,
 } from "./fretboard";
 import { AppSettings } from "../settings";
 import {
@@ -84,15 +85,11 @@ export abstract class InstrumentFeature implements Feature {
 
     const guitarGlobalSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
 
-    const instrument: InstrumentName = guitarGlobalSettings.instrument ?? "Guitar";
-    const tuningsForInstrument = INSTRUMENT_TUNINGS[instrument] ?? INSTRUMENT_TUNINGS["Guitar"];
-    const tuningName = tuningsForInstrument[guitarGlobalSettings.tuning]
-      ? guitarGlobalSettings.tuning
-      : Object.keys(tuningsForInstrument)[0];
-    const tuning = tuningsForInstrument[tuningName];
+    const instrument: InstrumentName = (guitarGlobalSettings.instrument as InstrumentName) ?? InstrumentName.Guitar;
+    const tuning = resolveTuning(instrument, guitarGlobalSettings.tuning, settings.customTunings);
 
     // Pass explicit widths for 6-string guitar to preserve existing appearance.
-    const stringWidths = instrument === "Guitar" ? [3, 3, 2, 2, 1, 1] : undefined;
+    const stringWidths = instrument === InstrumentName.Guitar ? [3, 3, 2, 2, 1, 1] : undefined;
 
     // Consume the pending width constraint set by ConfigurableFeatureView before createFeature().
     const maxCanvasWidth = _pendingConstraints.maxWidth;

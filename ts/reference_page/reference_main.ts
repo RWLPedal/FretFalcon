@@ -54,7 +54,8 @@ class ReferencePage {
                 (viewId, featureTypeName) => this.handleFeatureClick(viewId, featureTypeName),
                 this.floatingViewManager,
                 this.settings,
-                (theme) => this.handleThemeChange(theme)
+                (theme) => this.handleThemeChange(theme),
+                (ct) => this.saveSettings({ ...this.settings, customTunings: ct })
             );
         }
 

@@ -22,7 +22,7 @@ import { AppSettings } from "../../settings";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { MoveableToggleView } from "../views/moveable_toggle_view";
 import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../moveable_shapes";
-import { AVAILABLE_TUNINGS, STANDARD_TUNING } from "../fretboard";
+import { resolveTuning, InstrumentName } from "../fretboard";
 import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 import { addHeader, clearAllChildren } from "../fretboard_utils";
@@ -37,7 +37,11 @@ export class ChordFeature extends InstrumentFeature {
   // static readonly category = FeatureCategoryName.Guitar; // Removed
   static readonly typeName = "Chord";
   static readonly displayName = "Chord Diagram";
-  static readonly requiredInstruments = ["Guitar", "Ukulele", "Mandolin", "Mandola"] as const;
+  static readonly requiredInstruments = [
+    InstrumentName.Guitar, InstrumentName.Ukulele,
+    InstrumentName.Mandolin, InstrumentName.Mandola,
+    InstrumentName.TenorGuitar, InstrumentName.TenorBanjo,
+  ] as const;
   static readonly description = "Displays one or more chord diagrams.";
   readonly typeName = ChordFeature.typeName;
 
@@ -171,7 +175,7 @@ export class ChordFeature extends InstrumentFeature {
       for (const t of typesToFind) {
         let chord = findChordByRootAndType(library, rootNote as NoteName, t);
         if (!chord) {
-          const tuning = AVAILABLE_TUNINGS[guitarSettings.tuning] ?? STANDARD_TUNING;
+          const tuning = resolveTuning(guitarSettings.instrument as InstrumentName ?? InstrumentName.Guitar, guitarSettings.tuning);
           const result = getEasiestMoveableShape(
             guitarSettings.instrument,
             `${rootNote} ${t}`,

@@ -17,7 +17,8 @@ export class SidebarView {
         private onFeatureClick: (viewId: string, featureTypeName?: string) => void,
         private floatingViewManager?: FloatingViewManager,
         private appSettings?: AppSettings,
-        private onThemeChange?: (theme: Theme) => void
+        private onThemeChange?: (theme: Theme) => void,
+        private onImportCustomTunings?: (ct: AppSettings['customTunings']) => void
     ) {
         this.container = container;
         this.render();
@@ -219,7 +220,7 @@ export class SidebarView {
                         reader.onload = (e) => {
                             try {
                                 const json = e.target?.result as string;
-                                manager.importStateJson(json);
+                                manager.importStateJson(json, this.onImportCustomTunings);
                             } catch (err) {
                                 console.error('Failed to load layout file:', err);
                                 alert('Could not load layout: the file may be invalid.');

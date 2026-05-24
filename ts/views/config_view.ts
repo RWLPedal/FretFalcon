@@ -79,6 +79,16 @@ export class ConfigView {
                 btns.forEach(btn => {
                     btn.classList.toggle('is-active', resolvedValues.includes(btn.dataset.value ?? ''));
                 });
+            } else if (arg.isVariadic && arg.uiComponentType === UiComponentType.OrderedDegreeList) {
+                // Ordered-degree-list variadic: consume all remaining values in order
+                const values = config.slice(configIndex);
+                configIndex = config.length;
+                const control = this.container.querySelector<HTMLElement>(
+                    `[data-arg-index="${argIndex}"] .control`
+                );
+                const fn = (control as any)?._setValues;
+                if (typeof fn === 'function') fn(values);
+                else this.argValues.set(argIndex, values);
             } else {
                 // Non-variadic enum, or variadic enum rendered as a single <select>:
                 // consume exactly one value and update the select element.
@@ -358,6 +368,8 @@ export class ConfigView {
         } else if (arg.uiComponentType === UiComponentType.ToggleButtonSelector) {
             const keyType = this.getKeyTypeForArg(arg);
             this.renderToggleButtons(parent, arg, index, keyType, false);
+        } else if (arg.uiComponentType === UiComponentType.OrderedDegreeList) {
+            this.renderOrderedDegreeList(parent, arg, index);
         } else if (arg.type === ArgType.Enum) {
             this.renderEnumSelector(parent, arg, index);
         }
@@ -489,6 +501,100 @@ export class ConfigView {
         parent.appendChild(buttonsDiv);
     }
 
+    private renderOrderedDegreeList(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
+        if (!this.argValues.has(index)) this.argValues.set(index, []);
+
+        const getValues = (): string[] => (this.argValues.get(index) as string[]) ?? [];
+
+        const getLabels = (): LabelValue[] => {
+            const mode = this.getKeyTypeForArg(arg);
+            const lbm = arg.uiComponentData?.labelsByMode?.[mode]?.basic;
+            if (lbm) return lbm as LabelValue[];
+            return (arg.uiComponentData?.buttonLabels ?? []).map(l => ({ label: l, value: l }));
+        };
+
+        const chipsDiv = document.createElement('div');
+        chipsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;min-height:22px;margin-bottom:5px;';
+
+        const addRow = document.createElement('div');
+        addRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;align-items:center;';
+
+        const rebuildChips = () => {
+            chipsDiv.innerHTML = '';
+            const labels = getLabels();
+            const labelMap = new Map(labels.map(lv => [lv.value, lv.label]));
+            const values = getValues();
+
+            values.forEach((val, i) => {
+                const chip = document.createElement('span');
+                chip.style.cssText = 'display:inline-flex;align-items:center;gap:1px;border:1px solid var(--clr-border,#999);border-radius:4px;padding:1px 3px;font-size:0.78rem;white-space:nowrap;';
+
+                const mkNavBtn = (ch: string, title: string, disabled: boolean, handler: () => void) => {
+                    const b = document.createElement('button');
+                    b.textContent = ch; b.title = title; b.disabled = disabled;
+                    b.style.cssText = 'background:none;border:none;padding:0 2px;font-size:0.82rem;cursor:pointer;opacity:' + (disabled ? '0.25' : '0.55') + ';color:inherit;line-height:1;';
+                    b.addEventListener('click', handler);
+                    return b;
+                };
+
+                chip.appendChild(mkNavBtn('‹', 'Move earlier', i === 0, () => {
+                    const arr = getValues(); [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
+                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
+                }));
+
+                const lbl = document.createElement('span');
+                lbl.textContent = labelMap.get(val) ?? val;
+                lbl.style.cssText = 'min-width:22px;text-align:center;font-weight:500;';
+                chip.appendChild(lbl);
+
+                chip.appendChild(mkNavBtn('›', 'Move later', i === values.length - 1, () => {
+                    const arr = getValues(); [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
+                }));
+
+                const rm = document.createElement('button');
+                rm.textContent = '×'; rm.title = 'Remove';
+                rm.style.cssText = 'background:none;border:none;padding:0 2px;font-size:0.82rem;cursor:pointer;opacity:0.45;color:inherit;line-height:1;';
+                rm.addEventListener('click', () => {
+                    const arr = getValues(); arr.splice(i, 1);
+                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
+                });
+                chip.appendChild(rm);
+
+                chipsDiv.appendChild(chip);
+            });
+        };
+
+        const rebuildAddButtons = () => {
+            addRow.innerHTML = '';
+            const pfx = document.createElement('span');
+            pfx.textContent = '+'; pfx.style.cssText = 'font-size:0.72rem;opacity:0.6;margin-right:1px;';
+            addRow.appendChild(pfx);
+            getLabels().forEach(lv => {
+                const btn = document.createElement('button');
+                btn.classList.add('config-toggle-btn');
+                btn.textContent = lv.label; btn.title = `Add ${lv.label}`;
+                btn.style.cssText = 'font-size:0.72rem;padding:1px 5px;';
+                btn.addEventListener('click', () => {
+                    const arr = getValues(); arr.push(lv.value);
+                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
+                });
+                addRow.appendChild(btn);
+            });
+        };
+
+        parent.appendChild(chipsDiv);
+        parent.appendChild(addRow);
+        rebuildChips();
+        rebuildAddButtons();
+
+        // Hooks for external updates (setConfig, mode changes)
+        (parent as any)._setValues = (vals: string[]) => {
+            this.argValues.set(index, vals); rebuildChips();
+        };
+        (parent as any)._rebuildLabels = () => { rebuildChips(); rebuildAddButtons(); };
+    }
+
     // ------------------------------------------------------------------ //
 
     /** Returns the current key type value for any enum arg that controls `arg`. */
@@ -561,12 +667,20 @@ export class ConfigView {
                 if (!select) return;
 
                 select.addEventListener('change', () => {
-                    // Find whether the Advanced checkbox (if any) is currently checked.
-                    const advCb = this.container.querySelector<HTMLInputElement>(
-                        `input[type="checkbox"][data-controls-arg-name="${arg.controlsArgName}"]`
-                    );
-                    const showAdvanced = advCb?.checked ?? false;
-                    this.rebuildToggleButtons(controlledArg, controlledIndex, select.value, showAdvanced);
+                    if (controlledArg.uiComponentType === UiComponentType.OrderedDegreeList) {
+                        const control = this.container.querySelector<HTMLElement>(
+                            `[data-arg-name="${controlledArg.name}"] .control`
+                        );
+                        const fn = (control as any)?._rebuildLabels;
+                        if (typeof fn === 'function') fn();
+                    } else {
+                        // Find whether the Advanced checkbox (if any) is currently checked.
+                        const advCb = this.container.querySelector<HTMLInputElement>(
+                            `input[type="checkbox"][data-controls-arg-name="${arg.controlsArgName}"]`
+                        );
+                        const showAdvanced = advCb?.checked ?? false;
+                        this.rebuildToggleButtons(controlledArg, controlledIndex, select.value, showAdvanced);
+                    }
                     this.notifyChange();
                 });
             }

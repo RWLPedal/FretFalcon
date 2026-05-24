@@ -74,14 +74,18 @@ export function getAvailableFeatureTypes(
 
 /**
  * Retrieves feature type descriptors for a given category, filtered to those
- * compatible with the specified instrument. Features without `requiredInstruments`
- * are always included.
+ * compatible with the specified instrument and optional tuning. Features without
+ * `requiredInstruments` are always included; `isCompatibleWithTuning` provides
+ * a further optional gate.
  */
 export function getAvailableFeatureTypesForInstrument(
   categoryName: string,
-  instrument: string
+  instrument: string,
+  tuningName?: string
 ): FeatureTypeDescriptor[] {
-  return getAvailableFeatureTypes(categoryName).filter(
-    (ft) => !ft.requiredInstruments || ft.requiredInstruments.includes(instrument)
-  );
+  return getAvailableFeatureTypes(categoryName).filter((ft) => {
+    if (ft.requiredInstruments && !ft.requiredInstruments.includes(instrument)) return false;
+    if (tuningName && ft.isCompatibleWithTuning && !ft.isCompatibleWithTuning(instrument, tuningName)) return false;
+    return true;
+  });
 }
