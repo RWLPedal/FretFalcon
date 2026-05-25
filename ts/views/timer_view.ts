@@ -12,13 +12,23 @@ export class TimerView extends BaseView {
 
   private static readonly RING_RADIUS = 100;
   private static readonly RING_CIRCUMFERENCE = 2 * Math.PI * TimerView.RING_RADIUS;
+  private static readonly COMPACT_THRESHOLD = 240; // px — below this, ring clips
 
-  // DOM refs
+  // DOM refs — ring layout
+  private wrapperEl: HTMLElement | null = null;
   private titleEl: HTMLElement | null = null;
   private displayEl: HTMLElement | null = null;
   private progressRingEl: SVGCircleElement | null = null;
   private startPauseBtn: HTMLButtonElement | null = null;
   private resetBtn: HTMLButtonElement | null = null;
+
+  // DOM refs — compact layout
+  private compactDisplayEl: HTMLElement | null = null;
+  private compactBarFillEl: HTMLElement | null = null;
+  private compactStartPauseBtn: HTMLButtonElement | null = null;
+  private compactResetBtn: HTMLButtonElement | null = null;
+
+  private resizeObserver: ResizeObserver | null = null;
 
   // Callbacks (presence of onStartPause determines schedule-driven vs standalone mode)
   private readonly onStartPauseCallback: (() => void) | undefined;
@@ -51,6 +61,7 @@ export class TimerView extends BaseView {
 
     const wrapper = document.createElement('div');
     wrapper.classList.add('timer-view');
+    this.wrapperEl = wrapper;
 
     // Optional title (e.g. current task name)
     this.titleEl = document.createElement('div');
@@ -58,7 +69,8 @@ export class TimerView extends BaseView {
     this.titleEl.hidden = true;
     wrapper.appendChild(this.titleEl);
 
-    // Ring container with SVG progress ring + centered display
+    // ── Ring layout ──────────────────────────────────────────────────────────
+
     const ringContainer = document.createElement('div');
     ringContainer.classList.add('timer-ring-container');
 
@@ -83,16 +95,14 @@ export class TimerView extends BaseView {
     svg.appendChild(this.progressRingEl);
     ringContainer.appendChild(svg);
 
-    // Countdown display (centered inside ring)
     this.displayEl = document.createElement('div');
     this.displayEl.classList.add('timer-display');
     this.displayEl.textContent = formatDuration(this.currentSeconds);
-    this.displayEl.addEventListener('click', () => this.handleDisplayClick());
+    this.displayEl.addEventListener('click', () => this.handleDisplayClick(this.displayEl!));
     ringContainer.appendChild(this.displayEl);
 
     wrapper.appendChild(ringContainer);
 
-    // Controls below ring
     const controls = document.createElement('div');
     controls.classList.add('timer-controls');
 
@@ -111,7 +121,55 @@ export class TimerView extends BaseView {
     controls.appendChild(this.resetBtn);
 
     wrapper.appendChild(controls);
+
+    // ── Compact layout (shown when container is too narrow for the ring) ─────
+
+    const compactRow = document.createElement('div');
+    compactRow.classList.add('timer-compact-row');
+
+    const barContainer = document.createElement('div');
+    barContainer.classList.add('timer-bar');
+    this.compactBarFillEl = document.createElement('div');
+    this.compactBarFillEl.classList.add('timer-bar-fill');
+    barContainer.appendChild(this.compactBarFillEl);
+    compactRow.appendChild(barContainer);
+
+    const compactControls = document.createElement('div');
+    compactControls.classList.add('timer-compact-controls');
+
+    this.compactStartPauseBtn = document.createElement('button');
+    this.compactStartPauseBtn.classList.add('button', 'timer-start-pause');
+    this.compactStartPauseBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
+    this.compactStartPauseBtn.title = 'Play / Pause';
+    this.compactStartPauseBtn.addEventListener('click', () => this.handleStartPause());
+    compactControls.appendChild(this.compactStartPauseBtn);
+
+    this.compactResetBtn = document.createElement('button');
+    this.compactResetBtn.classList.add('button', 'timer-reset');
+    this.compactResetBtn.innerHTML = '<span class="material-icons">replay</span>';
+    this.compactResetBtn.title = 'Reset current interval';
+    this.compactResetBtn.addEventListener('click', () => this.handleReset());
+    compactControls.appendChild(this.compactResetBtn);
+
+    this.compactDisplayEl = document.createElement('div');
+    this.compactDisplayEl.classList.add('timer-display', 'timer-display--compact');
+    this.compactDisplayEl.textContent = formatDuration(this.currentSeconds);
+    this.compactDisplayEl.addEventListener('click', () => this.handleDisplayClick(this.compactDisplayEl!));
+    compactControls.appendChild(this.compactDisplayEl);
+
+    compactRow.appendChild(compactControls);
+
+    wrapper.appendChild(compactRow);
     container.appendChild(wrapper);
+
+    // Switch to compact layout when the container is narrower than the ring
+    this.resizeObserver = new ResizeObserver(entries => {
+      for (const entry of entries) {
+        const narrow = entry.contentRect.width < TimerView.COMPACT_THRESHOLD;
+        this.wrapperEl?.classList.toggle('timer-view--compact', narrow);
+      }
+    });
+    this.resizeObserver.observe(container);
 
     this.updateButtonState();
     this.updateRingProgress();
@@ -131,27 +189,31 @@ export class TimerView extends BaseView {
   }
 
   start(): void {
-    // In schedule-driven mode, the schedule drives everything – no-op here.
-    // In standalone mode, start the countdown.
     if (!this.isScheduleDriven) {
       this.startCountdown();
     }
   }
 
   stop(): void {
-    // In standalone mode, pause the countdown when the floating view is hidden.
     if (!this.isScheduleDriven) {
       this.stopCountdown();
     }
   }
 
   destroy(): void {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.stopCountdown();
+    this.wrapperEl = null;
     this.titleEl = null;
     this.displayEl = null;
     this.progressRingEl = null;
     this.startPauseBtn = null;
     this.resetBtn = null;
+    this.compactDisplayEl = null;
+    this.compactBarFillEl = null;
+    this.compactStartPauseBtn = null;
+    this.compactResetBtn = null;
     super.destroy();
   }
 
@@ -208,23 +270,21 @@ export class TimerView extends BaseView {
     }
   }
 
-  private handleDisplayClick(): void {
+  private handleDisplayClick(target: HTMLElement): void {
     if (this.isRunning || this.isEditing) return;
-    this.enterEditMode();
+    this.enterEditMode(target);
   }
 
   // ─── Edit mode ─────────────────────────────────────────────────────────────
 
-  private enterEditMode(): void {
-    if (!this.displayEl) return;
+  private enterEditMode(target: HTMLElement): void {
     this.isEditing = true;
-    this.displayEl.contentEditable = 'true';
-    this.displayEl.classList.add('is-editing');
+    target.contentEditable = 'true';
+    target.classList.add('is-editing');
 
-    // Select all text so the user can immediately type
-    this.displayEl.focus();
+    target.focus();
     const range = document.createRange();
-    range.selectNodeContents(this.displayEl);
+    range.selectNodeContents(target);
     const sel = window.getSelection();
     if (sel) {
       sel.removeAllRanges();
@@ -234,33 +294,32 @@ export class TimerView extends BaseView {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Enter') {
         e.preventDefault();
-        this.displayEl?.removeEventListener('keydown', onKeyDown);
-        this.displayEl?.removeEventListener('blur', onBlur);
-        this.exitEditMode();
+        target.removeEventListener('keydown', onKeyDown);
+        target.removeEventListener('blur', onBlur);
+        this.exitEditMode(target);
       } else if (e.key === 'Escape') {
         e.preventDefault();
-        this.displayEl?.removeEventListener('keydown', onKeyDown);
-        this.displayEl?.removeEventListener('blur', onBlur);
-        this.cancelEditMode();
+        target.removeEventListener('keydown', onKeyDown);
+        target.removeEventListener('blur', onBlur);
+        this.cancelEditMode(target);
       }
     };
 
     const onBlur = () => {
-      this.displayEl?.removeEventListener('keydown', onKeyDown);
-      this.displayEl?.removeEventListener('blur', onBlur);
-      this.exitEditMode();
+      target.removeEventListener('keydown', onKeyDown);
+      target.removeEventListener('blur', onBlur);
+      this.exitEditMode(target);
     };
 
-    this.displayEl.addEventListener('keydown', onKeyDown);
-    this.displayEl.addEventListener('blur', onBlur);
+    target.addEventListener('keydown', onKeyDown);
+    target.addEventListener('blur', onBlur);
   }
 
-  private exitEditMode(): void {
-    if (!this.displayEl) return;
-    const raw = this.displayEl.textContent?.trim() ?? '';
+  private exitEditMode(target: HTMLElement): void {
+    const raw = target.textContent?.trim() ?? '';
     this.isEditing = false;
-    this.displayEl.contentEditable = 'false';
-    this.displayEl.classList.remove('is-editing');
+    target.contentEditable = 'false';
+    target.classList.remove('is-editing');
 
     try {
       const parsed = parseDurationString(raw);
@@ -279,12 +338,11 @@ export class TimerView extends BaseView {
     this.updateDisplayEl();
   }
 
-  private cancelEditMode(): void {
-    if (!this.displayEl) return;
+  private cancelEditMode(target: HTMLElement): void {
     this.isEditing = false;
-    this.displayEl.contentEditable = 'false';
-    this.displayEl.classList.remove('is-editing');
-    this.updateDisplayEl(); // Restore previous value
+    target.contentEditable = 'false';
+    target.classList.remove('is-editing');
+    this.updateDisplayEl();
   }
 
   // ─── Standalone countdown engine ──────────────────────────────────────────
@@ -369,27 +427,36 @@ export class TimerView extends BaseView {
   // ─── DOM helpers ───────────────────────────────────────────────────────────
 
   private updateDisplayEl(): void {
-    if (this.displayEl) {
-      this.displayEl.textContent = formatDuration(this.currentSeconds);
-    }
+    const text = formatDuration(this.currentSeconds);
+    if (this.displayEl) this.displayEl.textContent = text;
+    if (this.compactDisplayEl) this.compactDisplayEl.textContent = text;
     this.updateRingProgress();
   }
 
   private updateRingProgress(): void {
-    if (!this.progressRingEl) return;
     const fraction = this.duration > 0
       ? Math.max(0, Math.min(1, this.currentSeconds / this.duration))
       : 1;
-    this.progressRingEl.style.strokeDashoffset =
-      String(TimerView.RING_CIRCUMFERENCE * (1 - fraction));
+
+    if (this.progressRingEl) {
+      this.progressRingEl.style.strokeDashoffset =
+        String(TimerView.RING_CIRCUMFERENCE * (1 - fraction));
+    }
+
+    if (this.compactBarFillEl) {
+      this.compactBarFillEl.style.width = `${fraction * 100}%`;
+    }
   }
 
   private updateButtonState(): void {
-    if (!this.startPauseBtn) return;
-    const icon = this.startPauseBtn.querySelector<HTMLElement>('.material-icons');
-    if (icon) {
-      icon.textContent = this.isRunning ? 'pause' : 'play_arrow';
+    const icon = this.isRunning ? 'pause' : 'play_arrow';
+    const title = this.isRunning ? 'Pause' : 'Play';
+
+    for (const btn of [this.startPauseBtn, this.compactStartPauseBtn]) {
+      if (!btn) continue;
+      const el = btn.querySelector<HTMLElement>('.material-icons');
+      if (el) el.textContent = icon;
+      btn.title = title;
     }
-    this.startPauseBtn.title = this.isRunning ? 'Pause' : 'Play';
   }
 }
