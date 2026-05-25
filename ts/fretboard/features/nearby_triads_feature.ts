@@ -17,8 +17,10 @@ import {
   ALL_DIATONIC_MODES,
   DIATONIC_MODE_LABELS,
 } from '../music_types';
-import { InstrumentName } from '../fretboard';
+import { InstrumentName, FretboardConfig } from '../fretboard';
 import { NoteRenderData, LineData } from '../fretboard';
+import { planSingleFretboard } from '../fretboard_layout';
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
@@ -69,6 +71,7 @@ interface ChordSlot {
   previewIndex: number;   // which of this slot's voicings is previewed as dashed from the previous fretboard
   fretboardView: FretboardView;
   counterEl: HTMLElement | null;
+  columnEl: HTMLElement | null;  // outer column div in reference mode, for active-chord highlight
 }
 
 // ─── Labels-by-mode helper (same approach as ChordProgressionFeature) ─────────
@@ -169,6 +172,11 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   private readonly diatonicMode: DiatonicMode;
   private readonly maxFretSpan: number;
 
+  // Sized for one slot in reference mode (full-width ÷ N); equals fretboardConfig in other modes.
+  private slotFretboardConfig: FretboardConfig;
+  private _zoomMultiplier: number = 1.2;
+  private _slotsNeedLayout: boolean = false;
+
   // Reference / Compact state
   private slots: ChordSlot[] = [];
   private compactFretboardView: FretboardView | null = null;
@@ -186,6 +194,9 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   private runtimeDrivenActive: boolean = false;
   private linkStatusHandler: ((e: Event) => void) | null = null;
   private linkStatusContainer: HTMLElement | null = null;
+  private activeChordKey: string | null = null;
+  private keySignalContainer: HTMLElement | null = null;
+  private keySignalHandler: ((e: Event) => void) | null = null;
 
   constructor(
     config: ReadonlyArray<string>,
@@ -199,12 +210,45 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
+    const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.ntMode       = ntMode;
     this.progDegrees  = progDegrees.length > 0 ? progDegrees : [1, 4, 5];
     this.rootNote     = rootNote;
     this.diatonicMode = diatonicMode;
     this.maxFretSpan  = maxFretSpan;
+
+    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
+      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    const zoom = guitarSettings.zoomMultiplier ?? 1.2;
+    this._zoomMultiplier = zoom;
+
+    console.log('[NearbyTriads] constructor', { availW, maxCanvasHeight, ntMode, zoom });
+
+    // Single-fretboard config (compact + driven modes).
+    this.fretboardConfig = planSingleFretboard(this.fretboardConfig, availW, maxCanvasHeight, zoom, 15);
+
+    if (ntMode === 'reference') {
+      const N = this.progDegrees.length;
+      const gap = 8;      // matches slotsRow CSS gap
+      const slotPad = 8;  // col's padding:4px left + 4px right
+      const overhead = 42;       // label + 2×gap(2px) + nav controls + 2×vpad(2px) per slot row
+      const rowMargin = 8;       // slotsRow margin-top (fixed, not per-row)
+      if (availW && maxCanvasHeight) {
+        this.slotFretboardConfig = NearbyTriadsFeature.bestSlotConfig(
+          this.fretboardConfig, N, availW, maxCanvasHeight - rowMargin, zoom, gap, slotPad, overhead
+        );
+      } else {
+        const perSlotW = availW ? (availW - (N - 1) * gap - N * slotPad) / N : undefined;
+        this.slotFretboardConfig = planSingleFretboard(
+          this.fretboardConfig, perSlotW, undefined, zoom, 15
+        );
+      }
+      // If availW was unknown at construction, defer slot sizing to renderReference().
+      this._slotsNeedLayout = !availW;
+    } else {
+      this.slotFretboardConfig = this.fretboardConfig;
+    }
 
     this.initSlots();
     if (ntMode === 'compact') {
@@ -235,8 +279,9 @@ export class NearbyTriadsFeature extends InstrumentFeature {
         rankedVoicings: [],
         selectedIndex: 0,
         previewIndex:  0,
-        fretboardView: new FretboardView(this.fretboardConfig, 15),
+        fretboardView: new FretboardView(this.slotFretboardConfig, 15),
         counterEl:     null,
+        columnEl:      null,
       };
       this.slots.push(slot);
     }
@@ -248,7 +293,7 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   private buildAllRawVoicings(): void {
     for (const slot of this.slots) {
       slot.rawVoicings = slot.chordKey
-        ? enumerateVoicings(slot.chordKey, this.fretboardConfig, 15, this.maxFretSpan)
+        ? enumerateVoicings(slot.chordKey, this.slotFretboardConfig, 15, this.maxFretSpan)
         : [];
     }
   }
@@ -372,6 +417,11 @@ export class NearbyTriadsFeature extends InstrumentFeature {
 
   render(container: HTMLElement): void {
     // Clean up any existing listeners
+    if (this.keySignalContainer && this.keySignalHandler) {
+      this.keySignalContainer.removeEventListener('drive-signal', this.keySignalHandler);
+      this.keySignalHandler   = null;
+      this.keySignalContainer = null;
+    }
     if (this.drivenSignalContainer && this.drivenSignalHandler) {
       this.drivenSignalContainer.removeEventListener('drive-signal', this.drivenSignalHandler);
       this.drivenSignalHandler   = null;
@@ -416,11 +466,21 @@ export class NearbyTriadsFeature extends InstrumentFeature {
         drivenBtn.textContent = 'Driven Mode';
         if (this.ntMode === 'reference') {
           this.renderReference(contentArea);
+          // Restore active-chord highlight after any (re)render of reference mode.
+          // The persisted value survives instance recreation so post-rebuild renders
+          // don't lose the highlight that was current when the rebuild was triggered.
+          const persisted = (container as any).__ntActiveChord as string | null | undefined;
+          if (persisted != null) {
+            this.activeChordKey = persisted;
+            this.updateSlotHighlights();
+          }
         } else {
           this.renderCompact(contentArea);
         }
       }
     };
+
+    this.attachKeySignalListener(container);
 
     drivenBtn.addEventListener('click', () => {
       this.runtimeDrivenActive = !this.runtimeDrivenActive;
@@ -445,13 +505,46 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   // ─── Reference mode ──────────────────────────────────────────────────────────
 
   private renderReference(container: HTMLElement): void {
+    // Lazy layout: if availW was unknown at construction, compute correct slot dims
+    // from the actual container width now that the DOM is available.
+    if (this._slotsNeedLayout) {
+      const cs = getComputedStyle(container);
+      const w = (container.clientWidth || container.offsetWidth)
+        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      console.log('[NearbyTriads] lazy layout triggered, container.clientWidth:', container.clientWidth, 'effective w:', w);
+      if (w > 0) {
+        const h = (container.clientHeight || container.offsetHeight)
+          - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        const N = this.slots.length;
+        const gap = 8;
+        const slotPad = 8;
+        const overhead = 42;
+        const rowMargin = 8;
+        this.slotFretboardConfig = h > 0
+          ? NearbyTriadsFeature.bestSlotConfig(
+              this.fretboardConfig, N, w, h - rowMargin, this._zoomMultiplier, gap, slotPad, overhead
+            )
+          : planSingleFretboard(
+              this.fretboardConfig, (w - (N - 1) * gap - N * slotPad) / N, undefined, this._zoomMultiplier, 15
+            );
+        this.slots.forEach(s => {
+          s.fretboardView.destroy();
+          s.fretboardView = new FretboardView(this.slotFretboardConfig, 15);
+        });
+        this.buildAllRawVoicings();
+        this.rankAllSlots();
+        this._slotsNeedLayout = false;
+      }
+    }
+
     const slotsRow = document.createElement('div');
     slotsRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;';
     container.appendChild(slotsRow);
 
     this.slots.forEach((slot, i) => {
       const col = document.createElement('div');
-      col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:4px;';
+      col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:6px;padding:2px 4px;transition:box-shadow 0.15s;';
+      slot.columnEl = col;
 
       // Chord label
       const label = document.createElement('div');
@@ -469,6 +562,8 @@ export class NearbyTriadsFeature extends InstrumentFeature {
       col.appendChild(this.buildSlotControls(slot, i));
       slotsRow.appendChild(col);
     });
+
+    this.updateSlotHighlights();
   }
 
   private buildSlotControls(slot: ChordSlot, slotIndex: number): HTMLElement {
@@ -656,6 +751,32 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     }
   }
 
+  // ─── Key / chord signal listeners (reference / compact modes) ────────────────
+
+  private updateSlotHighlights(): void {
+    for (const slot of this.slots) {
+      if (!slot.columnEl) continue;
+      const isActive = slot.chordKey !== null && slot.chordKey === this.activeChordKey;
+      slot.columnEl.style.boxShadow = isActive ? '0 0 0 2px var(--clr-accent, #5a9)' : '';
+    }
+  }
+
+  private attachKeySignalListener(container: HTMLElement): void {
+    this.keySignalHandler = (e: Event) => {
+      const signal = (e as CustomEvent).detail?.signal;
+      if (!signal || this.runtimeDrivenActive) return;
+      if (signal.kind !== SignalKind.Chord) return;
+      const cs = signal as ChordSignal;
+      if (cs.state !== SignalState.Next) {
+        this.activeChordKey = cs.chordKey;
+        (container as any).__ntActiveChord = cs.chordKey;
+        if (this.ntMode === 'reference') this.updateSlotHighlights();
+      }
+    };
+    this.keySignalContainer = container;
+    container.addEventListener('drive-signal', this.keySignalHandler);
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
   destroy?(): void {
@@ -669,6 +790,11 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     }
     this.linkStatusHandler   = null;
     this.linkStatusContainer = null;
+    if (this.keySignalContainer && this.keySignalHandler) {
+      this.keySignalContainer.removeEventListener('drive-signal', this.keySignalHandler);
+    }
+    this.keySignalHandler   = null;
+    this.keySignalContainer = null;
 
     this.slots.forEach(s => s.fretboardView.destroy());
     this.slots = [];
@@ -678,6 +804,47 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     this.drivenFretboardView  = null;
 
     super.destroy?.();
+  }
+
+  // ─── Layout helpers ──────────────────────────────────────────────────────────
+
+  /**
+   * Finds the column count (1..N) that maximises canvas area for the N-slot
+   * reference grid, then returns a FretboardConfig sized to that canvas.
+   * The flex-wrap layout naturally produces the chosen column count because
+   * the canvas width determines the slot column width.
+   */
+  private static bestSlotConfig(
+    base: FretboardConfig,
+    N: number,
+    availW: number,
+    availH: number,
+    zoom: number,
+    gap: number,
+    slotPad: number,
+    overhead: number
+  ): FretboardConfig {
+    const aspectRatio = base.getAspectRatio(15);
+    let bestArea = -1;
+    let bestW = 0;
+    let bestH = 0;
+    for (let cols = 1; cols <= N; cols++) {
+      const rows = Math.ceil(N / cols);
+      const bW = (availW - (cols - 1) * gap) / cols - slotPad;
+      const bH = (availH - (rows - 1) * gap) / rows - overhead;
+      if (bW <= 0 || bH <= 0) continue;
+      let eW: number, eH: number;
+      if (bW / bH > aspectRatio) {
+        eH = bH; eW = eH * aspectRatio;
+      } else {
+        eW = bW; eH = eW / aspectRatio;
+      }
+      const area = eW * eH;
+      if (area > bestArea) {
+        bestArea = area; bestW = eW; bestH = eH;
+      }
+    }
+    return planSingleFretboard(base, bestW || undefined, bestH || undefined, zoom, 15);
   }
 
   // ─── Config schema ────────────────────────────────────────────────────────────

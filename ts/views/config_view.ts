@@ -291,15 +291,23 @@ export class ConfigView {
         // Update argValues so getKeyTypeForArg sees the driven mode
         this.argValues.set(argIndex, value);
 
-        // If this enum arg controls a toggle-button arg, rebuild its labels for the new value
+        // If this enum arg controls another arg, update its labels for the new value
         if (arg.controlsArgName) {
             const controlledArg = this.schema.args.find(a => a.name === arg.controlsArgName);
             if (controlledArg) {
-                const controlledIndex = this.schema.args.indexOf(controlledArg);
-                const advCb = this.container.querySelector<HTMLInputElement>(
-                    `input[type="checkbox"][data-controls-arg-name="${arg.controlsArgName}"]`
-                );
-                this.rebuildToggleButtons(controlledArg, controlledIndex, value, advCb?.checked ?? false);
+                if (controlledArg.uiComponentType === UiComponentType.OrderedDegreeList) {
+                    const control = this.container.querySelector<HTMLElement>(
+                        `[data-arg-name="${controlledArg.name}"] .control`
+                    );
+                    const fn = (control as any)?._rebuildLabels;
+                    if (typeof fn === 'function') fn();
+                } else {
+                    const controlledIndex = this.schema.args.indexOf(controlledArg);
+                    const advCb = this.container.querySelector<HTMLInputElement>(
+                        `input[type="checkbox"][data-controls-arg-name="${arg.controlsArgName}"]`
+                    );
+                    this.rebuildToggleButtons(controlledArg, controlledIndex, value, advCb?.checked ?? false);
+                }
             }
         }
     }

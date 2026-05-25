@@ -36,6 +36,9 @@ export class ConfigurableFeatureView extends BaseView {
     private drivenNextValues = new Map<string, string>();
     // When true, createAndRenderFeature emits feature-state-drive instead of feature-state-changed
     private isDrivenUpdate = false;
+    // Last config that successfully created a feature — used as fallback when driven sentinels
+    // can't resolve (e.g. link established but no signal received yet) during a resize.
+    private _lastFinalConfig: string[] = [];
     // Suppresses feature-auto-size during saved-state restore so user's saved size is preserved
     private _isRestoringFromSaved = false;
 
@@ -161,10 +164,13 @@ export class ConfigurableFeatureView extends BaseView {
         // Rescale canvases when the user manually resizes the floating wrapper.
         this.listen(container, 'wrapper-user-resized', (e: Event) => {
             const { width, height } = (e as CustomEvent<{ width: number; height: number }>).detail;
+            console.log('[ConfigurableFeatureView] wrapper-user-resized received', { width, height, featureType: this.featureTypeName });
             this._availableHeight = Math.max(50, height);
             this._availableWidth  = Math.max(50, width);
             if (this.configView) {
                 this.createAndRenderFeature(this.configView.currentConfig);
+            } else {
+                console.warn('[ConfigurableFeatureView] wrapper-user-resized: no configView, skipping recreate');
             }
         });
 
@@ -275,15 +281,23 @@ export class ConfigurableFeatureView extends BaseView {
     }
 
     private createAndRenderFeature(config: (string | null)[]) {
-        if (!this.featureClass) return;
+        console.log('[CFV] createAndRenderFeature entry', { featureClass: !!this.featureClass, config });
+        if (!this.featureClass) { console.log('[CFV] EXIT: no featureClass'); return; }
 
         // Substitute "driven" / "driven_next" sentinels with the last known driven values.
         // Also use buildDrivenConfig for user-triggered rebuilds when sentinels are
         // present so that variadic args (e.g. CAGED shape buttons) are not discarded.
         const hasDrivenSentinel = config.some(c => c === 'driven' || c === 'driven_next');
-        const finalConfig = (this.isDrivenUpdate || hasDrivenSentinel)
+        let finalConfig = (this.isDrivenUpdate || hasDrivenSentinel)
             ? this.buildDrivenConfig(config)
             : config.filter(c => c !== null && c !== 'driven') as string[];
+        // On resize (not a driven update), if sentinels can't resolve yet because no signal
+        // has arrived since the link was established, fall back to the last working config so
+        // the layout update still takes effect.
+        if (!this.isDrivenUpdate && hasDrivenSentinel && finalConfig.length === 0 && this._lastFinalConfig.length > 0) {
+            finalConfig = [...this._lastFinalConfig];
+        }
+        console.log('[CFV] finalConfig', finalConfig);
 
         // Dispatch a partial/full title for features that implement getTitle, even before
         // the feature can fully render (e.g. only root note selected, no quality yet).
@@ -307,11 +321,13 @@ export class ConfigurableFeatureView extends BaseView {
             ? (this.featureClass.getConfigurationSchema() as any).args.filter((a: any) => a.required).length
             : 0;
 
+        console.log('[CFV] requiredArgs check', { finalConfigLen: finalConfig.length, requiredArgs });
         if (finalConfig.length < requiredArgs) {
-            return; // Not enough config to create feature yet
+            console.log('[CFV] EXIT: not enough args'); return;
         }
 
         // Clean up previous feature
+        console.log('[CFV] destroying old feature, will recreate');
         this.feature?.destroy?.();
         this.featureContainer.innerHTML = '';
 
@@ -340,7 +356,11 @@ export class ConfigurableFeatureView extends BaseView {
                 ? ((parseFloat(getComputedStyle(this.container).paddingLeft) || 0) +
                    (parseFloat(getComputedStyle(this.container).paddingRight) || 0))
                 : 10;
-            setPendingRenderConstraints({ maxWidth: Math.max(50, this._availableWidth - paddingH) });
+            const maxWidth = Math.max(50, this._availableWidth - paddingH);
+            console.log('[ConfigurableFeatureView] setPendingRenderConstraints', { maxWidth, _availableWidth: this._availableWidth, paddingH });
+            setPendingRenderConstraints({ maxWidth });
+        } else {
+            console.log('[ConfigurableFeatureView] _availableWidth=0, NOT setting pending constraints');
         }
 
         try {
@@ -353,6 +373,7 @@ export class ConfigurableFeatureView extends BaseView {
                 maxCanvasHeight,
                 this.categoryName
             );
+            this._lastFinalConfig = finalConfig;
 
             this.feature.render(this.featureContainer);
             this.feature.views?.forEach(view => view.render(this.featureContainer));

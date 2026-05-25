@@ -526,6 +526,35 @@ registerDriveSource({
   },
 });
 
+// ─── NearbyTriadsFeature as target ────────────────────────────────────────────
+// Root Note and Mode are driven via config recreation (same as Scale/ChordProgression).
+// Only KeySignals drive config rebuilds; ChordSignals flow through to the feature's
+// own keySignalHandler for active-chord highlighting without triggering a rebuild.
+// Accepting ChordSignals here caused the feature to rebuild on every chord change
+// (using the chord's root, not the prog root), wiping highlights on non-tonic chords.
+
+registerDriveTarget({
+  featureTypeName: 'Nearby Triads',
+  argName: 'Root Note',
+  label: 'Root note (from linked source)',
+  acceptedKinds: [SignalKind.Key],
+  resolveValue(signal: DriveSignal): string | null {
+    if (signal.kind !== SignalKind.Key) return null;
+    return signal.rootNote || null;
+  },
+});
+
+registerDriveTarget({
+  featureTypeName: 'Nearby Triads',
+  argName: 'Mode',
+  label: 'Mode (from linked source)',
+  acceptedKinds: [SignalKind.Key],
+  resolveValue(signal: DriveSignal): string | null {
+    if (signal.kind !== SignalKind.Key) return null;
+    return signal.scaleKey;
+  },
+});
+
 // ─── CircleOfFifthsView as target ─────────────────────────────────────────────
 // The view handles drive-signal directly; resolveValue is unused but required
 // so the view appears as a valid link target with the correct accepted kinds.

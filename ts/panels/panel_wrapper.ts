@@ -341,13 +341,15 @@ export class FloatingViewWrapper {
         if (!wasProgrammatic && !isFirst) {
           const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
           const titleBarH = titleBarEl?.offsetHeight ?? 30;
+          const evtW = this.contentElement.clientWidth;
+          const evtH = this.element.clientHeight - titleBarH;
+          console.log('[PanelWrapper] dispatching wrapper-user-resized', { w: evtW, h: evtH, wasProgrammatic, isFirst });
           this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
             bubbles: false,
-            detail: {
-              width:  this.contentElement.clientWidth,
-              height: this.element.clientHeight - titleBarH,
-            },
+            detail: { width: evtW, height: evtH },
           }));
+        } else {
+          console.log('[PanelWrapper] skipping wrapper-user-resized', { wasProgrammatic, isFirst, w, h });
         }
       }, 150);
     });
@@ -489,13 +491,10 @@ export class FloatingViewWrapper {
     const contentPaddingH = 24;
     const canvasBasedWidth = canvas.width + contentPaddingH;
 
-    // On rotate/refresh (force=true): snap to the new canvas size but floor at
-    // this.defaultWidth so the config UI above the canvas is never clipped.
-    // On initial open (force=false): use canvasBasedWidth directly — the canvas
-    // is always the widest content and the config section wraps to fit.
-    const newWidth = force
-      ? Math.max(canvasBasedWidth, this.defaultWidth)
-      : canvasBasedWidth;
+    // Always floor at defaultWidth so the config UI is never clipped and panels
+    // with multiple side-by-side canvases (e.g. NearbyTriads reference mode)
+    // don't shrink to just the first canvas's width on initial open.
+    const newWidth = Math.max(canvasBasedWidth, this.defaultWidth);
 
     // Set the new width FIRST so that line-wrapping in the config section (flex-wrap)
     // is resolved at the correct width before we read scrollHeight for the height.
