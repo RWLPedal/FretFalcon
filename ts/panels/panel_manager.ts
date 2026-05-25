@@ -117,7 +117,10 @@ export class FloatingViewManager {
     if (state.viewId === 'configurable_instrument_feature') {
       return (state.viewState as any)?.featureTypeName ?? null;
     }
-    return getFeatureTypeNameByViewId(state.viewId);
+    const descriptor = getFloatingViewDescriptor(state.viewId);
+    return (state.viewState as any)?.featureTypeName
+      ?? descriptor?.featureTypeName
+      ?? getFeatureTypeNameByViewId(state.viewId);
   }
 
   public spawnView(
@@ -488,7 +491,7 @@ export class FloatingViewManager {
       if (SKIP_VIEW_IDS.has(state.viewId)) return;
 
       const descriptor = getFloatingViewDescriptor(state.viewId);
-      if (!descriptor || descriptor.categoryName !== "Instrument") return;
+      if (!descriptor || !descriptor.refreshOnInstrumentChange) return;
 
       // Determine effective orientation and preserved zoom.
       const globalOrientation =

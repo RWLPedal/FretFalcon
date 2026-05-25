@@ -6,7 +6,10 @@ import { LinkRecord } from "./link_types";
 export interface FloatingViewDescriptor {
   viewId: string; // Unique identifier (e.g., "instrument_color_legend")
   displayName: string; // User-friendly name (e.g., "Color Legend (Guitar)")
-  categoryName: string; // Category it belongs to (e.g., "Guitar")
+  /** When true, this panel is re-created when instrument settings change. */
+  refreshOnInstrumentChange?: boolean;
+  /** For descriptors that always show a specific feature type (e.g. instrument_scale). */
+  featureTypeName?: string;
   defaultWidth?: number; // Optional default width
   defaultHeight?: number; // Optional default height
   minWidth?: number; // Optional minimum width (enforced via CSS min-width)

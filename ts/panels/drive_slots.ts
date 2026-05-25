@@ -105,49 +105,66 @@ registerDriveSource({
 // ─── MultiLayerFretboard as source ──────────────────────────────────────────
 // When the fretboard's config changes, emit one ChordSignal per chord layer.
 
+function extractMultiFretSignals(detail: any): ChordSignal[] {
+  const config: string[] = detail?.config ?? [];
+  const signals: ChordSignal[] = [];
+  for (const layerStr of config) {
+    const parts = layerStr.split('|');
+    if (parts[0] === 'chord' && parts.length >= 3) {
+      const chordKey = parts[1] || null;
+      signals.push({
+        kind: SignalKind.Chord,
+        chordKey,
+        rootNote: chordKey?.split('_')[0] ?? '',
+        keyType: chordKey?.endsWith('MIN') || chordKey?.endsWith('MIN7') ? KeyType.Minor : KeyType.Major,
+        roman: null,
+      });
+    }
+  }
+  return signals;
+}
+
 registerDriveSource({
   viewId: 'configurable_instrument_feature',
   featureTypeName: 'MultiLayerFretboard',
   emittedKinds: [SignalKind.Chord],
-  extractSignals(detail: any): ChordSignal[] {
-    const config: string[] = detail?.config ?? [];
-    const signals: ChordSignal[] = [];
+  extractSignals: extractMultiFretSignals,
+});
 
-    for (const layerStr of config) {
-      const parts = layerStr.split('|');
-      if (parts[0] === 'chord' && parts.length >= 3) {
-        const chordKey = parts[1] || null;
-        signals.push({
-          kind: SignalKind.Chord,
-          chordKey,
-          rootNote: chordKey?.split('_')[0] ?? '',
-          keyType: chordKey?.endsWith('MIN') || chordKey?.endsWith('MIN7') ? KeyType.Minor : KeyType.Major,
-          roman: null,
-        });
-      }
-    }
-    return signals;
-  },
+registerDriveSource({
+  viewId: 'instrument_multifret',
+  featureTypeName: 'MultiLayerFretboard',
+  emittedKinds: [SignalKind.Chord],
+  extractSignals: extractMultiFretSignals,
 });
 
 // ─── ScaleFeature as source ──────────────────────────────────────────────────
 // Emits ChordSignal (for drone/chord targets) and KeySignal (for mode-aware targets).
 
+function extractScaleSignals(detail: any): DriveSignal[] {
+  const config: string[] = detail?.config ?? [];
+  const rootNote: string = config[1] ?? 'C';
+  const scaleName: string = config[0] ?? 'Major';
+  const scaleKey: DiatonicMode = SCALE_NAME_TO_MODE[scaleName] ?? DiatonicMode.Ionian;
+  const keyType: KeyType = tonicIsMinor(scaleKey) ? KeyType.Minor : KeyType.Major;
+  return [
+    { kind: SignalKind.Chord, chordKey: null, rootNote, keyType, roman: null },
+    { kind: SignalKind.Key, rootNote, scaleKey },
+  ];
+}
+
 registerDriveSource({
   viewId: 'configurable_instrument_feature',
   featureTypeName: 'Scale',
   emittedKinds: [SignalKind.Chord, SignalKind.Key],
-  extractSignals(detail: any): DriveSignal[] {
-    const config: string[] = detail?.config ?? [];
-    const rootNote: string = config[1] ?? 'C';
-    const scaleName: string = config[0] ?? 'Major';
-    const scaleKey: DiatonicMode = SCALE_NAME_TO_MODE[scaleName] ?? DiatonicMode.Ionian;
-    const keyType: KeyType = tonicIsMinor(scaleKey) ? KeyType.Minor : KeyType.Major;
-    return [
-      { kind: SignalKind.Chord, chordKey: null, rootNote, keyType, roman: null },
-      { kind: SignalKind.Key, rootNote, scaleKey },
-    ];
-  },
+  extractSignals: extractScaleSignals,
+});
+
+registerDriveSource({
+  viewId: 'instrument_scale',
+  featureTypeName: 'Scale',
+  emittedKinds: [SignalKind.Chord, SignalKind.Key],
+  extractSignals: extractScaleSignals,
 });
 
 // ─── ChordFeature as target ───────────────────────────────────────────────────

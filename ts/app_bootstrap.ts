@@ -15,6 +15,12 @@ import { MetronomeView } from "./fretboard/views/metronome_view";
 import { StrumView } from "./views/strum_view";
 import { CircleOfFifthsView } from "./views/circle_of_fifths_view";
 import { NotesFeature } from "./fretboard/features/notes_feature";
+import { ScaleFeature } from "./fretboard/features/scale_feature";
+import { ChordFeature } from "./fretboard/features/chord_feature";
+import { TriadFeature } from "./fretboard/features/triad_feature";
+import { NearbyTriadsFeature } from "./fretboard/features/nearby_triads_feature";
+import { CagedFeature } from "./fretboard/features/caged_feature";
+import { MultiLayerFretboardFeature } from "./fretboard/features/multi_layer_fretboard_feature";
 import { ChordProgressionFeature } from "./fretboard/features/chord_progression_feature";
 import { InstrumentIntervalSettings } from "./fretboard/fretboard_interval_settings";
 import { AudioController } from "./audio_controller";
@@ -26,7 +32,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "floating_timer",
     displayName: "Timer",
-    categoryName: "General",
     defaultWidth: 300,
     defaultHeight: 150,
     minWidth: 195,
@@ -38,7 +43,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "drone_view",
     displayName: "Drone",
-    categoryName: "General",
     defaultWidth: 175,
     defaultHeight: 80,
     createView: (initialState?: any) => new DroneView(initialState),
@@ -47,7 +51,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "schedule_floating_view",
     displayName: "Schedule",
-    categoryName: "Practice",
     defaultWidth: 960,
     defaultHeight: 800,
     showInMenu: false,
@@ -58,7 +61,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "any_floating_view",
     displayName: "Any",
-    categoryName: "Practice",
     defaultWidth: 420,
     defaultHeight: 550,
     showInMenu: false,
@@ -69,7 +71,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "any_feature",
     displayName: "Any Feature",
-    categoryName: "Practice",
     defaultWidth: 420,
     defaultHeight: 550,
     showInMenu: false,
@@ -88,7 +89,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "drum_machine",
     displayName: "Backing Track",
-    categoryName: "General",
     defaultWidth: 575,
     defaultHeight: 300,
     minWidth: 575,
@@ -99,7 +99,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "capo_view",
     displayName: "Capo",
-    categoryName: "General",
     defaultWidth: 240,
     defaultHeight: 350,
     createView: (_initialState?: any, appSettings?: AppSettings) =>
@@ -109,7 +108,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_color_legend",
     displayName: "Color Legend",
-    categoryName: "Instrument",
+    refreshOnInstrumentChange: true,
     defaultWidth: 180,
     createView: (_initialState?: any, appSettings?: AppSettings) => {
       if (!appSettings) {
@@ -129,7 +128,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "configurable_instrument_feature",
     displayName: "Configurable Feature",
-    categoryName: "Instrument",
+    refreshOnInstrumentChange: true,
     defaultWidth: 420,
     defaultHeight: 550,
     showInMenu: false,
@@ -145,9 +144,156 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
+    viewId: "instrument_notes",
+    displayName: "Notes",
+    featureTypeName: NotesFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? NotesFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_scale",
+    displayName: "Scale",
+    featureTypeName: ScaleFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? ScaleFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_chord",
+    displayName: "Chord",
+    featureTypeName: ChordFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? ChordFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_triad",
+    displayName: "Triad Shapes",
+    featureTypeName: TriadFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? TriadFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_nearby_triads",
+    displayName: "Nearby Triads",
+    featureTypeName: NearbyTriadsFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? NearbyTriadsFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_caged",
+    displayName: "CAGED",
+    featureTypeName: CagedFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? CagedFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_multifret",
+    displayName: "MultiFret",
+    featureTypeName: MultiLayerFretboardFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName = initialState?.featureTypeName ?? MultiLayerFretboardFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
     viewId: "instrument_notes_reference",
     displayName: "Fretboard Notes",
-    categoryName: "Instrument",
+    refreshOnInstrumentChange: true,
     defaultWidth: 340,
     defaultHeight: 550,
     showInMenu: true,
@@ -182,7 +328,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_chord_progression",
     displayName: "Chord Progression",
-    categoryName: "Instrument",
+    refreshOnInstrumentChange: true,
     defaultWidth: 420,
     defaultHeight: 600,
     showInMenu: true,
@@ -204,7 +350,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_floating_metronome",
     displayName: "Metronome",
-    categoryName: "Instrument",
+    refreshOnInstrumentChange: true,
     defaultWidth: 280,
     defaultHeight: 120,
     createView: () => {
@@ -221,7 +367,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "circle_of_fifths",
     displayName: "Circle of Fifths",
-    categoryName: "Theory",
     defaultWidth: 360,
     minWidth: 290,
     minHeight: 430,
@@ -231,7 +376,6 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "strum_view",
     displayName: "Strum",
-    categoryName: "Practice",
     defaultWidth: 520,
     defaultHeight: 160,
     createView: (initialState?: any) => {
