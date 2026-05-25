@@ -183,6 +183,8 @@ export class FloatingViewManager {
         () => this.saveState(),
         descriptor.defaultWidth,
         descriptor.defaultHeight,
+        descriptor.minWidth,
+        descriptor.minHeight,
         isFretboardDescriptor(descriptor) && descriptor.supportsRotate ? () => this.handleRotateRequest(instanceId) : undefined,
         isFretboardDescriptor(descriptor) && descriptor.supportsZoom ? () => this.handleZoomRequest(instanceId) : undefined,
         descriptor.supportsConfigToggle ? () => this.handleConfigToggleRequest(instanceId) : undefined
@@ -304,6 +306,8 @@ export class FloatingViewManager {
             () => this.saveState(),
             state.size?.width ?? descriptor.defaultWidth,
             state.size?.height ?? descriptor.defaultHeight,
+            descriptor.minWidth,
+            descriptor.minHeight,
             isFretboardDescriptor(descriptor) && descriptor.supportsRotate ? () => this.handleRotateRequest(state.instanceId) : undefined,
             isFretboardDescriptor(descriptor) && descriptor.supportsZoom ? () => this.handleZoomRequest(state.instanceId) : undefined,
             descriptor.supportsConfigToggle ? () => this.handleConfigToggleRequest(state.instanceId) : undefined

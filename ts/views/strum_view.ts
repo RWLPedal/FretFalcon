@@ -5,6 +5,7 @@ import { AudioController } from '../audio_controller';
 import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
 import { StrokeAction, StrumPreset } from './strum_types';
+import { ValueSlider } from './components/value_slider';
 interface StrumViewState {
   _v: 1;
   subdivision: 'eighth' | 'sixteenth';
@@ -103,8 +104,7 @@ export class StrumView extends BaseView {
   private cellEls: HTMLElement[] = [];
   private beatLabelEls: HTMLElement[] = [];
   private playBtn: HTMLButtonElement | null = null;
-  private bpmDisplay: HTMLElement | null = null;
-  private bpmSlider: HTMLInputElement | null = null;
+  private bpmSlider: ValueSlider | null = null;
   private timeSigSelect: HTMLSelectElement | null = null;
   private subdivisionBtn: HTMLButtonElement | null = null;
   private presetSelect: HTMLSelectElement | null = null;
@@ -146,7 +146,7 @@ export class StrumView extends BaseView {
 
     this.listen(container, 'link-status-changed', (e: Event) => {
       this.isGrooveTarget = !!((e as CustomEvent).detail?.hasIncomingLinks);
-      if (this.bpmSlider) this.bpmSlider.disabled = this.isGrooveTarget;
+      this.bpmSlider?.setDisabled(this.isGrooveTarget);
     });
   }
 
@@ -221,31 +221,18 @@ export class StrumView extends BaseView {
     row.appendChild(this.subdivisionBtn);
 
     // BPM
-    const bpmLbl = document.createElement('span');
-    bpmLbl.className = 'sv-label';
-    bpmLbl.textContent = 'BPM:';
-    row.appendChild(bpmLbl);
-
-    this.bpmSlider = document.createElement('input');
-    this.bpmSlider.type = 'range';
-    this.bpmSlider.min = '20';
-    this.bpmSlider.max = '240';
-    this.bpmSlider.value = String(this.bpm);
-    this.bpmSlider.className = 'sv-bpm-slider';
-    this.bpmSlider.disabled = this.isGrooveTarget;
-    this.bpmSlider.addEventListener('input', () => {
-      this.bpm = parseInt(this.bpmSlider!.value, 10);
-      this.bpmDisplay!.textContent = String(this.bpm);
-      if (this.isPlaying) this.restartInterval();
-      this.dispatchGrooveConfig();
-      this.dispatchStateChange();
+    this.bpmSlider = new ValueSlider({
+      min: 20, max: 240, value: this.bpm, label: 'BPM',
+      disabled: this.isGrooveTarget,
+      onChange: (v) => {
+        this.bpm = v;
+        if (this.isPlaying) this.restartInterval();
+        this.dispatchGrooveConfig();
+        this.dispatchStateChange();
+      },
     });
-    row.appendChild(this.bpmSlider);
-
-    this.bpmDisplay = document.createElement('span');
-    this.bpmDisplay.className = 'sv-bpm-display';
-    this.bpmDisplay.textContent = String(this.bpm);
-    row.appendChild(this.bpmDisplay);
+    this.bpmSlider.element.classList.add('sv-bpm-slider');
+    row.appendChild(this.bpmSlider.element);
 
     return row;
   }
@@ -539,8 +526,7 @@ export class StrumView extends BaseView {
     const clamped = Math.max(20, Math.min(240, Math.round(signal.bpm)));
     if (clamped !== this.bpm) {
       this.bpm = clamped;
-      if (this.bpmDisplay) this.bpmDisplay.textContent = String(clamped);
-      if (this.bpmSlider)  this.bpmSlider.value = String(clamped);
+      this.bpmSlider?.setValue(clamped);
       // Config-only signals restart the interval immediately for the new BPM.
       // Beat signals are handled below and will restart at the bar boundary.
       if (this.isPlaying && signal.beat === undefined) this.restartInterval();

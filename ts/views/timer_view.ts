@@ -17,6 +17,8 @@ export class TimerView extends BaseView {
   // DOM refs — ring layout
   private wrapperEl: HTMLElement | null = null;
   private titleEl: HTMLElement | null = null;
+  private ringContainerEl: HTMLElement | null = null;
+  private controlsEl: HTMLElement | null = null;
   private displayEl: HTMLElement | null = null;
   private progressRingEl: SVGCircleElement | null = null;
   private startPauseBtn: HTMLButtonElement | null = null;
@@ -73,6 +75,7 @@ export class TimerView extends BaseView {
 
     const ringContainer = document.createElement('div');
     ringContainer.classList.add('timer-ring-container');
+    this.ringContainerEl = ringContainer;
 
     const svgNS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(svgNS, 'svg') as SVGSVGElement;
@@ -105,6 +108,7 @@ export class TimerView extends BaseView {
 
     const controls = document.createElement('div');
     controls.classList.add('timer-controls');
+    this.controlsEl = controls;
 
     this.startPauseBtn = document.createElement('button');
     this.startPauseBtn.classList.add('button', 'timer-start-pause');
@@ -162,11 +166,26 @@ export class TimerView extends BaseView {
     wrapper.appendChild(compactRow);
     container.appendChild(wrapper);
 
-    // Switch to compact layout when the container is narrower than the ring
+    // Switch to compact layout when the container is narrower than the ring.
+    // In large mode (non-schedule), scale the ring to fit min(width, height).
     this.resizeObserver = new ResizeObserver(entries => {
       for (const entry of entries) {
-        const narrow = entry.contentRect.width < TimerView.COMPACT_THRESHOLD;
+        const W = entry.contentRect.width;
+        const H = entry.contentRect.height;
+        const narrow = W < TimerView.COMPACT_THRESHOLD;
         this.wrapperEl?.classList.toggle('timer-view--compact', narrow);
+
+        if (!narrow && !this.isScheduleDriven && this.ringContainerEl) {
+          const titleH = this.titleEl?.hidden === false
+            ? (this.titleEl.offsetHeight ?? 0) + 4 : 0;
+          const controlsH = this.controlsEl?.offsetHeight ?? 44;
+          // .timer-view has 6px top/bottom padding and 4px gap between ring and controls
+          const availH = Math.max(60, H - 12 - titleH - controlsH - 4);
+          const availW = Math.max(60, W - 16);
+          const ringSize = Math.min(220, Math.floor(Math.min(availW, availH)));
+          this.ringContainerEl.style.width  = `${ringSize}px`;
+          this.ringContainerEl.style.height = `${ringSize}px`;
+        }
       }
     });
     this.resizeObserver.observe(container);
@@ -206,6 +225,8 @@ export class TimerView extends BaseView {
     this.stopCountdown();
     this.wrapperEl = null;
     this.titleEl = null;
+    this.ringContainerEl = null;
+    this.controlsEl = null;
     this.displayEl = null;
     this.progressRingEl = null;
     this.startPauseBtn = null;

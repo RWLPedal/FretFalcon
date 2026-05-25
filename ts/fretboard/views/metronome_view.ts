@@ -2,6 +2,7 @@
 import { BaseView } from "../../base_view";
 import { AudioController } from "../../audio_controller";
 import { SignalKind, GrooveSignal } from "../../panels/link_types";
+import { ValueSlider } from "../../views/components/value_slider";
 
 enum BeatState {
   Silent = 0,
@@ -51,12 +52,13 @@ export class MetronomeView extends BaseView {
   private beatsContainer: HTMLElement | null = null;
   private beatElements: HTMLElement[] = [];
   private timeSigSelect: HTMLSelectElement | null = null;
-  private bpmSlider: HTMLInputElement | null = null;
-  private bpmDisplay: HTMLSpanElement | null = null;
+  private bpmSlider: ValueSlider | null = null;
   private playPauseButton: HTMLButtonElement | null = null;
   private muteButton: HTMLButtonElement | null = null;
   private progressionDeltaInput: HTMLInputElement | null = null;
   private progressionSecsInput: HTMLInputElement | null = null;
+  private tapTempoButton: HTMLButtonElement | null = null;
+  private tapTimestamps: number[] = [];
 
   constructor(bpm: number, audioController: AudioController) {
     super();
@@ -143,22 +145,24 @@ export class MetronomeView extends BaseView {
 
     this.viewWrapper.appendChild(transportRow);
 
-    // Row 3: BPM display, slider, progression inputs
+    // Row 3: tap tempo, BPM slider (value inside), progression inputs
     const bpmRow = document.createElement("div");
     bpmRow.classList.add("metronome-bpm-row");
 
-    this.bpmDisplay = document.createElement("span");
-    this.bpmDisplay.classList.add("metronome-bpm-display", "is-size-7");
-    bpmRow.appendChild(this.bpmDisplay);
+    this.tapTempoButton = document.createElement("button");
+    this.tapTempoButton.type = "button";
+    this.tapTempoButton.classList.add("button", "is-small", "metronome-tap-btn");
+    this.tapTempoButton.innerHTML = `<span class="material-icons">touch_app</span>`;
+    this.tapTempoButton.title = "Tap Tempo";
+    this.tapTempoButton.addEventListener("click", this.handleTapTempo.bind(this));
+    bpmRow.appendChild(this.tapTempoButton);
 
-    this.bpmSlider = document.createElement("input");
-    this.bpmSlider.type = "range";
-    this.bpmSlider.min = "20";
-    this.bpmSlider.max = "240";
-    this.bpmSlider.value = String(this.bpm);
-    this.bpmSlider.classList.add("metronome-bpm-slider");
-    this.bpmSlider.addEventListener("input", this.handleSliderInput.bind(this));
-    bpmRow.appendChild(this.bpmSlider);
+    this.bpmSlider = new ValueSlider({
+      min: 20, max: 240, value: this.bpm, label: 'BPM',
+      onChange: (v) => this.setBpm(v),
+    });
+    this.bpmSlider.element.classList.add("metronome-bpm-slider");
+    bpmRow.appendChild(this.bpmSlider.element);
 
     // Progression inputs
     this.progressionDeltaInput = document.createElement("input");
@@ -191,7 +195,6 @@ export class MetronomeView extends BaseView {
     this.viewWrapper.appendChild(bpmRow);
     this.container.appendChild(this.viewWrapper);
 
-    this.updateBpmDisplay();
     this.updateMuteButtonState();
     this.updatePlayPauseButtonState();
     this.updateAllBeatStyles();
@@ -281,8 +284,7 @@ export class MetronomeView extends BaseView {
     const clamped = Math.max(20, Math.min(240, Math.round(newBpm)));
     const changed = this.bpm !== clamped;
     this.bpm = clamped;
-    this.updateBpmDisplay();
-    if (this.bpmSlider) this.bpmSlider.value = String(clamped);
+    this.bpmSlider?.setValue(clamped);
     if (changed && this.isRunning) {
       this.stopInterval();
       this.startInterval();
@@ -377,9 +379,10 @@ export class MetronomeView extends BaseView {
 
   private applyTargetDisabledState(): void {
     const disabled = this.isTempoTarget;
-    if (this.bpmSlider) this.bpmSlider.disabled = disabled;
+    this.bpmSlider?.setDisabled(disabled);
     if (this.progressionDeltaInput) this.progressionDeltaInput.disabled = disabled;
     if (this.progressionSecsInput) this.progressionSecsInput.disabled = disabled;
+    if (this.tapTempoButton) this.tapTempoButton.disabled = disabled;
   }
 
   // ─── Interval ───────────────────────────────────────────────────────────────
@@ -446,10 +449,6 @@ export class MetronomeView extends BaseView {
     }
   }
 
-  private updateBpmDisplay(): void {
-    if (this.bpmDisplay) this.bpmDisplay.textContent = String(this.bpm);
-  }
-
   private updateAllBeatStyles(): void {
     this.beatElements.forEach((el, i) => this.applyBeatStyle(el, i));
   }
@@ -464,9 +463,20 @@ export class MetronomeView extends BaseView {
     if (index === this.currentTickIndex) element.classList.add("beat-current");
   }
 
-  private handleSliderInput(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    this.setBpm(parseInt(target.value, 10));
+  private handleTapTempo(): void {
+    const now = performance.now();
+    if (this.tapTimestamps.length > 0 && now - this.tapTimestamps[this.tapTimestamps.length - 1] > 2500) {
+      this.tapTimestamps = [];
+    }
+    this.tapTimestamps.push(now);
+    if (this.tapTimestamps.length > 8) this.tapTimestamps.shift();
+    if (this.tapTimestamps.length >= 2) {
+      let total = 0;
+      for (let i = 1; i < this.tapTimestamps.length; i++) {
+        total += this.tapTimestamps[i] - this.tapTimestamps[i - 1];
+      }
+      this.setBpm(Math.round(60000 / (total / (this.tapTimestamps.length - 1))));
+    }
   }
 
   private handleBeatClick(event: MouseEvent): void {
@@ -495,10 +505,11 @@ export class MetronomeView extends BaseView {
     this.beatElements = [];
     this.timeSigSelect = null;
     this.bpmSlider = null;
-    this.bpmDisplay = null;
     this.muteButton = null;
     this.playPauseButton = null;
     this.progressionDeltaInput = null;
     this.progressionSecsInput = null;
+    this.tapTempoButton = null;
+    this.tapTimestamps = [];
   }
 }

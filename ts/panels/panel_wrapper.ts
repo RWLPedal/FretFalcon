@@ -105,6 +105,8 @@ export class FloatingViewWrapper {
     onSave: () => void,
     defaultWidth?: number,
     defaultHeight?: number,
+    minWidth?: number,
+    minHeight?: number,
     onRotate?: () => void,
     onZoom?: () => void,
     onConfigToggle?: () => void
@@ -126,6 +128,8 @@ export class FloatingViewWrapper {
     this.element.style.left = `${state.position.x}px`;
     this.element.style.top = `${state.position.y}px`;
     this.element.style.zIndex = `${state.zIndex}`;
+    if (minWidth)  this.element.style.minWidth  = `${minWidth}px`;
+    if (minHeight) this.element.style.minHeight = `${minHeight}px`;
     if (state.size) {
       this.element.style.width = `${state.size.width}px`;
       this.element.style.height = `${state.size.height}px`;

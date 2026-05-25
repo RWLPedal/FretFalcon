@@ -9,6 +9,8 @@ export interface FloatingViewDescriptor {
   categoryName: string; // Category it belongs to (e.g., "Guitar")
   defaultWidth?: number; // Optional default width
   defaultHeight?: number; // Optional default height
+  minWidth?: number; // Optional minimum width (enforced via CSS min-width)
+  minHeight?: number; // Optional minimum height (enforced via CSS min-height)
   showInMenu?: boolean; // Optional: If false, won't be shown in spawnable view lists. Defaults to true.
   /** When true, a config-toggle button (⚙) is shown in the title bar. */
   supportsConfigToggle?: boolean;

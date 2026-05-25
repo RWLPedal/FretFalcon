@@ -236,6 +236,7 @@ export class CircleOfFifthsView extends BaseView {
   private progressionCache: ProgEntry[] = [];
 
   // SVG element refs (populated in _buildSvg, cleared in destroy)
+  private svgEl: SVGSVGElement | null = null;
   private wedgeGroups: SVGGElement[] = [];
   private innerGroups: SVGGElement[] = [];
   private romanTexts: SVGTextElement[] = [];
@@ -245,9 +246,12 @@ export class CircleOfFifthsView extends BaseView {
   private triadTriangleEl: SVGPolygonElement | null = null;
 
   // HTML element refs
+  private viewEl: HTMLElement | null = null;
   private infoBarEl: HTMLElement | null = null;
   private progressionEl: HTMLElement | null = null;
   private chipEls: HTMLButtonElement[] = [];
+
+  private cofResizeObserver: ResizeObserver | null = null;
 
   constructor(initialState?: any) {
     super();
@@ -262,6 +266,7 @@ export class CircleOfFifthsView extends BaseView {
 
     const view = document.createElement('div');
     view.classList.add('circle-of-fifths-view');
+    this.viewEl = view;
 
     view.appendChild(this._buildSvg());
 
@@ -279,6 +284,9 @@ export class CircleOfFifthsView extends BaseView {
     view.appendChild(this.progressionEl);
 
     container.appendChild(view);
+
+    this.cofResizeObserver = new ResizeObserver(() => this._applySvgSize());
+    this.cofResizeObserver.observe(container);
 
     this.listen(container, 'drive-signal', (e: Event) => {
       const { signal } = (e as CustomEvent<{ signal: DriveSignal }>).detail;
@@ -304,6 +312,7 @@ export class CircleOfFifthsView extends BaseView {
   private _buildSvg(): SVGSVGElement {
     const svg = svgEl<SVGSVGElement>('svg', { viewBox: '0 0 300 300' });
     svg.classList.add('cof-svg');
+    this.svgEl = svg;
 
     const GAP = 0.8;
 
@@ -562,7 +571,29 @@ export class CircleOfFifthsView extends BaseView {
     }));
   }
 
+  private _applySvgSize(): void {
+    if (!this.svgEl || !this.container || !this.viewEl) return;
+    const W = this.container.clientWidth;
+    const H = this.container.clientHeight;
+
+    // Sum heights of all non-SVG children of the view div to find how much vertical
+    // space the info bar and progression chips consume.
+    let nonSvgH = 16; // 8px top + 8px bottom padding of .circle-of-fifths-view
+    for (const child of Array.from(this.viewEl.children)) {
+      if (child !== this.svgEl) nonSvgH += (child as HTMLElement).offsetHeight + 4; // 4px gap
+    }
+    nonSvgH += 4; // gap between the top padding edge and the SVG itself
+
+    const size = Math.max(60, Math.min(W - 16, H - nonSvgH));
+    this.svgEl.style.width  = `${size}px`;
+    this.svgEl.style.height = `${size}px`;
+  }
+
   destroy(): void {
+    this.cofResizeObserver?.disconnect();
+    this.cofResizeObserver = null;
+    this.svgEl           = null;
+    this.viewEl          = null;
     this.wedgeGroups     = [];
     this.innerGroups     = [];
     this.romanTexts      = [];

@@ -1,5 +1,6 @@
 // ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
+import { ValueSlider } from './components/value_slider';
 import { SignalKind } from '../panels/link_types';
 import {
   DrumSoundId,
@@ -254,10 +255,8 @@ export class BackingTrackView extends BaseView {
   private bassCellEls: HTMLElement[] = [];
   private stepNumEls: HTMLElement[] = [];
   private playBtn: HTMLButtonElement | null = null;
-  private bpmSliderEl: HTMLInputElement | null = null;
-  private bpmDisplayEl: HTMLElement | null = null;
-  private swingSliderEl: HTMLInputElement | null = null;
-  private swingDisplayEl: HTMLElement | null = null;
+  private bpmSlider: ValueSlider | null = null;
+  private swingSlider: ValueSlider | null = null;
   private barsBtns: Map<number, HTMLButtonElement> = new Map();
   private trackDropdowns: HTMLSelectElement[] = [];
   private chordToolSelectEl: HTMLSelectElement | null = null;
@@ -378,8 +377,7 @@ export class BackingTrackView extends BaseView {
       const clamped = Math.max(30, Math.min(200, Math.round(signal.bpm)));
       if (clamped === this.bpm) return;
       this.bpm = clamped;
-      if (this.bpmSliderEl)  this.bpmSliderEl.value = String(clamped);
-      if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(clamped);
+      this.bpmSlider?.setValue(clamped);
       if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
     });
     this.listen(container, 'link-status-changed', (e: Event) => {
@@ -389,7 +387,7 @@ export class BackingTrackView extends BaseView {
   }
 
   private applyTempoTargetState(): void {
-    if (this.bpmSliderEl) this.bpmSliderEl.disabled = this.isTempoTarget;
+    this.bpmSlider?.setDisabled(this.isTempoTarget);
   }
 
   destroy(): void {
@@ -400,11 +398,9 @@ export class BackingTrackView extends BaseView {
     this.cellEls             = [];
     this.bassCellEls         = [];
     this.stepNumEls          = [];
-    this.playBtn             = null;
-    this.bpmSliderEl         = null;
-    this.bpmDisplayEl        = null;
-    this.swingSliderEl       = null;
-    this.swingDisplayEl      = null;
+    this.playBtn    = null;
+    this.bpmSlider  = null;
+    this.swingSlider = null;
     this.barsBtns.clear();
     this.trackDropdowns      = [];
     this.presetSelectEl      = null;
@@ -539,56 +535,27 @@ export class BackingTrackView extends BaseView {
     const row = document.createElement('div');
     row.classList.add('dm-controls-row');
 
-    const bpmLbl = document.createElement('span');
-    bpmLbl.classList.add('dm-label');
-    bpmLbl.textContent = 'BPM:';
-    row.appendChild(bpmLbl);
-
-    const bpmGroup = document.createElement('div');
-    bpmGroup.classList.add('dm-bpm-group');
-    this.bpmSliderEl       = document.createElement('input');
-    this.bpmSliderEl.type  = 'range';
-    this.bpmSliderEl.min   = '30';
-    this.bpmSliderEl.max   = '200';
-    this.bpmSliderEl.value = String(this.bpm);
-    this.bpmSliderEl.classList.add('dm-bpm-slider');
-    this.bpmSliderEl.addEventListener('input', () => {
-      this.bpm = parseInt(this.bpmSliderEl!.value, 10);
-      if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(this.bpm);
-      if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
-      this.dispatchStateChange();
+    this.bpmSlider = new ValueSlider({
+      min: 30, max: 200, value: this.bpm, label: 'BPM',
+      onChange: (v) => {
+        this.bpm = v;
+        if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
+        this.dispatchStateChange();
+      },
     });
-    this.bpmDisplayEl = document.createElement('span');
-    this.bpmDisplayEl.classList.add('dm-bpm-display');
-    this.bpmDisplayEl.textContent = String(this.bpm);
-    bpmGroup.appendChild(this.bpmSliderEl);
-    bpmGroup.appendChild(this.bpmDisplayEl);
-    row.appendChild(bpmGroup);
+    this.bpmSlider.element.classList.add('dm-bpm-slider');
+    row.appendChild(this.bpmSlider.element);
 
-    const swingLbl = document.createElement('span');
-    swingLbl.classList.add('dm-label');
-    swingLbl.textContent = 'Swing:';
-    row.appendChild(swingLbl);
-
-    const swingGroup = document.createElement('div');
-    swingGroup.classList.add('dm-bpm-group');
-    this.swingSliderEl = document.createElement('input');
-    this.swingSliderEl.type = 'range';
-    this.swingSliderEl.min = '0';
-    this.swingSliderEl.max = '50';
-    this.swingSliderEl.value = String(Math.round(this.swingAmount * 100));
-    this.swingSliderEl.classList.add('dm-bpm-slider');
-    this.swingSliderEl.addEventListener('input', () => {
-      this.swingAmount = parseInt(this.swingSliderEl!.value, 10) / 100;
-      if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${this.swingSliderEl!.value}%`;
-      this.dispatchStateChange();
+    this.swingSlider = new ValueSlider({
+      min: 0, max: 50, value: Math.round(this.swingAmount * 100), label: 'Swing',
+      format: (v) => `${v}%`,
+      onChange: (v) => {
+        this.swingAmount = v / 100;
+        this.dispatchStateChange();
+      },
     });
-    this.swingDisplayEl = document.createElement('span');
-    this.swingDisplayEl.classList.add('dm-bpm-display');
-    this.swingDisplayEl.textContent = `${Math.round(this.swingAmount * 100)}%`;
-    swingGroup.appendChild(this.swingSliderEl);
-    swingGroup.appendChild(this.swingDisplayEl);
-    row.appendChild(swingGroup);
+    this.swingSlider.element.classList.add('dm-swing-slider');
+    row.appendChild(this.swingSlider.element);
 
     const barsLbl = document.createElement('span');
     barsLbl.classList.add('dm-label');
@@ -1080,9 +1047,7 @@ export class BackingTrackView extends BaseView {
     }
     if (typeof preset.swingAmount === 'number') {
       this.swingAmount = Math.min(0.5, Math.max(0, preset.swingAmount));
-      const swingPct = Math.round(this.swingAmount * 100);
-      if (this.swingSliderEl)  this.swingSliderEl.value  = String(swingPct);
-      if (this.swingDisplayEl) this.swingDisplayEl.textContent = `${swingPct}%`;
+      this.swingSlider?.setValue(Math.round(this.swingAmount * 100));
     }
     if (Array.isArray(preset.measureChords)) {
       this.measureChords = preset.measureChords.slice(0, this.numMeasures);
@@ -1095,8 +1060,7 @@ export class BackingTrackView extends BaseView {
     this.trackSounds = this.resolveTrackSounds(undefined, preset.tracks);
     this.currentStep    = -1;
     this.currentMeasure = -1;
-    if (this.bpmSliderEl)  this.bpmSliderEl.value = String(this.bpm);
-    if (this.bpmDisplayEl) this.bpmDisplayEl.textContent = String(this.bpm);
+    this.bpmSlider?.setValue(this.bpm);
     this.rebuildGrid();
     if (this.presetSelectEl && this.activePresetIndex !== null) {
       this.presetSelectEl.value = String(this.activePresetIndex);
@@ -1135,11 +1099,8 @@ export class BackingTrackView extends BaseView {
     this.currentStep    = -1;
     this.currentMeasure = -1;
 
-    if (this.bpmSliderEl)      this.bpmSliderEl.value = String(this.bpm);
-    if (this.bpmDisplayEl)     this.bpmDisplayEl.textContent = String(this.bpm);
-    const swingPct = Math.round(this.swingAmount * 100);
-    if (this.swingSliderEl)    this.swingSliderEl.value = String(swingPct);
-    if (this.swingDisplayEl)   this.swingDisplayEl.textContent = `${swingPct}%`;
+    this.bpmSlider?.setValue(this.bpm);
+    this.swingSlider?.setValue(Math.round(this.swingAmount * 100));
     if (this.progRootSelectEl) this.progRootSelectEl.value = this.progRootNote;
     if (this.progModeSelectEl) this.progModeSelectEl.value = this.progMode;
     this.barsBtns.forEach((btn, bars) => btn.classList.toggle('is-active', bars === this.numMeasures));
