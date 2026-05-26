@@ -12,7 +12,7 @@ export class TimerView extends BaseView {
 
   private static readonly RING_RADIUS = 100;
   private static readonly RING_CIRCUMFERENCE = 2 * Math.PI * TimerView.RING_RADIUS;
-  private static readonly COMPACT_THRESHOLD = 240; // px — below this, ring clips
+  private static readonly MIN_RING_SIZE = 120; // px — below this, switch to bar layout
 
   // DOM refs — ring layout
   private wrapperEl: HTMLElement | null = null;
@@ -172,17 +172,18 @@ export class TimerView extends BaseView {
       for (const entry of entries) {
         const W = entry.contentRect.width;
         const H = entry.contentRect.height;
-        const narrow = W < TimerView.COMPACT_THRESHOLD;
-        this.wrapperEl?.classList.toggle('timer-view--compact', narrow);
+        const titleH = this.titleEl?.hidden === false
+          ? (this.titleEl.offsetHeight ?? 0) + 4 : 0;
+        const controlsH = this.controlsEl?.offsetHeight ?? 44;
+        // .timer-view has 6px top/bottom padding and 4px gap between ring and controls
+        const availH = Math.max(0, H - 12 - titleH - controlsH - 4);
+        const availW = Math.max(0, W - 16);
+        const ringSize = Math.min(220, Math.floor(Math.min(availW, availH)));
 
-        if (!narrow && !this.isScheduleDriven && this.ringContainerEl) {
-          const titleH = this.titleEl?.hidden === false
-            ? (this.titleEl.offsetHeight ?? 0) + 4 : 0;
-          const controlsH = this.controlsEl?.offsetHeight ?? 44;
-          // .timer-view has 6px top/bottom padding and 4px gap between ring and controls
-          const availH = Math.max(60, H - 12 - titleH - controlsH - 4);
-          const availW = Math.max(60, W - 16);
-          const ringSize = Math.min(220, Math.floor(Math.min(availW, availH)));
+        const compact = ringSize < TimerView.MIN_RING_SIZE;
+        this.wrapperEl?.classList.toggle('timer-view--compact', compact);
+
+        if (!compact && !this.isScheduleDriven && this.ringContainerEl) {
           this.ringContainerEl.style.width  = `${ringSize}px`;
           this.ringContainerEl.style.height = `${ringSize}px`;
         }
