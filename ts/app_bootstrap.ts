@@ -45,6 +45,8 @@ export function registerBuiltins(): void {
     displayName: "Drone",
     defaultWidth: 175,
     defaultHeight: 80,
+    minHeight: 80,
+    minWidth: 175,
     createView: (initialState?: any) => new DroneView(initialState),
   });
 
@@ -156,7 +158,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? NotesFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? NotesFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -177,7 +180,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? ScaleFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? ScaleFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -198,7 +202,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? ChordFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? ChordFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -219,7 +224,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? TriadFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? TriadFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -240,7 +246,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? NearbyTriadsFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? NearbyTriadsFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -261,7 +268,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? CagedFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? CagedFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
@@ -282,7 +290,8 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      const featureTypeName = initialState?.featureTypeName ?? MultiLayerFretboardFeature.typeName;
+      const featureTypeName =
+        initialState?.featureTypeName ?? MultiLayerFretboardFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,
