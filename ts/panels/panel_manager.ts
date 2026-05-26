@@ -87,6 +87,56 @@ export class FloatingViewManager {
     this.saveState();
   }
 
+  /**
+   * Scans from the top of the right edge downward and returns the first pixel
+   * position where a view of the given estimated size fits without overlapping
+   * any existing view or the sidebar. Returns null if no clear spot is found.
+   */
+  private _findSpawnPosition(
+    estimatedWidth: number,
+    estimatedHeight: number
+  ): { x: number; y: number } | null {
+    if (!this.viewAreaElement) return null;
+
+    const MARGIN = 16;
+    const STEP = GRID_UNIT * 2;
+
+    const areaWidth = this.viewAreaElement.clientWidth;
+    const areaHeight = this.viewAreaElement.clientHeight;
+
+    const sidebarEl = document.querySelector('.side-bar-container');
+    const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
+
+    const targetX = sidebarWidth + MARGIN;
+    if (targetX + estimatedWidth + MARGIN > areaWidth) return null;
+
+    const maxY = areaHeight - estimatedHeight - MARGIN;
+    if (maxY < MARGIN) return null;
+
+    type Rect = { x: number; y: number; w: number; h: number };
+    const blocked: Rect[] = [{ x: 0, y: 0, w: sidebarWidth, h: areaHeight }];
+    for (const [, wrapper] of this.activeViews) {
+      const state = wrapper["state"] as FloatingViewInstanceState;
+      const size = wrapper.getSize();
+      blocked.push({
+        x: state.position.x,
+        y: state.position.y,
+        w: size.width || estimatedWidth,
+        h: size.height || estimatedHeight,
+      });
+    }
+
+    for (let y = MARGIN; y <= maxY; y += STEP) {
+      const overlaps = blocked.some(
+        r => targetX < r.x + r.w && targetX + estimatedWidth > r.x &&
+             y < r.y + r.h && y + estimatedHeight > r.y
+      );
+      if (!overlaps) return { x: targetX, y };
+    }
+
+    return null;
+  }
+
   // --- Public API ---
 
   public setLinkManager(lm: LinkManager): void {
@@ -145,14 +195,18 @@ export class FloatingViewManager {
     const instanceId = `fv-${this.nextInstanceId++}`;
     this.currentMaxZIndex++;
 
-    // Compute default spawn position, offset by sidebar width if present
+    // Compute default spawn position: first non-overlapping spot from top-right,
+    // falling back to cascading offset if no clear position exists.
     const defaultPosition = (() => {
       const sidebarEl = document.querySelector('.side-bar-container');
       const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
-      return {
+      const fallback = {
         x: sidebarWidth + 48 + ((this.activeViews.size * 20) % 300),
         y: 48 + ((this.activeViews.size * 20) % 400),
       };
+      const estimatedW = descriptor.defaultWidth ?? 300;
+      const estimatedH = descriptor.defaultHeight ?? 200;
+      return this._findSpawnPosition(estimatedW, estimatedH) ?? fallback;
     })();
 
     const spawnPosition = options?.position ?? defaultPosition;
