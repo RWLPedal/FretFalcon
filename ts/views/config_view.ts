@@ -612,7 +612,9 @@ export class ConfigView {
         const controller = schema.args.find(a => a.controlsArgName === arg.name && a.type === ArgType.Enum);
         if (!controller) return 'Major';
         const idx = schema.args.indexOf(controller);
-        return (this.argValues.get(idx) as string) ?? 'Major';
+        const val = (this.argValues.get(idx) as string) ?? controller.enum?.[0] ?? 'Major';
+        if (val === 'driven' || val === 'driven_next') return controller.enum?.[0] ?? 'Major';
+        return val;
     }
 
     /** Rebuilds the toggle button set for an arg after Key or Advanced changes. */

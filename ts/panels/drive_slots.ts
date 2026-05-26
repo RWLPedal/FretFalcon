@@ -269,15 +269,18 @@ registerDriveTarget({
 });
 
 // ─── ChordProgressionFeature as target ───────────────────────────────────────
-// KeySignal drives Root Note and Mode; ChordSignal drives Root Note only.
+// Only KeySignals drive config rebuilds; ChordSignals flow through to the feature's
+// own chordSignalHandler for active-chord highlighting without triggering a rebuild.
+// Accepting ChordSignals here caused the feature to rebuild on every chord change
+// (using the chord's own root, not the progression root), breaking non-tonic highlights.
 
 registerDriveTarget({
   featureTypeName: 'Chord Progression',
   argName: 'Root Note',
   label: 'Root note (from linked source)',
-  acceptedKinds: [SignalKind.Key, SignalKind.Chord],
+  acceptedKinds: [SignalKind.Key],
   resolveValue(signal: DriveSignal): string | null {
-    if (signal.kind !== SignalKind.Key && signal.kind !== SignalKind.Chord) return null;
+    if (signal.kind !== SignalKind.Key) return null;
     return signal.rootNote || null;
   },
 });
@@ -286,13 +289,10 @@ registerDriveTarget({
   featureTypeName: 'Chord Progression',
   argName: 'Mode',
   label: 'Mode (from linked source)',
-  acceptedKinds: [SignalKind.Key, SignalKind.Chord],
+  acceptedKinds: [SignalKind.Key],
   resolveValue(signal: DriveSignal): string | null {
-    if (signal.kind === SignalKind.Key) return signal.scaleKey;
-    if (signal.kind === SignalKind.Chord) {
-      return signal.keyType === KeyType.Major ? DiatonicMode.Ionian : DiatonicMode.Aeolian;
-    }
-    return null;
+    if (signal.kind !== SignalKind.Key) return null;
+    return signal.scaleKey;
   },
 });
 

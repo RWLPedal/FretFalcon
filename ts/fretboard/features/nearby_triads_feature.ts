@@ -4,19 +4,14 @@ import {
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
-  UiComponentType,
-  LabelValue,
 } from '../../feature';
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
+import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, degreesArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
 import { AudioController } from '../../audio_controller';
 import { IntervalSettings } from '../../schedule/editor/interval/types';
 import { InstrumentIntervalSettings } from '../fretboard_interval_settings';
-import {
-  DiatonicMode,
-  ALL_DIATONIC_MODES,
-  DIATONIC_MODE_LABELS,
-} from '../music_types';
+import { DiatonicMode, DIATONIC_MODE_LABELS } from '../music_types';
 import { InstrumentName, FretboardConfig } from '../fretboard';
 import { NoteRenderData, LineData } from '../fretboard';
 import { planSingleFretboard } from '../fretboard_layout';
@@ -34,7 +29,6 @@ import {
   CHORD_ROOTS,
 } from '../chord_key_resolver';
 import { chord_tones_library } from '../chords';
-import { scales } from '../scales';
 import { FretboardView } from '../views/fretboard_view';
 import {
   TriadVoicing,
@@ -73,20 +67,6 @@ interface ChordSlot {
   counterEl: HTMLElement | null;
   columnEl: HTMLElement | null;  // outer column div in reference mode, for active-chord highlight
 }
-
-// ─── Labels-by-mode helper (same approach as ChordProgressionFeature) ─────────
-
-function buildLabelsByMode(): Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> {
-  const result: Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> = {};
-  for (const mode of ALL_DIATONIC_MODES) {
-    const entries = scales[mode].generateRomanEntries(true);
-    const basic = entries.slice(0, 7).map((e, i) => ({ label: e.roman, value: String(i) }));
-    result[mode] = { basic, advanced: [] };
-  }
-  return result;
-}
-
-const LABELS_BY_MODE = buildLabelsByMode();
 
 // ─── Note-building helpers ────────────────────────────────────────────────────
 
@@ -157,7 +137,7 @@ function buildVoicingLines(
 
 // ─── Feature ──────────────────────────────────────────────────────────────────
 
-export class NearbyTriadsFeature extends InstrumentFeature {
+export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   static readonly typeName       = 'Nearby Triads';
   static readonly displayName    = 'Nearby Triads (Voice Leading)';
   static readonly requiredInstruments = [InstrumentName.Guitar] as const;
@@ -194,9 +174,6 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   private runtimeDrivenActive: boolean = false;
   private linkStatusHandler: ((e: Event) => void) | null = null;
   private linkStatusContainer: HTMLElement | null = null;
-  private activeChordKey: string | null = null;
-  private keySignalContainer: HTMLElement | null = null;
-  private keySignalHandler: ((e: Event) => void) | null = null;
 
   constructor(
     config: ReadonlyArray<string>,
@@ -417,11 +394,6 @@ export class NearbyTriadsFeature extends InstrumentFeature {
 
   render(container: HTMLElement): void {
     // Clean up any existing listeners
-    if (this.keySignalContainer && this.keySignalHandler) {
-      this.keySignalContainer.removeEventListener('drive-signal', this.keySignalHandler);
-      this.keySignalHandler   = null;
-      this.keySignalContainer = null;
-    }
     if (this.drivenSignalContainer && this.drivenSignalHandler) {
       this.drivenSignalContainer.removeEventListener('drive-signal', this.drivenSignalHandler);
       this.drivenSignalHandler   = null;
@@ -480,7 +452,10 @@ export class NearbyTriadsFeature extends InstrumentFeature {
       }
     };
 
-    this.attachKeySignalListener(container);
+    this.attachChordSignalListener(container, () => {
+      (container as any).__ntActiveChord = this.activeChordKey;
+      if (this.ntMode === 'reference') this.updateSlotHighlights();
+    }, () => this.runtimeDrivenActive);
 
     drivenBtn.addEventListener('click', () => {
       this.runtimeDrivenActive = !this.runtimeDrivenActive;
@@ -507,34 +482,36 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   private renderReference(container: HTMLElement): void {
     // Lazy layout: if availW was unknown at construction, compute correct slot dims
     // from the actual container width now that the DOM is available.
+    // If the container is not yet in the DOM (clientWidth === 0, which happens when
+    // FloatingViewWrapper calls render() before appendChild), fall back to 420px —
+    // the descriptor's defaultWidth — so slots are not created at full default size.
     if (this._slotsNeedLayout) {
       const cs = getComputedStyle(container);
-      const w = (container.clientWidth || container.offsetWidth)
+      let w = (container.clientWidth || container.offsetWidth)
         - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      if (w <= 0) w = 420;
       console.log('[NearbyTriads] lazy layout triggered, container.clientWidth:', container.clientWidth, 'effective w:', w);
-      if (w > 0) {
-        const h = (container.clientHeight || container.offsetHeight)
-          - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-        const N = this.slots.length;
-        const gap = 8;
-        const slotPad = 8;
-        const overhead = 42;
-        const rowMargin = 8;
-        this.slotFretboardConfig = h > 0
-          ? NearbyTriadsFeature.bestSlotConfig(
-              this.fretboardConfig, N, w, h - rowMargin, this._zoomMultiplier, gap, slotPad, overhead
-            )
-          : planSingleFretboard(
-              this.fretboardConfig, (w - (N - 1) * gap - N * slotPad) / N, undefined, this._zoomMultiplier, 15
-            );
-        this.slots.forEach(s => {
-          s.fretboardView.destroy();
-          s.fretboardView = new FretboardView(this.slotFretboardConfig, 15);
-        });
-        this.buildAllRawVoicings();
-        this.rankAllSlots();
-        this._slotsNeedLayout = false;
-      }
+      const h = (container.clientHeight || container.offsetHeight)
+        - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      const N = this.slots.length;
+      const gap = 8;
+      const slotPad = 8;
+      const overhead = 42;
+      const rowMargin = 8;
+      this.slotFretboardConfig = h > 0
+        ? NearbyTriadsFeature.bestSlotConfig(
+            this.fretboardConfig, N, w, h - rowMargin, this._zoomMultiplier, gap, slotPad, overhead
+          )
+        : planSingleFretboard(
+            this.fretboardConfig, (w - (N - 1) * gap - N * slotPad) / N, undefined, this._zoomMultiplier, 15
+          );
+      this.slots.forEach(s => {
+        s.fretboardView.destroy();
+        s.fretboardView = new FretboardView(this.slotFretboardConfig, 15);
+      });
+      this.buildAllRawVoicings();
+      this.rankAllSlots();
+      this._slotsNeedLayout = false;
     }
 
     const slotsRow = document.createElement('div');
@@ -751,7 +728,7 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     }
   }
 
-  // ─── Key / chord signal listeners (reference / compact modes) ────────────────
+  // ─── Active-chord highlight ───────────────────────────────────────────────────
 
   private updateSlotHighlights(): void {
     for (const slot of this.slots) {
@@ -759,22 +736,6 @@ export class NearbyTriadsFeature extends InstrumentFeature {
       const isActive = slot.chordKey !== null && slot.chordKey === this.activeChordKey;
       slot.columnEl.style.boxShadow = isActive ? '0 0 0 2px var(--clr-accent, #5a9)' : '';
     }
-  }
-
-  private attachKeySignalListener(container: HTMLElement): void {
-    this.keySignalHandler = (e: Event) => {
-      const signal = (e as CustomEvent).detail?.signal;
-      if (!signal || this.runtimeDrivenActive) return;
-      if (signal.kind !== SignalKind.Chord) return;
-      const cs = signal as ChordSignal;
-      if (cs.state !== SignalState.Next) {
-        this.activeChordKey = cs.chordKey;
-        (container as any).__ntActiveChord = cs.chordKey;
-        if (this.ntMode === 'reference') this.updateSlotHighlights();
-      }
-    };
-    this.keySignalContainer = container;
-    container.addEventListener('drive-signal', this.keySignalHandler);
   }
 
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
@@ -790,12 +751,6 @@ export class NearbyTriadsFeature extends InstrumentFeature {
     }
     this.linkStatusHandler   = null;
     this.linkStatusContainer = null;
-    if (this.keySignalContainer && this.keySignalHandler) {
-      this.keySignalContainer.removeEventListener('drive-signal', this.keySignalHandler);
-    }
-    this.keySignalHandler   = null;
-    this.keySignalContainer = null;
-
     this.slots.forEach(s => s.fretboardView.destroy());
     this.slots = [];
     this.compactFretboardView?.destroy();
@@ -850,44 +805,17 @@ export class NearbyTriadsFeature extends InstrumentFeature {
   // ─── Config schema ────────────────────────────────────────────────────────────
 
   static getConfigurationSchema(): ConfigurationSchema {
-    const specificArgs: ConfigurationSchemaArg[] = [
-      {
-        name: 'Root Note',
-        type: ArgType.Enum,
-        required: true,
-        enum: NOTE_NAMES_FROM_A as string[],
-        description: 'Root note of the progression.',
-      },
-      {
-        name: 'Mode',
-        type: ArgType.Enum,
-        required: true,
-        enum: ALL_DIATONIC_MODES as string[],
-        enumLabels: ALL_DIATONIC_MODES.map(m => DIATONIC_MODE_LABELS[m]),
-        description: 'Diatonic mode.',
-        controlsArgName: 'Degrees',
-      },
-      {
-        name: 'Display',
-        type: ArgType.Enum,
-        required: true,
-        enum: ['reference', 'compact'],
-        enumLabels: ['Reference', 'Compact'],
-        description: 'Display mode.',
-      },
-      {
-        name: 'Degrees',
-        type: ArgType.String,
-        required: false,
-        uiComponentType: UiComponentType.OrderedDegreeList,
-        uiComponentData: { labelsByMode: LABELS_BY_MODE },
-        isVariadic: true,
-        description: 'Ordered chord degrees for the progression — duplicates allowed.',
-      },
-    ];
+    const displayArg: ConfigurationSchemaArg = {
+      name: 'Display',
+      type: ArgType.Enum,
+      required: true,
+      enum: ['reference', 'compact'],
+      enumLabels: ['Reference', 'Compact'],
+      description: 'Display mode.',
+    };
     return {
       description: `Config: ${this.typeName},RootNote,Mode,Display[,Deg1,...][,InstrumentSettings]`,
-      args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      args: [rootNoteArg(), modeArg(), displayArg, degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 

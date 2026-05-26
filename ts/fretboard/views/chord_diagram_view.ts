@@ -328,6 +328,12 @@ export class ChordDiagramView extends BaseView {
     return null;
   }
 
+  setActive(active: boolean): void {
+    if (!this.wrapperDiv) return;
+    this.wrapperDiv.style.boxShadow = active ? '0 0 0 2px var(--clr-accent, #5a9)' : '';
+    this.wrapperDiv.style.borderRadius = active ? '4px' : '';
+  }
+
   destroy(): void {
     this.fretboard?.detachClickHandler();
     if (this.wrapperDiv && this.wrapperDiv.parentNode) {
