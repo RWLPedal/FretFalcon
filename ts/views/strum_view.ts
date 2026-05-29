@@ -1,6 +1,6 @@
 // ts/views/strum_view.ts
 import { BaseView } from '../base_view';
-import { SignalKind, GrooveSignal, DriveSignal } from '../panels/link_types';
+import { SignalKind, GrooveSignal, DriveSignal, StrumAction } from '../panels/link_types';
 import { AudioController } from '../audio_controller';
 import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
@@ -448,6 +448,7 @@ export class StrumView extends BaseView {
       this.playBtn.classList.remove('is-light');
     }
     this.startInterval();
+    this.dispatchTransportChanged(true);
   }
 
   stop(): void {
@@ -460,6 +461,7 @@ export class StrumView extends BaseView {
     this.stopInterval();
     this.clearHighlight();
     this.currentStep = -1;
+    this.dispatchTransportChanged(false);
   }
 
   destroy(): void {
@@ -489,6 +491,7 @@ export class StrumView extends BaseView {
     this.highlightStep(this.currentStep);
     this.playAudioForStep(this.currentStep);
     this.dispatchGrooveTick(this.currentStep);
+    this.dispatchStrumTick(this.currentStep);
   }
 
   private highlightStep(step: number): void {
@@ -553,6 +556,30 @@ export class StrumView extends BaseView {
     this.container.dispatchEvent(new CustomEvent('groove-tick', {
       bubbles: true,
       detail: { bpm: this.bpm, timeSig: this.timeSig, swing: this.swing, beat },
+    }));
+  }
+
+  private dispatchTransportChanged(playing: boolean): void {
+    if (!this.container) return;
+    this.container.dispatchEvent(new CustomEvent('transport-changed', {
+      bubbles: true,
+      detail: { playing },
+    }));
+  }
+
+  private dispatchStrumTick(step: number): void {
+    if (!this.container) return;
+    const n = totalSlots(this.timeSig, this.subdivision);
+    this.container.dispatchEvent(new CustomEvent('strum-tick', {
+      bubbles: true,
+      detail: {
+        action:     this.slots[step] as unknown as StrumAction,
+        direction:  slotDirection(step),
+        bpm:        this.bpm,
+        timeSig:    this.timeSig,
+        step,
+        totalSteps: n,
+      },
     }));
   }
 

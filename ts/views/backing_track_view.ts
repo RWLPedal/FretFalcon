@@ -1,7 +1,7 @@
 // ts/views/backing_track_view.ts
 import { BaseView } from '../base_view';
 import { ValueSlider } from './components/value_slider';
-import { SignalKind } from '../panels/link_types';
+import { SignalKind, StrumSignal } from '../panels/link_types';
 import {
   DrumSoundId,
   DRUM_SOUND_LABELS,
@@ -248,6 +248,8 @@ export class BackingTrackView extends BaseView {
 
   // Tempo target state
   private isTempoTarget: boolean = false;
+  // Strum link state: when true, per-step strum signals replace the per-measure chord drone
+  private isStrumLinked: boolean = false;
 
   // DOM refs
   private gridEl: HTMLElement | null = null;
@@ -371,6 +373,11 @@ export class BackingTrackView extends BaseView {
         if (signal.playing) this.startPlayback(); else this.stopPlayback();
         return;
       }
+      if (signal.kind === SignalKind.Strum) {
+        this.isStrumLinked = true;
+        this.playStrumChord(signal as StrumSignal);
+        return;
+      }
       if (signal.kind !== SignalKind.Groove) return;
       // Ignore per-beat ticks — only sync BPM from config updates (no beat field)
       if (signal.beat !== undefined) return;
@@ -381,7 +388,9 @@ export class BackingTrackView extends BaseView {
       if (this.isPlaying) { this.stopInterval(); this.startInterval(); }
     });
     this.listen(container, 'link-status-changed', (e: Event) => {
-      this.isTempoTarget = !!((e as CustomEvent).detail?.hasIncomingLinks);
+      const detail = (e as CustomEvent).detail;
+      this.isTempoTarget = !!detail?.hasIncomingLinks;
+      if (!detail?.hasIncomingLinks) this.isStrumLinked = false;
       this.applyTempoTargetState();
     });
   }
@@ -1220,7 +1229,8 @@ export class BackingTrackView extends BaseView {
       this.currentMeasure = (this.currentMeasure + 1) % this.numMeasures;
       this.highlightCurrentMeasure();
       const chordDeg = this.measureChords[this.currentMeasure];
-      if (chordDeg !== null) this.playChordDrone(chordDeg);
+      // When strum-linked, per-step strum signals drive chord audio instead of a measure-long drone.
+      if (chordDeg !== null && !this.isStrumLinked) this.playChordDrone(chordDeg);
       this.dispatchTickEvent(chordDeg ?? null);
     }
   }
@@ -1362,6 +1372,91 @@ export class BackingTrackView extends BaseView {
       osc.stop(now + noteDur);
     } catch (e) {
       console.warn('BackingTrackView: bass note error', e);
+    }
+  }
+
+  // ─── Strum chord ─────────────────────────────────────────────────────────────
+
+  private playStrumChord(signal: StrumSignal): void {
+    if (signal.action === 'rest' || signal.action === 'air') return;
+    const chordDeg = this.measureChords[Math.max(0, this.currentMeasure)];
+    if (chordDeg === null) return;
+
+    const entry = getRomansForMode(this.progMode)[chordDeg - 1];
+    if (!entry) return;
+    const chordKey = resolveAbsoluteChordKey(entry.roman, this.progRootNote, this.progMode);
+    if (!chordKey) return;
+    const chordEntry = chord_tones_library[chordKey];
+    if (!chordEntry) return;
+
+    try {
+      const ctx       = volumeManager.getAudioContext();
+      const masterVol = volumeManager.getVolume();
+      const now       = ctx.currentTime;
+
+      if (signal.action === 'chuck') {
+        // Noise burst: muted hit at chord root frequency via tight bandpass
+        const rootTone = chordEntry.tones[0];
+        if (!rootTone) return;
+        const rootFreq = chordToneFreq(rootTone, 2);
+        if (!rootFreq) return;
+        const bufLen = Math.ceil(ctx.sampleRate * 0.06);
+        const buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        const data   = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const src    = ctx.createBufferSource();
+        src.buffer   = buf;
+        const filter = ctx.createBiquadFilter();
+        filter.type            = 'bandpass';
+        filter.frequency.value = Math.min(rootFreq * 2, 1800);
+        filter.Q.value         = 1.5;
+        const chuckGain = ctx.createGain();
+        const peak = 0.35 * masterVol;
+        chuckGain.gain.setValueAtTime(peak, now);
+        chuckGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        src.connect(filter);
+        filter.connect(chuckGain);
+        chuckGain.connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.06);
+        return;
+      }
+
+      const isDown   = signal.direction === 'down';
+      const isAccent = signal.action === 'accent';
+      const duration = isDown ? (isAccent ? 0.45 : 0.35) : (isAccent ? 0.30 : 0.22);
+      const peakVol  = isDown ? (isAccent ? 0.55 : 0.40) : (isAccent ? 0.45 : 0.30);
+      const filterFreq = isDown ? 800 : 2200;
+      const filterType: BiquadFilterType = isDown ? 'lowpass' : 'bandpass';
+
+      chordEntry.tones.forEach((toneName, i) => {
+        const octave = i === 0 ? 2 : 3;
+        const freq   = chordToneFreq(toneName, octave);
+        if (!freq) return;
+
+        const osc    = ctx.createOscillator();
+        const filter = ctx.createBiquadFilter();
+        const gain   = ctx.createGain();
+
+        osc.setPeriodicWave(getGuitarWave(ctx));
+        osc.frequency.value    = freq;
+        filter.type            = filterType;
+        filter.frequency.value = filterFreq;
+        filter.Q.value         = isDown ? 0.7 : 1.2;
+
+        const peak = peakVol * masterVol;
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(peak, now + 0.006);
+        gain.gain.setTargetAtTime(0, now + 0.006, duration * 0.5);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration);
+      });
+    } catch (e) {
+      console.warn('BackingTrackView: strum chord error', e);
     }
   }
 

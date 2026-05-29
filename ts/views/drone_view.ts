@@ -1,11 +1,13 @@
 import { BaseView } from '../base_view';
-import { NoteName, NOTE_NAMES, SustainedNote } from '../sounds/note_sounds';
-import { DriveSignal, SignalKind } from '../panels/link_types';
+import { NoteName, NOTE_NAMES, SustainedNote, getGuitarWave } from '../sounds/note_sounds';
+import { DriveSignal, SignalKind, StrumSignal } from '../panels/link_types';
+import { volumeManager } from '../sounds/volume_manager';
 
 export class DroneView extends BaseView {
   private note: NoteName;
   private octave: number;
   private isPlaying = false;
+  private hasStrumLink = false;
   private drone = new SustainedNote();
 
   private playBtn: HTMLButtonElement | null = null;
@@ -84,6 +86,11 @@ export class DroneView extends BaseView {
         else { if (this.isPlaying) this.togglePlay(); }
         return;
       }
+      if (signal.kind === SignalKind.Strum) {
+        this.hasStrumLink = true;
+        this.handleStrumPluck(signal as StrumSignal);
+        return;
+      }
       if (this.noteSelect?.value !== 'driven') return;
       if (signal.kind !== SignalKind.Chord) return;
       const rootNote = signal.rootNote as NoteName;
@@ -105,12 +112,15 @@ export class DroneView extends BaseView {
         }
         if (this.noteSelect) this.noteSelect.value = 'driven';
       } else {
+        this.hasStrumLink = false;
         if (this.drivenOption) {
           this.drivenOption.remove();
           this.drivenOption = null;
         }
         if (this.noteSelect) this.noteSelect.value = this.note;
         this.dispatchTitle();
+        // Restore continuous sustain if we were playing in pluck mode
+        if (this.isPlaying) this.drone.start(this.note, this.octave);
       }
     });
 
@@ -133,11 +143,82 @@ export class DroneView extends BaseView {
       this.drone.stop();
       this.isPlaying = false;
     } else {
-      this.drone.start(this.note, this.octave);
       this.isPlaying = true;
+      // In strum-link mode, don't start a continuous sustain — plucks fire on strum signals.
+      if (!this.hasStrumLink) this.drone.start(this.note, this.octave);
     }
     this.updatePlayBtn();
     this.dispatchTransportChanged();
+  }
+
+  private handleStrumPluck(signal: StrumSignal): void {
+    if (!this.isPlaying) return;
+    if (signal.action === 'rest' || signal.action === 'air') return;
+
+    try {
+      const ctx       = volumeManager.getAudioContext();
+      const masterVol = volumeManager.getVolume();
+      const now       = ctx.currentTime;
+
+      if (signal.action === 'chuck') {
+        const bufLen = Math.ceil(ctx.sampleRate * 0.06);
+        const buf    = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+        const data   = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const src    = ctx.createBufferSource();
+        src.buffer   = buf;
+        const filter = ctx.createBiquadFilter();
+        filter.type            = 'bandpass';
+        filter.frequency.value = 1800;
+        filter.Q.value         = 1.5;
+        const chuckGain = ctx.createGain();
+        const peak = 0.35 * masterVol;
+        chuckGain.gain.setValueAtTime(peak, now);
+        chuckGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+        src.connect(filter);
+        filter.connect(chuckGain);
+        chuckGain.connect(ctx.destination);
+        src.start(now);
+        src.stop(now + 0.06);
+        return;
+      }
+
+      // Pitched pluck — compute drone frequency
+      const SEMITONE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+      const noteIdx = SEMITONE_NAMES.indexOf(this.note as string);
+      if (noteIdx === -1) return;
+      const freq = 440 * Math.pow(2, (noteIdx + 12 * (this.octave - 4)) / 12);
+
+      const isDown   = signal.direction === 'down';
+      const isAccent = signal.action === 'accent';
+
+      const osc    = ctx.createOscillator();
+      const filter = ctx.createBiquadFilter();
+      const gain   = ctx.createGain();
+
+      osc.setPeriodicWave(getGuitarWave(ctx));
+      osc.frequency.value = freq;
+
+      filter.type            = isDown ? 'lowpass' : 'bandpass';
+      filter.frequency.value = isDown ? 800 : 2200;
+      filter.Q.value         = isDown ? 0.7 : 1.2;
+
+      const duration = isDown ? (isAccent ? 0.45 : 0.35) : (isAccent ? 0.30 : 0.22);
+      const peakVol  = isDown ? (isAccent ? 0.55 : 0.40) : (isAccent ? 0.45 : 0.30);
+      const peak     = peakVol * masterVol;
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(peak, now + 0.006);
+      gain.gain.setTargetAtTime(0, now + 0.006, duration * 0.5);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (e) {
+      console.warn('DroneView: strum pluck error', e);
+    }
   }
 
   private dispatchTransportChanged(): void {

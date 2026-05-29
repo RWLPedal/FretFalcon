@@ -3,7 +3,7 @@
 // (reference_main.ts) to wire all signal translations.
 
 import { registerDriveSource, registerDriveTarget } from './drive_registry';
-import { SignalKind, SignalState, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal } from './link_types';
+import { SignalKind, SignalState, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal, StrumSignal } from './link_types';
 import { KeyType, DiatonicMode, ChordQuality } from '../fretboard/music_types';
 import { scales } from '../fretboard/scales';
 
@@ -381,6 +381,15 @@ registerDriveTarget({
   resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
+registerDriveTarget({
+  featureTypeName: 'Drone',
+  viewId: 'drone_view',
+  argName: 'Strum',
+  label: 'Strum rhythm (from linked source)',
+  acceptedKinds: [SignalKind.Strum],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
+});
+
 // ─── BackingTrackView as groove/play target ───────────────────────────────────
 
 registerDriveTarget({
@@ -400,6 +409,15 @@ registerDriveTarget({
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
+  resolveValue(_signal: DriveSignal): string | null { return null; },
+});
+
+registerDriveTarget({
+  featureTypeName: 'BackingTrack',
+  viewId: 'drum_machine',
+  argName: 'Strum',
+  label: 'Strum rhythm (from linked source)',
+  acceptedKinds: [SignalKind.Strum],
   resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
@@ -425,13 +443,14 @@ registerDriveTarget({
   resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
-// ─── StrumView as groove source ──────────────────────────────────────────────
-// The StrumView dispatches 'metronome-tempo-changed' on BPM/timeSig config changes,
-// which is picked up by the existing link_manager listener.
+// ─── StrumView as groove + strum source ──────────────────────────────────────
+// The StrumView dispatches 'metronome-tempo-changed' on BPM/timeSig config changes
+// (picked up by the existing link_manager listener) and 'strum-tick' on each step
+// (picked up by the strum-tick listener added below).
 
 registerDriveSource({
   viewId: 'strum_view',
-  emittedKinds: [SignalKind.Groove],
+  emittedKinds: [SignalKind.Groove, SignalKind.Strum, SignalKind.Play],
   extractSignals(detail: any): DriveSignal[] {
     if (typeof detail?.bpm !== 'number') return [];
     const grooveSignal: GrooveSignal = {

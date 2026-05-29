@@ -1,5 +1,5 @@
 // ts/panels/link_manager.ts
-import { HandleSide, LinkRecord, DriveSignal, SignalKind, SignalState, GrooveSignal, PlaySignal } from './link_types';
+import { HandleSide, LinkRecord, DriveSignal, SignalKind, SignalState, GrooveSignal, PlaySignal, StrumSignal } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';
 import {
@@ -87,6 +87,24 @@ export class LinkManager {
         beat: typeof detail.beat === 'number' ? detail.beat : undefined,
       };
       this.routeBeatSignal(instanceId, signal);
+    });
+
+    // Listen for strum-tick (per-step strum action from StrumView)
+    viewAreaEl.addEventListener('strum-tick', (e: Event) => {
+      const instanceId = this.resolveSourceInstanceId(e);
+      if (!instanceId) return;
+      const detail = (e as CustomEvent).detail;
+      if (!detail?.action) return;
+      const signal: StrumSignal = {
+        kind:       SignalKind.Strum,
+        action:     detail.action,
+        direction:  detail.direction ?? 'down',
+        bpm:        detail.bpm ?? 120,
+        timeSig:    detail.timeSig ?? { beats: 4, division: 4 },
+        step:       typeof detail.step === 'number' ? detail.step : 0,
+        totalSteps: typeof detail.totalSteps === 'number' ? detail.totalSteps : 1,
+      };
+      this.routeUncachedSignal(instanceId, signal);
     });
 
     // Listen for transport-changed (play/stop state from BackingTrackView or other transport sources)

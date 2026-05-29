@@ -20,7 +20,8 @@ export enum SignalKind {
   Key       = 'Key',
   Groove    = 'Groove',
   Feature   = 'Feature',
-  Play = 'Play',
+  Play      = 'Play',
+  Strum     = 'Strum',
 }
 
 export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
@@ -28,7 +29,8 @@ export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
   [SignalKind.Key]:       '♭',
   [SignalKind.Groove]:    '♩',
   [SignalKind.Feature]:   '◈',
-  [SignalKind.Play]: '▶',
+  [SignalKind.Play]:      '▶',
+  [SignalKind.Strum]:     '♾',
 };
 
 // ─── Signal state ─────────────────────────────────────────────────────────────
@@ -96,4 +98,21 @@ export interface PlaySignal extends BaseSignal {
   playing: boolean;
 }
 
-export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal;
+// Strum action string union — mirrors StrokeAction enum values in strum_types.ts.
+export type StrumAction = 'rest' | 'stroke' | 'accent' | 'chuck' | 'air';
+
+// A per-step strum signal emitted by StrumView on each tick.
+// Carries the stroke action, direction, and timing context so consumers can produce
+// direction-appropriate audio (warm pluck on down, bright on up, muted on chuck).
+// Not cached by LinkManager: real-time per-step, like groove beat ticks.
+export interface StrumSignal extends BaseSignal {
+  kind: SignalKind.Strum;
+  action: StrumAction;
+  direction: 'down' | 'up';
+  bpm: number;
+  timeSig: { beats: number; division: number };
+  step: number;       // 0-indexed step within the pattern
+  totalSteps: number;
+}
+
+export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal | StrumSignal;
