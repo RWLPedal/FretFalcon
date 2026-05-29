@@ -24,11 +24,19 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 let draggedElement: HTMLElement | null = null;
 
+// Global capture-phase listener: logs what element actually receives mousedown.
+// Remove after diagnosing the drag issue.
+document.addEventListener('mousedown', (e) => {
+  const el = e.target as HTMLElement;
+  console.log('[Drag:global] mousedown target', { tag: el.tagName, id: el.id, classes: el.className, x: e.clientX, y: e.clientY });
+}, true /* capture */);
+
 function startDrag(e: MouseEvent, element: HTMLElement) {
   draggedElement = element;
   const rect = element.getBoundingClientRect();
   dragOffsetX = e.clientX - rect.left;
   dragOffsetY = e.clientY - rect.top;
+  console.log('[Drag] startDrag', { rect: { left: rect.left, top: rect.top, w: rect.width, h: rect.height }, offsetX: dragOffsetX, offsetY: dragOffsetY });
   document.addEventListener("mousemove", doDrag);
   document.addEventListener("mouseup", stopDrag);
   element.style.cursor = "grabbing";
@@ -39,13 +47,17 @@ function doDrag(e: MouseEvent) {
   if (!draggedElement) return;
   let newX = e.clientX - dragOffsetX;
   let newY = e.clientY - dragOffsetY;
+  console.log('[Drag] doDrag raw', { newX, newY });
 
   const parent = (draggedElement.offsetParent as HTMLElement) || document.body;
   const parentRect = parent.getBoundingClientRect();
   const elemRect = draggedElement.getBoundingClientRect();
 
-  newX = snapToGrid(Math.max(0, Math.min(newX, parentRect.width - elemRect.width)));
-  newY = snapToGrid(Math.max(0, Math.min(newY, parentRect.height - elemRect.height)));
+  const clampedX = Math.max(0, Math.min(newX, parentRect.width - elemRect.width));
+  const clampedY = Math.max(0, Math.min(newY, parentRect.height - elemRect.height));
+  console.log('[Drag] doDrag clamp', { parentW: parentRect.width, parentH: parentRect.height, parentTop: parentRect.top, parentLeft: parentRect.left, elemW: elemRect.width, elemH: elemRect.height, clampedX, clampedY });
+  newX = snapToGrid(clampedX);
+  newY = snapToGrid(clampedY);
 
   draggedElement.style.left = `${newX}px`;
   draggedElement.style.top = `${newY}px`;
@@ -156,7 +168,11 @@ export class FloatingViewWrapper {
     const titleBar = document.createElement("div");
     titleBar.classList.add("floating-view-titlebar");
     titleBar.style.cursor = "grab";
-    titleBar.addEventListener("mousedown", (e) => startDrag(e, this.element));
+    titleBar.addEventListener("mousedown", (e) => {
+      const hit = document.elementFromPoint(e.clientX, e.clientY);
+      console.log('[Drag] titlebar mousedown', { instanceId: state.instanceId, x: e.clientX, y: e.clientY, topElement: hit?.tagName, topClass: (hit as HTMLElement)?.className });
+      startDrag(e, this.element);
+    });
 
     this.titleTextEl = document.createElement("span");
     this.titleTextEl.classList.add("floating-view-title-text");

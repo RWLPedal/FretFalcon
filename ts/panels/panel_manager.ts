@@ -33,7 +33,10 @@ function gridRowToPixel(row: number, scale: number): number {
   return row * scale * GRID_UNIT;
 }
 
-function viewportGridSize(el: HTMLElement | null): { cols: number; rows: number } {
+function viewportGridSize(el: HTMLElement | null): {
+  cols: number;
+  rows: number;
+} {
   const w = el?.clientWidth ?? window.innerWidth;
   const h = el?.clientHeight ?? window.innerHeight;
   return {
@@ -53,17 +56,21 @@ export class FloatingViewManager {
 
   private _resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(appSettings: AppSettings, screenConfigManager: ScreenConfigManager) {
+  constructor(
+    appSettings: AppSettings,
+    screenConfigManager: ScreenConfigManager,
+  ) {
     this.appSettings = appSettings;
     this.screenConfigManager = screenConfigManager;
     this.viewAreaElement = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!this.viewAreaElement) {
       console.error(
-        `Floating View container #${FLOATING_VIEW_AREA_ID} not found! Views will not be displayed.`
+        `Floating View container #${FLOATING_VIEW_AREA_ID} not found! Views will not be displayed.`,
       );
     }
     window.addEventListener("resize", () => {
-      if (this._resizeDebounceTimer !== null) clearTimeout(this._resizeDebounceTimer);
+      if (this._resizeDebounceTimer !== null)
+        clearTimeout(this._resizeDebounceTimer);
       this._resizeDebounceTimer = setTimeout(() => {
         this._resizeDebounceTimer = null;
         this._clampAllViews();
@@ -77,8 +84,14 @@ export class FloatingViewManager {
     this.activeViews.forEach((wrapper) => {
       const state = wrapper["state"] as FloatingViewInstanceState;
       const size = wrapper.getSize();
-      const clampedX = Math.max(0, Math.min(state.position.x, vpW - size.width));
-      const clampedY = Math.max(0, Math.min(state.position.y, vpH - size.height));
+      const clampedX = Math.max(
+        0,
+        Math.min(state.position.x, vpW - size.width),
+      );
+      const clampedY = Math.max(
+        0,
+        Math.min(state.position.y, vpH - size.height),
+      );
       if (clampedX !== state.position.x || clampedY !== state.position.y) {
         wrapper.setPosition(clampedX, clampedY);
       }
@@ -94,7 +107,7 @@ export class FloatingViewManager {
    */
   private _findSpawnPosition(
     estimatedWidth: number,
-    estimatedHeight: number
+    estimatedHeight: number,
   ): { x: number; y: number } | null {
     if (!this.viewAreaElement) return null;
 
@@ -104,8 +117,10 @@ export class FloatingViewManager {
     const areaWidth = this.viewAreaElement.clientWidth;
     const areaHeight = this.viewAreaElement.clientHeight;
 
-    const sidebarEl = document.querySelector('.side-bar-container');
-    const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
+    const sidebarEl = document.querySelector(".side-bar-container");
+    const sidebarWidth = sidebarEl
+      ? sidebarEl.getBoundingClientRect().width
+      : 0;
 
     const targetX = sidebarWidth + MARGIN;
     if (targetX + estimatedWidth + MARGIN > areaWidth) return null;
@@ -128,8 +143,11 @@ export class FloatingViewManager {
 
     for (let y = MARGIN; y <= maxY; y += STEP) {
       const overlaps = blocked.some(
-        r => targetX < r.x + r.w && targetX + estimatedWidth > r.x &&
-             y < r.y + r.h && y + estimatedHeight > r.y
+        (r) =>
+          targetX < r.x + r.w &&
+          targetX + estimatedWidth > r.x &&
+          y < r.y + r.h &&
+          y + estimatedHeight > r.y,
       );
       if (!overlaps) return { x: targetX, y };
     }
@@ -152,7 +170,13 @@ export class FloatingViewManager {
   }
 
   public getViewId(instanceId: string): string | null {
-    return (this.activeViews.get(instanceId)?.['state'] as FloatingViewInstanceState | undefined)?.viewId ?? null;
+    return (
+      (
+        this.activeViews.get(instanceId)?.["state"] as
+          | FloatingViewInstanceState
+          | undefined
+      )?.viewId ?? null
+    );
   }
 
   /**
@@ -162,15 +186,19 @@ export class FloatingViewManager {
    * from the drive registry by viewId.
    */
   public getFeatureTypeName(instanceId: string): string | null {
-    const state = (this.activeViews.get(instanceId) as any)?.['state'] as FloatingViewInstanceState | undefined;
+    const state = (this.activeViews.get(instanceId) as any)?.["state"] as
+      | FloatingViewInstanceState
+      | undefined;
     if (!state) return null;
-    if (state.viewId === 'configurable_instrument_feature') {
+    if (state.viewId === "configurable_instrument_feature") {
       return (state.viewState as any)?.featureTypeName ?? null;
     }
     const descriptor = getFloatingViewDescriptor(state.viewId);
-    return (state.viewState as any)?.featureTypeName
-      ?? descriptor?.featureTypeName
-      ?? getFeatureTypeNameByViewId(state.viewId);
+    return (
+      (state.viewState as any)?.featureTypeName ??
+      descriptor?.featureTypeName ??
+      getFeatureTypeNameByViewId(state.viewId)
+    );
   }
 
   public spawnView(
@@ -180,14 +208,14 @@ export class FloatingViewManager {
       position?: { x: number; y: number };
       size?: { width: number; height: number };
       title?: string;
-    }
+    },
   ): void {
     if (!this.viewAreaElement) return;
 
     const descriptor = getFloatingViewDescriptor(viewId);
     if (!descriptor) {
       console.error(
-        `Cannot spawn view: Descriptor not found for viewId "${viewId}"`
+        `Cannot spawn view: Descriptor not found for viewId "${viewId}"`,
       );
       return;
     }
@@ -198,8 +226,10 @@ export class FloatingViewManager {
     // Compute default spawn position: first non-overlapping spot from top-right,
     // falling back to cascading offset if no clear position exists.
     const defaultPosition = (() => {
-      const sidebarEl = document.querySelector('.side-bar-container');
-      const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
+      const sidebarEl = document.querySelector(".side-bar-container");
+      const sidebarWidth = sidebarEl
+        ? sidebarEl.getBoundingClientRect().width
+        : 0;
       const fallback = {
         x: sidebarWidth + 48 + ((this.activeViews.size * 20) % 300),
         y: 48 + ((this.activeViews.size * 20) % 400),
@@ -220,7 +250,10 @@ export class FloatingViewManager {
         row: pixelToGridRow(spawnPosition.y),
       },
       gridSize: options?.size
-        ? { cols: pixelToGridCol(options.size.width), rows: pixelToGridRow(options.size.height) }
+        ? {
+            cols: pixelToGridCol(options.size.width),
+            rows: pixelToGridRow(options.size.height),
+          }
         : undefined,
       zIndex: this.currentMaxZIndex,
       viewState: options?.viewState,
@@ -228,7 +261,10 @@ export class FloatingViewManager {
 
     try {
       const spawnSettings = this._buildOverriddenSettings(undefined, 1.0);
-      const viewInstance = descriptor.createView(state.viewState, spawnSettings);
+      const viewInstance = descriptor.createView(
+        state.viewState,
+        spawnSettings,
+      );
       const title = options?.title ?? descriptor.displayName;
 
       const wrapper = new FloatingViewWrapper(
@@ -242,16 +278,21 @@ export class FloatingViewManager {
         descriptor.defaultHeight,
         descriptor.minWidth,
         descriptor.minHeight,
-        isFretboardDescriptor(descriptor) && descriptor.supportsRotate ? () => this.handleRotateRequest(instanceId) : undefined,
-        isFretboardDescriptor(descriptor) && descriptor.supportsZoom ? () => this.handleZoomRequest(instanceId) : undefined,
-        descriptor.supportsConfigToggle ? () => this.handleConfigToggleRequest(instanceId) : undefined
+        isFretboardDescriptor(descriptor) && descriptor.supportsRotate
+          ? () => this.handleRotateRequest(instanceId)
+          : undefined,
+        isFretboardDescriptor(descriptor) && descriptor.supportsZoom
+          ? () => this.handleZoomRequest(instanceId)
+          : undefined,
+        descriptor.supportsConfigToggle
+          ? () => this.handleConfigToggleRequest(instanceId)
+          : undefined,
       );
 
       this.activeViews.set(instanceId, wrapper);
       this.viewAreaElement.appendChild(wrapper.element);
       this.linkManager?.onWindowSpawned(instanceId, wrapper.element);
       this.saveState();
-      console.log(`Spawned floating view instance: ${instanceId} (type: ${viewId})`);
     } catch (e) {
       console.error(`Error creating view instance for ${viewId}:`, e);
     }
@@ -260,22 +301,24 @@ export class FloatingViewManager {
   public destroyView(instanceId: string): void {
     const wrapper = this.activeViews.get(instanceId);
     if (wrapper) {
-      const viewId = wrapper["state"].viewId;
       this.linkManager?.onWindowDestroyed(instanceId);
       this.activeViews.delete(instanceId);
       this.saveState();
-      console.log(`Destroyed floating view instance: ${instanceId} (type: ${viewId})`);
     }
   }
 
   public updateAllViews(state: any): void {
-    this.activeViews.forEach(wrapper => {
-      const viewInstance = wrapper['viewInstance'];
-      if (viewInstance && typeof (viewInstance as any).update === 'function') {
+    this.activeViews.forEach((wrapper) => {
+      const viewInstance = wrapper["viewInstance"];
+      if (viewInstance && typeof (viewInstance as any).update === "function") {
         try {
           (viewInstance as any).update(state);
         } catch (e) {
-          console.error("Error calling update for view:", wrapper['state']?.viewId, e);
+          console.error(
+            "Error calling update for view:",
+            wrapper["state"]?.viewId,
+            e,
+          );
         }
       }
     });
@@ -284,7 +327,6 @@ export class FloatingViewManager {
   public restoreViewsFromState(): void {
     const viewArea = this.viewAreaElement;
     if (!viewArea) return;
-    console.log("Restoring floating views from state...");
     const savedState = this.loadState();
     if (savedState && savedState.openViews) {
       this.currentMaxZIndex = savedState.nextZIndex || 100;
@@ -295,21 +337,26 @@ export class FloatingViewManager {
       const refGrid = savedState.referenceGrid ?? currentGrid;
       const scale = Math.min(
         currentGrid.cols / refGrid.cols,
-        currentGrid.rows / refGrid.rows
+        currentGrid.rows / refGrid.rows,
       );
 
       const sortedStates = Object.values(savedState.openViews).sort(
-        (a, b) => a.zIndex - b.zIndex
+        (a, b) => a.zIndex - b.zIndex,
       );
 
       sortedStates.forEach((savedEntry) => {
         const descriptor = getFloatingViewDescriptor(savedEntry.viewId);
         if (!descriptor) {
-          console.warn(`Cannot restore view: Descriptor not found for viewId "${savedEntry.viewId}"`);
+          console.warn(
+            `Cannot restore view: Descriptor not found for viewId "${savedEntry.viewId}"`,
+          );
           return;
         }
         try {
-          const numericId = parseInt(savedEntry.instanceId.replace("fv-", ""), 10);
+          const numericId = parseInt(
+            savedEntry.instanceId.replace("fv-", ""),
+            10,
+          );
           if (!isNaN(numericId)) {
             this.nextInstanceId = Math.max(this.nextInstanceId, numericId + 1);
           }
@@ -320,8 +367,10 @@ export class FloatingViewManager {
           const pixelY = gridRowToPixel(gp.row, scale);
           const pixelSize = savedEntry.gridSize
             ? {
-                width:  Math.round(savedEntry.gridSize.cols * scale * GRID_UNIT),
-                height: Math.round(savedEntry.gridSize.rows * scale * GRID_UNIT),
+                width: Math.round(savedEntry.gridSize.cols * scale * GRID_UNIT),
+                height: Math.round(
+                  savedEntry.gridSize.rows * scale * GRID_UNIT,
+                ),
               }
             : undefined;
 
@@ -330,7 +379,10 @@ export class FloatingViewManager {
           const vpH = this.viewAreaElement?.clientHeight ?? window.innerHeight;
           const clampedX = pixelSize
             ? Math.max(0, Math.min(pixelX, vpW - pixelSize.width))
-            : Math.max(0, Math.min(pixelX, vpW - (descriptor.defaultWidth ?? 150)));
+            : Math.max(
+                0,
+                Math.min(pixelX, vpW - (descriptor.defaultWidth ?? 150)),
+              );
           const clampedY = pixelSize
             ? Math.max(0, Math.min(pixelY, vpH - pixelSize.height))
             : Math.max(0, Math.min(pixelY, vpH - 50));
@@ -344,16 +396,23 @@ export class FloatingViewManager {
 
           // Apply any saved orientation/zoom overrides when recreating the view.
           const globalOrientation =
-            (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
+            (this.appSettings.instrumentSettings as any)?.orientation ??
+            "vertical";
           const effectiveOrientation: "vertical" | "horizontal" =
             state.orientationOverride ?? globalOrientation;
           const zoomMultiplier = this._zoomMultiplierFor(
             effectiveOrientation,
-            state.zoomActive ?? false
+            state.zoomActive ?? false,
           );
-          const settingsToUse = this._buildOverriddenSettings(state.orientationOverride, zoomMultiplier);
+          const settingsToUse = this._buildOverriddenSettings(
+            state.orientationOverride,
+            zoomMultiplier,
+          );
 
-          const viewInstance = descriptor.createView(state.viewState, settingsToUse);
+          const viewInstance = descriptor.createView(
+            state.viewState,
+            settingsToUse,
+          );
           const wrapper = new FloatingViewWrapper(
             state,
             descriptor.displayName,
@@ -365,21 +424,28 @@ export class FloatingViewManager {
             state.size?.height ?? descriptor.defaultHeight,
             descriptor.minWidth,
             descriptor.minHeight,
-            isFretboardDescriptor(descriptor) && descriptor.supportsRotate ? () => this.handleRotateRequest(state.instanceId) : undefined,
-            isFretboardDescriptor(descriptor) && descriptor.supportsZoom ? () => this.handleZoomRequest(state.instanceId) : undefined,
-            descriptor.supportsConfigToggle ? () => this.handleConfigToggleRequest(state.instanceId) : undefined
+            isFretboardDescriptor(descriptor) && descriptor.supportsRotate
+              ? () => this.handleRotateRequest(state.instanceId)
+              : undefined,
+            isFretboardDescriptor(descriptor) && descriptor.supportsZoom
+              ? () => this.handleZoomRequest(state.instanceId)
+              : undefined,
+            descriptor.supportsConfigToggle
+              ? () => this.handleConfigToggleRequest(state.instanceId)
+              : undefined,
           );
           this.activeViews.set(state.instanceId, wrapper);
           viewArea.appendChild(wrapper.element);
           this.linkManager?.onWindowSpawned(state.instanceId, wrapper.element);
         } catch (e) {
-          console.error(`Error recreating view instance ${savedEntry.instanceId} (${savedEntry.viewId}):`, e);
+          console.error(
+            `Error recreating view instance ${savedEntry.instanceId} (${savedEntry.viewId}):`,
+            e,
+          );
         }
       });
-      console.log(`Restored ${this.activeViews.size} floating views.`);
       this.linkManager?.initialize(savedState.links ?? []);
     } else {
-      console.log("No saved floating view state found.");
       this.linkManager?.initialize([]);
     }
   }
@@ -407,7 +473,9 @@ export class FloatingViewManager {
   private handleConfigToggleRequest(instanceId: string): void {
     const wrapper = this.activeViews.get(instanceId);
     if (!wrapper) return;
-    wrapper.contentEl.dispatchEvent(new CustomEvent('config-visibility-toggle', { bubbles: false }));
+    wrapper.contentEl.dispatchEvent(
+      new CustomEvent("config-visibility-toggle", { bubbles: false }),
+    );
   }
 
   /**
@@ -435,15 +503,27 @@ export class FloatingViewManager {
 
     // Recompute zoom multiplier for the new orientation (zoom ratio stays the same,
     // but the per-orientation scale factor changes).
-    const zoomMultiplier = this._zoomMultiplierFor(newOverride, state.zoomActive ?? false);
+    const zoomMultiplier = this._zoomMultiplierFor(
+      newOverride,
+      state.zoomActive ?? false,
+    );
 
     try {
-      const overriddenSettings = this._buildOverriddenSettings(newOverride, zoomMultiplier);
-      const newViewInstance = descriptor.createView(state.viewState, overriddenSettings);
+      const overriddenSettings = this._buildOverriddenSettings(
+        newOverride,
+        zoomMultiplier,
+      );
+      const newViewInstance = descriptor.createView(
+        state.viewState,
+        overriddenSettings,
+      );
       wrapper.replaceViewContent(newViewInstance);
       this.linkManager?.refreshForInstance(instanceId);
     } catch (e) {
-      console.error(`Error recreating view with orientation override for ${instanceId}:`, e);
+      console.error(
+        `Error recreating view with orientation override for ${instanceId}:`,
+        e,
+      );
     }
 
     this.saveState();
@@ -467,19 +547,28 @@ export class FloatingViewManager {
       (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
     const effectiveOrientation: "vertical" | "horizontal" =
       state.orientationOverride ?? globalOrientation;
-    const zoomMultiplier = this._zoomMultiplierFor(effectiveOrientation, state.zoomActive);
+    const zoomMultiplier = this._zoomMultiplierFor(
+      effectiveOrientation,
+      state.zoomActive,
+    );
 
     try {
       const overriddenSettings = this._buildOverriddenSettings(
         state.orientationOverride,
-        zoomMultiplier
+        zoomMultiplier,
       );
-      const newViewInstance = descriptor.createView(state.viewState, overriddenSettings);
+      const newViewInstance = descriptor.createView(
+        state.viewState,
+        overriddenSettings,
+      );
       wrapper.replaceViewContent(newViewInstance);
       wrapper.updateZoomButtonState(state.zoomActive);
       this.linkManager?.refreshForInstance(instanceId);
     } catch (e) {
-      console.error(`Error recreating view with zoom override for ${instanceId}:`, e);
+      console.error(
+        `Error recreating view with zoom override for ${instanceId}:`,
+        e,
+      );
     }
 
     this.saveState();
@@ -491,7 +580,7 @@ export class FloatingViewManager {
    */
   private _zoomMultiplierFor(
     orientation: "vertical" | "horizontal",
-    zoomActive: boolean
+    zoomActive: boolean,
   ): number {
     if (!zoomActive) return 1.0;
     return orientation === "horizontal" ? 2.0 : 1.25;
@@ -503,13 +592,15 @@ export class FloatingViewManager {
    */
   private _buildOverriddenSettings(
     orientationOverride: "vertical" | "horizontal" | undefined,
-    zoomMultiplier: number
+    zoomMultiplier: number,
   ): AppSettings {
     return {
       ...this.appSettings,
       instrumentSettings: {
         ...this.appSettings.instrumentSettings,
-        ...(orientationOverride !== undefined ? { orientation: orientationOverride } : {}),
+        ...(orientationOverride !== undefined
+          ? { orientation: orientationOverride }
+          : {}),
         zoomMultiplier,
       },
     };
@@ -530,7 +621,8 @@ export class FloatingViewManager {
     const oldInstrumentSettings = this.appSettings.instrumentSettings;
     const newInstrumentSettings = newSettings.instrumentSettings;
     const guitarSettingsChanged =
-      JSON.stringify(oldInstrumentSettings) !== JSON.stringify(newInstrumentSettings);
+      JSON.stringify(oldInstrumentSettings) !==
+      JSON.stringify(newInstrumentSettings);
     const themeChanged = this.appSettings.theme !== newSettings.theme;
 
     this.appSettings = newSettings;
@@ -538,7 +630,10 @@ export class FloatingViewManager {
     if (!guitarSettingsChanged && !themeChanged) return;
 
     // Views that manage their own runtime state should not be re-created.
-    const SKIP_VIEW_IDS = new Set(["instrument_floating_metronome", "floating_timer"]);
+    const SKIP_VIEW_IDS = new Set([
+      "instrument_floating_metronome",
+      "floating_timer",
+    ]);
 
     this.activeViews.forEach((wrapper, instanceId) => {
       const state = wrapper["state"] as FloatingViewInstanceState;
@@ -554,23 +649,29 @@ export class FloatingViewManager {
         state.orientationOverride ?? globalOrientation;
       const zoomMultiplier = this._zoomMultiplierFor(
         effectiveOrientation,
-        state.zoomActive ?? false
+        state.zoomActive ?? false,
       );
 
       const settingsToUse = this._buildOverriddenSettings(
         state.orientationOverride,
-        zoomMultiplier
+        zoomMultiplier,
       );
 
       try {
-        const newViewInstance = descriptor.createView(state.viewState, settingsToUse);
+        const newViewInstance = descriptor.createView(
+          state.viewState,
+          settingsToUse,
+        );
         // Only auto-size the wrapper when instrument settings actually changed (canvas
         // dimensions may differ). For a pure theme change, keep the current wrapper size
         // so it doesn't grow 12px per theme switch.
         wrapper.replaceViewContent(newViewInstance, guitarSettingsChanged);
         this.linkManager?.refreshForInstance(instanceId);
       } catch (e) {
-        console.error(`Error updating view ${instanceId} after settings change:`, e);
+        console.error(
+          `Error updating view ${instanceId} after settings change:`,
+          e,
+        );
       }
     });
 
@@ -580,24 +681,33 @@ export class FloatingViewManager {
   public exportStateJson(): string {
     const payload = {
       ...this._buildStrippedPayload(),
-      ...(this.appSettings.customTunings ? { customTunings: this.appSettings.customTunings } : {}),
+      ...(this.appSettings.customTunings
+        ? { customTunings: this.appSettings.customTunings }
+        : {}),
     };
     return this.screenConfigManager.exportJson(payload);
   }
 
-  public importStateJson(json: string, onCustomTuningsImported?: (ct: AppSettings['customTunings']) => void): void {
+  public importStateJson(
+    json: string,
+    onCustomTuningsImported?: (ct: AppSettings["customTunings"]) => void,
+  ): void {
     const migrated = this.screenConfigManager.importJson(json);
     if (!migrated) {
-      console.error("importStateJson: could not parse or migrate the provided JSON.");
+      console.error(
+        "importStateJson: could not parse or migrate the provided JSON.",
+      );
       return;
     }
 
     if (migrated.customTunings && onCustomTuningsImported) {
-      onCustomTuningsImported(migrated.customTunings as AppSettings['customTunings']);
+      onCustomTuningsImported(
+        migrated.customTunings as AppSettings["customTunings"],
+      );
     }
 
     const instanceIds = Array.from(this.activeViews.keys());
-    instanceIds.forEach(id => {
+    instanceIds.forEach((id) => {
       const wrapper = this.activeViews.get(id);
       if (wrapper) wrapper.destroy();
     });
@@ -609,14 +719,15 @@ export class FloatingViewManager {
   }
 
   public loadNamedLayout(name: string): void {
-    const payload = this.screenConfigManager.loadNamed(name);
+    const { cols } = viewportGridSize(this.viewAreaElement);
+    const payload = this.screenConfigManager.loadNamed(name, cols);
     if (!payload) {
       console.error(`loadNamedLayout: no layout found for "${name}".`);
       return;
     }
 
     const instanceIds = Array.from(this.activeViews.keys());
-    instanceIds.forEach(id => {
+    instanceIds.forEach((id) => {
       const wrapper = this.activeViews.get(id);
       if (wrapper) wrapper.destroy();
     });
@@ -643,14 +754,17 @@ export class FloatingViewManager {
         row: pixelToGridRow(s.position.y),
       };
       const gridSize = s.size
-        ? { cols: pixelToGridCol(s.size.width), rows: pixelToGridRow(s.size.height) }
+        ? {
+            cols: pixelToGridCol(s.size.width),
+            rows: pixelToGridRow(s.size.height),
+          }
         : undefined;
       // Build the entry without pixel-only fields.
       const entry: FloatingViewInstanceState = {
         instanceId: s.instanceId,
         viewId: s.viewId,
         position: s.position, // runtime field; excluded from JSON by _stripRuntime
-        size: s.size,          // runtime field; excluded below
+        size: s.size, // runtime field; excluded below
         gridPosition,
         gridSize,
         zIndex: s.zIndex,
@@ -673,7 +787,7 @@ export class FloatingViewManager {
         Object.entries(saveState.openViews).map(([id, s]) => {
           const { position: _p, size: _sz, ...persisted } = s;
           return [id, persisted];
-        })
+        }),
       ),
     } as CurrentPayload;
   }

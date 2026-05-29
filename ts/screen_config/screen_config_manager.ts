@@ -12,7 +12,7 @@ import {
   VersionedScreenConfig,
 } from "./screen_config_types";
 import { migrate, MigrationError, FutureVersionError } from "./migrations";
-import { DEFAULT_CONFIGS, EMPTY_CONFIG } from "./default_configs";
+import { COMPACT_BREAKPOINT_COLS, DEFAULT_CONFIGS, EMPTY_CONFIG } from "./default_configs";
 
 /** localStorage key for all user-saved named presets (shared across contexts). */
 const NAMED_CONFIGS_KEY = "savedScreenConfigs";
@@ -121,16 +121,21 @@ export class ScreenConfigManager {
 
   /** Load a named preset. The "default:" prefix routes to the built-in
    *  DEFAULT_CONFIGS registry; all other names are looked up in localStorage.
-   *  Returns null if the name is not found or migration fails fatally. */
-  public loadNamed(name: string): CurrentPayload | null {
+   *  Returns null if the name is not found or migration fails fatally.
+   *  Pass viewportCols to enable automatic compact-variant selection for
+   *  built-in presets that define one (see COMPACT_BREAKPOINT_COLS). */
+  public loadNamed(name: string, viewportCols?: number): CurrentPayload | null {
     if (name.startsWith("default:")) {
       const key = name.slice("default:".length);
-      const config = DEFAULT_CONFIGS[key];
-      if (!config) {
+      const entry = DEFAULT_CONFIGS[key];
+      if (!entry) {
         console.warn(`[ScreenConfigManager] Unknown built-in preset "${name}".`);
         return null;
       }
-      return config;
+      if (entry.compact && viewportCols !== undefined && viewportCols < COMPACT_BREAKPOINT_COLS) {
+        return entry.compact;
+      }
+      return entry.default;
     }
     if (typeof localStorage === "undefined") return null;
     const store = this._loadNamedStore();

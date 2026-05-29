@@ -169,7 +169,6 @@ export class SidebarView {
                 const name = layoutSelect.value;
                 if (name) {
                     manager.loadNamedLayout(name);
-                    layoutSelect.value = '';
                 }
             });
         }
