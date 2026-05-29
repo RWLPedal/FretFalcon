@@ -26,6 +26,7 @@ import {
 import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard";
 import type { CustomTuning } from "../settings";
 import { FretboardColorScheme } from "./colors";
+import { ArpeggioFeature } from "./features/arpeggio_feature";
 import { CagedFeature } from "./features/caged_feature";
 import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
 import { AnyFeature } from "./features/any_feature";
@@ -136,6 +137,7 @@ export class InstrumentCategory implements Category {
       ],
       [AnyFeature.typeName, AnyFeature as unknown as FeatureTypeDescriptor],
       [NearbyTriadsFeature.typeName, NearbyTriadsFeature as unknown as FeatureTypeDescriptor],
+      [ArpeggioFeature.typeName, ArpeggioFeature as unknown as FeatureTypeDescriptor],
     ]);
   }
 

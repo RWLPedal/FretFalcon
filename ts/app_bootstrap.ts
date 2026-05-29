@@ -22,6 +22,7 @@ import { NearbyTriadsFeature } from "./fretboard/features/nearby_triads_feature"
 import { CagedFeature } from "./fretboard/features/caged_feature";
 import { MultiLayerFretboardFeature } from "./fretboard/features/multi_layer_fretboard_feature";
 import { ChordProgressionFeature } from "./fretboard/features/chord_progression_feature";
+import { ArpeggioFeature } from "./fretboard/features/arpeggio_feature";
 import { InstrumentIntervalSettings } from "./fretboard/fretboard_interval_settings";
 import { AudioController } from "./audio_controller";
 import { AppSettings } from "./settings";
@@ -248,6 +249,28 @@ export function registerBuiltins(): void {
     createView: (initialState?: any, appSettings?: AppSettings) => {
       const featureTypeName =
         initialState?.featureTypeName ?? NearbyTriadsFeature.typeName;
+      return new ConfigurableFeatureView(
+        { ...initialState, categoryName: "Instrument", featureTypeName },
+        appSettings!,
+      );
+    },
+  } as FretboardFloatingViewDescriptor);
+
+  registerFloatingView({
+    viewId: "instrument_arpeggio",
+    displayName: "Arpeggio",
+    featureTypeName: ArpeggioFeature.typeName,
+    refreshOnInstrumentChange: true,
+    defaultWidth: 420,
+    defaultHeight: 550,
+    showInMenu: false,
+    supportsConfigToggle: true,
+    isFretboardView: true,
+    supportsRotate: true,
+    supportsZoom: true,
+    createView: (initialState?: any, appSettings?: AppSettings) => {
+      const featureTypeName =
+        initialState?.featureTypeName ?? ArpeggioFeature.typeName;
       return new ConfigurableFeatureView(
         { ...initialState, categoryName: "Instrument", featureTypeName },
         appSettings!,

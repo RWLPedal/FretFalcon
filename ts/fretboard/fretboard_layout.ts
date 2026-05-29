@@ -212,8 +212,8 @@ export function planMultiFretboardGrid(
     `itemsPerQuality=${itemsPerQuality}`, `qualityCount=${qualityCount}`
   );
 
-  if (!availableWidth || !availableHeight) {
-    console.log('[planMultiFretboardGrid] early return — dimensions unavailable');
+  if (!availableWidth) {
+    console.log('[planMultiFretboardGrid] early return — width unavailable');
     return { config: baseConfig, cols: itemsPerQuality, rows: 1 };
   }
 
@@ -222,6 +222,36 @@ export function planMultiFretboardGrid(
   const rowMargin = getTriadRowMargin();
   const subtitleH = getFeatureSubtitleHeight();
 
+  if (!availableHeight) {
+    // Width is known but height isn't yet (container not laid out, e.g. first open from
+    // the nav panel).  Place all items in one row per quality and derive canvas height
+    // from the aspect ratio so canvases are naturally sized rather than falling back to
+    // the unconstrained FretboardConfig default (~700 px tall).
+    const c = itemsPerQuality;
+    const elemW = Math.max(1, (availableWidth - (c - 1) * gap) / c);
+    const elemH = Math.max(1, elemW / aspectRatio);
+    console.log(
+      '[planMultiFretboardGrid] width-only result',
+      `cols=${c}`, `elemW=${elemW.toFixed(1)}`, `elemH=${elemH.toFixed(1)}`
+    );
+    const config = new FretboardConfig(
+      baseConfig.tuning,
+      baseConfig.handedness,
+      baseConfig.orientation,
+      baseConfig.colorScheme,
+      baseConfig.labelDisplay,
+      baseConfig.markerDots,
+      baseConfig.sideNumbers,
+      baseConfig.stringWidths,
+      elemH,
+      elemW,
+      zoomMultiplier,
+      fretCount
+    );
+    return { config, cols: c, rows: 1 };
+  }
+
+  // Both width and height available — compute the optimal layout.
   // Vertical budget per quality block after reserving subtitle + row margin for each.
   const perQualityH =
     (availableHeight - qualityCount * (subtitleH + rowMargin)) / qualityCount;

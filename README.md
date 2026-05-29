@@ -10,7 +10,7 @@ If you want to see what all the fuss is about, you can try out PracTempo [here](
 
 ## Key Features
 
-- **Multiple instruments:** Supports guitar (6, 7, or 8 strings, ukulele, mandolins and mandolas).
+- **Multiple instruments:** Supports guitar (6, 7, or 8 strings), ukulele, mandolins and mandolas.
 - **Left-handed support:** Native support for left-handed chord diagrams and scales. No more mentally rotating shapes in your head.
 - **Scheduled Practice:** Define custom practice routines with timed intervals and completion notifications. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, and keyboard shortcuts.
 - **Reference Page:** Browse scales, chords, and other references outside of a practice session.

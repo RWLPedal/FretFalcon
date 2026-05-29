@@ -572,6 +572,35 @@ registerDriveTarget({
   },
 });
 
+// ─── ArpeggioFeature as target ────────────────────────────────────────────────
+
+registerDriveTarget({
+  featureTypeName: 'Arpeggio',
+  argName: 'Root Note',
+  label: 'Root note (from linked source)',
+  acceptedKinds: [SignalKind.Chord],
+  resolveValue(signal: DriveSignal): string | null {
+    if (signal.kind !== SignalKind.Chord) return null;
+    return signal.rootNote || null;
+  },
+});
+
+registerDriveTarget({
+  featureTypeName: 'Arpeggio',
+  argName: 'Quality',
+  label: 'Quality (from linked source)',
+  acceptedKinds: [SignalKind.Chord],
+  resolveValue(signal: DriveSignal): string | null {
+    if (signal.kind !== SignalKind.Chord || !signal.chordKey) return null;
+    const suffix = signal.chordKey.slice(signal.chordKey.indexOf('_') + 1);
+    const suffixMap: Record<string, string> = {
+      MAJ: 'Major', MIN: 'Minor', DOM7: 'Dom 7',
+      MAJ7: 'Maj 7', MIN7: 'Min 7', DIM: 'Dim', AUG: 'Aug',
+    };
+    return suffixMap[suffix] ?? null;
+  },
+});
+
 // ─── CircleOfFifthsView as target ─────────────────────────────────────────────
 // The view handles drive-signal directly; resolveValue is unused but required
 // so the view appears as a valid link target with the correct accepted kinds.
