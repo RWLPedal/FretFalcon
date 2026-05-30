@@ -260,6 +260,7 @@ export const DADGAD_TUNING: Tuning               = { name: "DADGAD",            
 export const OPEN_G_TUNING: Tuning               = { name: "Open G",              notes: [5, 10, 5, 10, 2, 5],       openStringMidi: [38, 43, 50, 55, 59, 62] }; // D-G-D-G-B-D
 export const BARITONE_B_STANDARD_TUNING: Tuning  = { name: "Baritone B Standard", notes: [2, 7, 0, 5, 9, 2],         openStringMidi: [35, 40, 45, 50, 54, 59] }; // B-E-A-D-F#-B
 export const BARITONE_A_STANDARD_TUNING: Tuning  = { name: "Baritone A Standard", notes: [0, 5, 10, 3, 7, 0],        openStringMidi: [33, 38, 43, 48, 52, 57] }; // A-D-G-C-E-A
+export const GUITALELE_ADGCEA_TUNING: Tuning     = { name: "Guitalele",           notes: [0, 5, 10, 3, 7, 0],        openStringMidi: [45, 50, 55, 60, 64, 69] }; // A-D-G-C-E-A
 
 // Bass tunings (4-string)
 export const BASS_EADG_TUNING: Tuning   = { name: "EADG",         notes: [7, 0, 5, 10],             openStringMidi: [28, 33, 38, 43] };  // E-A-D-G
@@ -308,7 +309,7 @@ export const INSTRUMENTS: Record<InstrumentName, Instrument> = {
     displayText: "Guitar (6-string)",
     stringCount: 6,
     defaultTuning: STANDARD_TUNING,
-    availableTunings: [STANDARD_TUNING, DROP_D_TUNING, DADGAD_TUNING, OPEN_G_TUNING, BARITONE_B_STANDARD_TUNING, BARITONE_A_STANDARD_TUNING],
+    availableTunings: [STANDARD_TUNING, DROP_D_TUNING, DADGAD_TUNING, OPEN_G_TUNING, BARITONE_B_STANDARD_TUNING, BARITONE_A_STANDARD_TUNING, GUITALELE_ADGCEA_TUNING],
   },
   [InstrumentName.Bass]: {
     name: InstrumentName.Bass,
