@@ -19,7 +19,6 @@ export function initializeDragAndDrop(
   containerEl.addEventListener("dragleave", handleDragLeave);
   containerEl.addEventListener("dragstart", handleDragStart);
   containerEl.addEventListener("dragend", handleDragEnd);
-  console.log("DnD Initialized with multi-drag capabilities.");
 }
 
 function handleDragStart(e: DragEvent): void {
@@ -37,14 +36,10 @@ function handleDragStart(e: DragEvent): void {
   if (isMultiDrag) {
     draggedElements = getSelectedElementsCallback();
     draggedElements.forEach((el) => el.classList.add("dragging-selected"));
-    console.log(
-      `Drag Start: Multi-drag initiated with ${draggedElements.length} elements.`
-    );
     e.dataTransfer.setData("application/x-schedule-multidrag", "true");
   } else {
     draggedElements = [target];
     target.classList.add("dragging");
-    console.log("Drag Start: Single element drag.");
   }
 
   e.dataTransfer.effectAllowed = "move";
@@ -67,7 +62,6 @@ function handleDragEnd(e: DragEvent): void {
   draggedElement = null;
   draggedElements = [];
   isMultiDrag = false;
-  console.log("Drag End.");
 }
 
 function handleDragOver(e: DragEvent): void {
@@ -86,11 +80,6 @@ function handleDrop(e: DragEvent): void {
   clearDragOverStyles(container);
   if (draggedElements.length === 0) return;
   const afterElement = getDragAfterElement(container, e.clientY);
-  console.log(
-    `Drop: Moving ${draggedElements.length} elements ${
-      afterElement ? "before target" : "to the end"
-    }.`
-  );
   draggedElements.forEach((el) => {
     el.classList.remove("dragging", "dragging-selected");
     el.style.opacity = "";

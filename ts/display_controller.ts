@@ -88,11 +88,6 @@ export class DisplayController implements IDisplayController {
     feature: Feature,
     handedness: "left" | "right" = "right"
   ): void {
-    console.log(
-      `[DisplayController.renderFeature] Attempting to render feature: ${
-        feature?.typeName || "UNKNOWN"
-      }`
-    );
     this.clearFeature();
 
     if (!feature) {
@@ -104,14 +99,8 @@ export class DisplayController implements IDisplayController {
 
     try {
       feature.render(this.diagramEl);
-      console.log(
-        `[DisplayController.renderFeature] Successfully called feature.render() for ${feature.typeName}`
-      );
 
       feature.views?.forEach((view) => {
-        console.log(
-          `[DisplayController.renderFeature]   Rendering view: ${view.constructor.name}`
-        );
         view.render(this.diagramEl);
       });
     } catch (error) {

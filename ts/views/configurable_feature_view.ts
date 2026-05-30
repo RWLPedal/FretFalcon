@@ -164,7 +164,6 @@ export class ConfigurableFeatureView extends BaseView {
         // Rescale canvases when the user manually resizes the floating wrapper.
         this.listen(container, 'wrapper-user-resized', (e: Event) => {
             const { width, height } = (e as CustomEvent<{ width: number; height: number }>).detail;
-            console.log('[ConfigurableFeatureView] wrapper-user-resized received', { width, height, featureType: this.featureTypeName });
             this._availableHeight = Math.max(50, height);
             this._availableWidth  = Math.max(50, width);
             if (this.configView) {
@@ -281,8 +280,7 @@ export class ConfigurableFeatureView extends BaseView {
     }
 
     private createAndRenderFeature(config: (string | null)[]) {
-        console.log('[CFV] createAndRenderFeature entry', { featureClass: !!this.featureClass, config });
-        if (!this.featureClass) { console.log('[CFV] EXIT: no featureClass'); return; }
+        if (!this.featureClass) { return; }
 
         // Substitute "driven" / "driven_next" sentinels with the last known driven values.
         // Also use buildDrivenConfig for user-triggered rebuilds when sentinels are
@@ -297,8 +295,6 @@ export class ConfigurableFeatureView extends BaseView {
         if (!this.isDrivenUpdate && hasDrivenSentinel && finalConfig.length === 0 && this._lastFinalConfig.length > 0) {
             finalConfig = [...this._lastFinalConfig];
         }
-        console.log('[CFV] finalConfig', finalConfig);
-
         // Dispatch a partial/full title for features that implement getTitle, even before
         // the feature can fully render (e.g. only root note selected, no quality yet).
         const titleFn = (this.featureClass as any).getTitle;
@@ -321,13 +317,10 @@ export class ConfigurableFeatureView extends BaseView {
             ? (this.featureClass.getConfigurationSchema() as any).args.filter((a: any) => a.required).length
             : 0;
 
-        console.log('[CFV] requiredArgs check', { finalConfigLen: finalConfig.length, requiredArgs });
         if (finalConfig.length < requiredArgs) {
-            console.log('[CFV] EXIT: not enough args'); return;
+            return;
         }
 
-        // Clean up previous feature
-        console.log('[CFV] destroying old feature, will recreate');
         this.feature?.destroy?.();
         this.featureContainer.innerHTML = '';
 
@@ -357,10 +350,7 @@ export class ConfigurableFeatureView extends BaseView {
                    (parseFloat(getComputedStyle(this.container).paddingRight) || 0))
                 : 10;
             const maxWidth = Math.max(50, this._availableWidth - paddingH);
-            console.log('[ConfigurableFeatureView] setPendingRenderConstraints', { maxWidth, _availableWidth: this._availableWidth, paddingH });
             setPendingRenderConstraints({ maxWidth });
-        } else {
-            console.log('[ConfigurableFeatureView] _availableWidth=0, NOT setting pending constraints');
         }
 
         try {

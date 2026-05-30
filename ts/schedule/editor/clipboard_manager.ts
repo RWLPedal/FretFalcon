@@ -35,7 +35,6 @@ export class ClipboardManager {
   /** Clears the internal clipboard data. */
   public clearClipboard(): void {
     this.clipboardData = [];
-    console.log("Internal clipboard cleared.");
     this.onClipboardChangeCallback(this.hasCopiedData());
   }
 
@@ -43,7 +42,6 @@ export class ClipboardManager {
   public copySelectedRows(): void {
     const selectedRows = this.selectionManager.getSelectedElementsInDomOrder();
     if (selectedRows.length === 0) {
-      console.log("Nothing selected to copy.");
       return;
     }
     // Use RowManager.getRowData which now includes categoryName string
@@ -51,21 +49,14 @@ export class ClipboardManager {
       .map((row) => this.rowManager.getRowData(row))
       .filter((data): data is ScheduleRowJSONData => data !== null);
 
-    console.log(
-      `Copied ${this.clipboardData.length} rows to internal clipboard:`,
-      JSON.stringify(this.clipboardData)
-    );
     this.onClipboardChangeCallback(this.hasCopiedData());
   }
 
   /** Pastes rows from the internal clipboard after the last selected element. */
   public pasteRows(): void {
     if (!this.hasCopiedData()) {
-      console.log("Clipboard is empty, nothing to paste.");
       return;
     }
-
-    console.log(`Pasting ${this.clipboardData.length} rows...`);
     const insertAfterElement =
       this.selectionManager.getLastSelectedElementInDomOrder();
     let lastPastedElement: HTMLElement | null = insertAfterElement;

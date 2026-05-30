@@ -61,9 +61,6 @@ export function buildIntervalRowElement(
   } else {
     const settingsFactory = instrumentCategory.getIntervalSettingsFactory();
     if (settingsFactory) {
-      console.log(
-        `Creating default interval settings using factory for category: ${categoryName}`
-      );
       settingsInstance = settingsFactory();
     } else {
       console.error(

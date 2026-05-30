@@ -1,8 +1,17 @@
 // ts/settings.ts
-import { PracticeSettings, DEFAULT_PRACTICE_SETTINGS } from "./practice_settings";
-import { ReferenceSettings, DEFAULT_REFERENCE_SETTINGS } from "./reference_settings";
+import {
+  PracticeSettings,
+  DEFAULT_PRACTICE_SETTINGS,
+} from "./practice_settings";
+import {
+  ReferenceSettings,
+  DEFAULT_REFERENCE_SETTINGS,
+} from "./reference_settings";
 import { Theme } from "./theme_manager";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
+import {
+  InstrumentSettings,
+  DEFAULT_INSTRUMENT_SETTINGS,
+} from "./fretboard/fretboard_settings";
 
 export type { InstrumentSettings };
 
@@ -33,28 +42,35 @@ export function loadSettings(): AppSettings {
     practice: { ...DEFAULT_PRACTICE_SETTINGS },
     reference: { ...DEFAULT_REFERENCE_SETTINGS },
     instrumentSettings: { ...DEFAULT_INSTRUMENT_SETTINGS },
-    showGrid: false,
+    showGrid: true,
   };
 
   try {
     const storedJson = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (storedJson) {
       const stored = JSON.parse(storedJson);
-      console.log("Successfully loaded settings from localStorage.");
       return {
         ...defaults,
-        ...(stored.theme     ? { theme: stored.theme }                                              : {}),
-        ...(stored.practice  ? { practice:  { ...defaults.practice,  ...stored.practice  } }        : {}),
-        ...(stored.reference ? { reference: { ...defaults.reference, ...stored.reference } }        : {}),
-        instrumentSettings:    { ...defaults.instrumentSettings, ...(stored.instrumentSettings ?? {}) },
+        ...(stored.theme ? { theme: stored.theme } : {}),
+        ...(stored.practice
+          ? { practice: { ...defaults.practice, ...stored.practice } }
+          : {}),
+        ...(stored.reference
+          ? { reference: { ...defaults.reference, ...stored.reference } }
+          : {}),
+        instrumentSettings: {
+          ...defaults.instrumentSettings,
+          ...(stored.instrumentSettings ?? {}),
+        },
         ...(stored.showGrid !== undefined ? { showGrid: stored.showGrid } : {}),
-        ...(stored.customTunings ? { customTunings: stored.customTunings } : {}),
+        ...(stored.customTunings
+          ? { customTunings: stored.customTunings }
+          : {}),
       };
     }
   } catch (e) {
     console.error("Failed to load settings from localStorage:", e);
   }
 
-  console.log("Using default settings.");
   return defaults;
 }

@@ -299,11 +299,6 @@ export class RowManager {
                 // **** END: Standard Single Argument Logic ****
               }
             });
-          } else {
-            // Handle cases where schema is just a string or feature has no args
-            console.log(
-              `Feature '${featureTypeName}' has no structured args or schema is a string.`
-            );
           }
         } else if (!featureTypeName) {
           // No feature selected, args list should be empty

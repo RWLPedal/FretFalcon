@@ -200,8 +200,6 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const zoom = guitarSettings.zoomMultiplier ?? 1.2;
     this._zoomMultiplier = zoom;
 
-    console.log('[NearbyTriads] constructor', { availW, maxCanvasHeight, ntMode, zoom });
-
     // Single-fretboard config (compact + driven modes).
     this.fretboardConfig = planSingleFretboard(this.fretboardConfig, availW, maxCanvasHeight, zoom, 15);
 
@@ -490,7 +488,6 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       let w = (container.clientWidth || container.offsetWidth)
         - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
       if (w <= 0) w = 420;
-      console.log('[NearbyTriads] lazy layout triggered, container.clientWidth:', container.clientWidth, 'effective w:', w);
       const h = (container.clientHeight || container.offsetHeight)
         - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
       const N = this.slots.length;

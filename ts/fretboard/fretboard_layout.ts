@@ -150,15 +150,6 @@ export function planChordDiagramGrid(
     };
   });
 
-  console.log(
-    '[planChordDiagramGrid]',
-    `chordCount=${chordCount}`,
-    `cols=${best.cols}`, `rows=${best.rows}`,
-    `elementW=${best.elementW.toFixed(1)}`, `elementH=${best.elementH.toFixed(1)}`,
-    `aspectRatio=${aspectRatio.toFixed(3)}`,
-    `avail=${availableWidth}×${availableHeight}`
-  );
-
   const config = new FretboardConfig(
     baseConfig.tuning,
     baseConfig.handedness,
@@ -206,14 +197,7 @@ export function planMultiFretboardGrid(
   zoomMultiplier: number,
   fretCount: number
 ): { config: FretboardConfig; cols: number; rows: number } {
-  console.log(
-    '[planMultiFretboardGrid] called',
-    `avail=${availableWidth}×${availableHeight}`,
-    `itemsPerQuality=${itemsPerQuality}`, `qualityCount=${qualityCount}`
-  );
-
   if (!availableWidth) {
-    console.log('[planMultiFretboardGrid] early return — width unavailable');
     return { config: baseConfig, cols: itemsPerQuality, rows: 1 };
   }
 
@@ -230,10 +214,6 @@ export function planMultiFretboardGrid(
     const c = itemsPerQuality;
     const elemW = Math.max(1, (availableWidth - (c - 1) * gap) / c);
     const elemH = Math.max(1, elemW / aspectRatio);
-    console.log(
-      '[planMultiFretboardGrid] width-only result',
-      `cols=${c}`, `elemW=${elemW.toFixed(1)}`, `elemH=${elemH.toFixed(1)}`
-    );
     const config = new FretboardConfig(
       baseConfig.tuning,
       baseConfig.handedness,
@@ -264,13 +244,6 @@ export function planMultiFretboardGrid(
       h: (perQualityH - (rowsPerQuality - 1) * gap) / rowsPerQuality,
     };
   });
-
-  console.log(
-    '[planMultiFretboardGrid] result',
-    `cols=${best.cols}`, `rowsPerQuality=${best.rows}`,
-    `elementW=${best.elementW.toFixed(1)}`, `elementH=${best.elementH.toFixed(1)}`,
-    `perQualityH=${perQualityH.toFixed(1)}`
-  );
 
   const config = new FretboardConfig(
     baseConfig.tuning,

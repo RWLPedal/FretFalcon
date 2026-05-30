@@ -130,7 +130,6 @@ function getInstrumentGlobalSettingsUISchema(
 
 export class InstrumentCategory implements Category {
   private readonly name = "Instrument";
-  private readonly displayName = "Instrument Tools";
   private readonly featureTypes: Map<string, FeatureTypeDescriptor>;
   private customTunings?: Partial<Record<string, CustomTuning[]>>;
 
@@ -171,7 +170,7 @@ export class InstrumentCategory implements Category {
   }
 
   getDisplayName(): string {
-    return this.displayName;
+    return this.name;
   }
 
   getFeatureTypes(): ReadonlyMap<string, FeatureTypeDescriptor> {

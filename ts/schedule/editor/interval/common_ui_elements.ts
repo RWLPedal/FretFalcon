@@ -260,7 +260,6 @@ export function populateEllipsisDropdownContent(
                     else if (nestedArg.type === ArgType.Boolean) { newValue = target.value === "true"; }
                     // Update the INSTANCE directly using the nestedArg name as key
                     (settingsInstance as any)[nestedArg.name] = newValue;
-                    console.log(`Updated setting '${nestedArg.name}' to:`, newValue, settingsInstance); // Log generic instance
                 });
             }
             controlDiv.appendChild(inputElement);

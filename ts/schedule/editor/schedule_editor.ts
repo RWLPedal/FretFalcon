@@ -128,9 +128,6 @@ export class ScheduleEditor {
         this.uiManager.configEntriesContainerEl.childElementCount === 0 &&
         this.defaultCategoryName
       ) {
-        console.log(
-          "Config view empty after load/sync, adding default interval row."
-        );
         this.rowManager.addEmptyIntervalRow(this.defaultCategoryName);
       }
     }
@@ -179,7 +176,6 @@ export class ScheduleEditor {
       if (isTextMode) this.syncConfigToJSONView();
       else this.syncJSONViewToConfig();
     }
-    console.log(`Editor mode set to ${mode}. Skip sync: ${skipSync}`);
   }
   private syncConfigToJSONView(): void {
     try {
@@ -220,15 +216,11 @@ export class ScheduleEditor {
     let initialName: string | undefined = undefined;
 
     if (lastRunJSON) {
-      console.log(
-        "Found last run schedule (JSON) in localStorage. Attempting to parse..."
-      );
       try {
         const parsedDoc = parseScheduleJSON(lastRunJSON);
         initialName = parsedDoc.name;
         initialItems = parsedDoc.items;
         initialJSON = lastRunJSON;
-        console.log("Successfully parsed last run schedule.");
       } catch (e) {
         console.warn(
           "Could not parse last run schedule JSON, removing from storage.",
@@ -239,7 +231,6 @@ export class ScheduleEditor {
     }
 
     if (!initialItems) {
-      console.log("Loading default schedule from first registered category...");
       if (typeof instrumentCategory.getDefaultIntervals === "function") {
         initialItems = instrumentCategory.getDefaultIntervals();
       }
@@ -379,7 +370,6 @@ export class ScheduleEditor {
   public newSchedule(): void {
     if (!confirm("Clear the current schedule and start a new one?")) return;
 
-    console.log("Starting new schedule...");
     this._clearConfigEntries();
     this.uiManager.textEl.value = "";
     this.scheduleName = DEFAULT_SCHEDULE_NAME;
@@ -450,7 +440,6 @@ export class ScheduleEditor {
 
   /** Sets the editor content from a JSON string (uses updated parser) */
   public setScheduleJSON(jsonString: string, skipSync: boolean = false): void {
-    console.log("Setting schedule JSON programmatically.");
     try {
       const parsedDoc = parseScheduleJSON(jsonString);
       this.scheduleName = parsedDoc.name || DEFAULT_SCHEDULE_NAME;
@@ -471,7 +460,6 @@ export class ScheduleEditor {
         this.rowManager.updateAllRowIndentation();
         this.selectionManager.clearSelection();
       }
-      console.log("Schedule JSON set and potentially synced to editor view.");
     } catch (error: any) {
       console.error("Failed to set schedule JSON:", error);
       this.errorDisplay.showMessage(

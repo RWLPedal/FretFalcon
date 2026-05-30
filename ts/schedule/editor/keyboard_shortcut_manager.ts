@@ -47,16 +47,13 @@ export class KeyboardShortcutManager {
     if (isCtrlPressed && e.key.toLowerCase() === "c") {
       e.preventDefault();
       this.clipboardManager.copySelectedRows();
-      console.log("Keyboard shortcut: Copied selected rows");
     } else if (isCtrlPressed && e.key.toLowerCase() === "v") {
       e.preventDefault();
       this.clipboardManager.pasteRows();
-      console.log("Keyboard shortcut: Pasted rows");
     } else if (e.key === "Delete" || e.key === "Backspace") {
       // Prevent Backspace from navigating back in browser
       e.preventDefault();
       this.rowManager.deleteSelectedRows();
-      console.log("Keyboard shortcut: Deleted selected rows");
     }
     // Add other shortcuts here (e.g., Ctrl+X for cut, Ctrl+D for duplicate)
   }

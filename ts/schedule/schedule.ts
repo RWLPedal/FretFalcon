@@ -104,7 +104,6 @@ export class Schedule {
 
 
   setDisplayTask(interval: Interval): void {
-    console.log("Setting display for interval:", interval);
     const suffix = interval.isIntroActive() ? " (Warmup)" : "";
     const title = this.name ? `${this.name}: ${interval.task}${suffix}` : interval.task + suffix;
     this.display.setTask(title, interval.color);
@@ -150,15 +149,12 @@ export class Schedule {
   start(): void {
     const interval = this.getCurrentInterval();
     if (!interval || this.isFinished()) {
-      console.log("Schedule start: No interval or schedule finished.");
       return;
     }
     if (interval.isTimerRunning()) {
-      console.log("Schedule start: Timer already running.");
       return; // Avoid double start
     }
 
-    console.log("Schedule start: Starting interval", this.currentIntervalIndex);
     this.display.setPause(); // Set button to PAUSE state
     this.display.setStatus(Status.Play);
     interval.start(); // This now also starts feature/views
@@ -168,11 +164,9 @@ export class Schedule {
   prepare(): void {
     const interval = this.getCurrentInterval();
     if (!interval) {
-      console.log("Schedule prepare: No intervals.");
       this.setDisplayFinished(); // Or some initial state
       return;
     }
-    console.log("Schedule prepare: Setting up display for interval", this.currentIntervalIndex);
     this.display.setTime(interval.getCurrentTimeRemaining());
     this.display.setTimerDuration(interval.getTotalDuration());
     this.setDisplayTask(interval); // Renders feature/views via DisplayController
@@ -199,10 +193,8 @@ export class Schedule {
   pause(): void {
     const interval = this.getCurrentInterval();
     if (!interval || this.isFinished() || !interval.isTimerRunning()) {
-      console.log("Schedule pause: No interval, finished, or not running.");
       return;
     }
-    console.log("Schedule pause: Pausing interval", this.currentIntervalIndex);
     this.display.setStart(); // Set button to START state
     this.display.setStatus(Status.Pause);
     interval.pause();
@@ -210,7 +202,6 @@ export class Schedule {
 
   // Skip the current interval
   skip(): void {
-    console.log("Attempting to skip interval", this.currentIntervalIndex);
     if (this.isFinished()) {
         console.warn("Cannot skip: Schedule is already finished.");
         return;
@@ -236,7 +227,6 @@ export class Schedule {
 
     // Check if the schedule finished after skipping
     if (this.isFinished()) {
-        console.log("Schedule finished after skipping.");
         this.setDisplayFinished();
         // Update accumulated time here? Or leave as is?
         // For simplicity, skip doesn't add the remaining time to accumulated.
@@ -245,7 +235,6 @@ export class Schedule {
     } else {
         // Prepare and start the next interval
         const nextInterval = this.getCurrentInterval();
-        console.log("Skipped to interval", this.currentIntervalIndex);
         this.setDisplayTask(nextInterval); // Set display for the new interval
         this.updateUpcoming();
 
@@ -321,30 +310,22 @@ export class Interval {
 
   start(): void {
     if (this.timer.isRunning()) return; // Prevent double start
-    console.log(`Interval "${this.task}" starting timer...`);
     this.timer.countdown();
-    // Start feature and its views
-    console.log(`   Starting feature and views for "${this.task}"...`);
     this.feature?.prepare?.(); // Prepare feature before starting
     this.feature?.start?.();
   }
 
   pause(): void {
     if (!this.timer.isRunning()) return; // Can't pause if not running
-    console.log(`Interval "${this.task}" pausing timer...`);
     this.timer.pause();
-    // Stop feature and its views
-    console.log(`   Stopping feature and views for "${this.task}"...`);
     this.feature?.stop?.();
   }
 
   stopFeatureAndViews(): void {
-    console.log(`Interval "${this.task}" explicitly stopping feature/views.`);
     this.timer.pause(); // Ensure timer is paused when stopping features
     this.feature?.stop?.();
   }
   destroyFeatureAndViews(): void {
-    console.log(`Interval "${this.task}" explicitly destroying feature/views.`);
     this.feature?.destroy?.();
   }
 }
@@ -409,10 +390,8 @@ class IntervalTimer {
 
     // Start the first tick
     if (this.introTimeRemaining > 0 || this.timeRemaining > 0) {
-      console.log("IntervalTimer: Starting countdown...");
       this.countdownTimerId = window.setTimeout(tick, 1000); // Initial start with timeout
     } else {
-      console.log("IntervalTimer: Zero duration, calling finished immediately.");
       this.finishedCallback?.(); // Call immediately if zero duration
     }
   }
@@ -421,7 +400,6 @@ class IntervalTimer {
     if (this.countdownTimerId !== null) {
       window.clearTimeout(this.countdownTimerId);
       this.countdownTimerId = null;
-      console.log("IntervalTimer: Paused.");
     }
   }
 }

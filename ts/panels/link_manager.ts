@@ -46,18 +46,13 @@ export class LinkManager {
 
     // Listen for backing-track-tick (real-time per-measure chord signal)
     viewAreaEl.addEventListener('backing-track-tick', (e: Event) => {
-      console.log('[LM] backing-track-tick received');
       const instanceId = this.resolveSourceInstanceId(e);
-      console.log('[LM] resolved sourceInstanceId:', instanceId);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
-      console.log('[LM] viewId:', viewId);
       if (!viewId) return;
       const descriptor = getDriveSourceDescriptor(viewId);
-      console.log('[LM] descriptor:', descriptor);
       if (!descriptor) return;
       const signals = descriptor.extractSignals((e as CustomEvent).detail);
-      console.log('[LM] signals:', signals, 'links:', this.links);
       this.routeSignals(instanceId, signals);
     });
 

@@ -48,7 +48,6 @@ export class ScheduleBuilder {
     settings: AppSettings,
     maxCanvasHeight: number
   ): Schedule | null {
-    console.log("[ScheduleBuilder] Starting buildSchedule...");
     this.errorDisplay.removeMessage(); // Clear previous errors
     const schedule = new Schedule(displayController, audioController);
     schedule.name = this.scheduleName;
@@ -82,13 +81,6 @@ export class ScheduleBuilder {
         const intervalData = rowData as IntervalDataJSON;
         const categoryName = intervalData.categoryName; // Get category name string
 
-        console.log(
-          `[ScheduleBuilder] Processing interval ${
-            index + 1
-          }: Cat='${categoryName}', Type='${
-            intervalData.featureTypeName || "None"
-          }', Task='${intervalData.task}', Duration='${intervalData.duration}'`
-        );
         let durationSeconds = 0;
         let feature: Feature | null = null;
         let intervalSettings: IntervalSettings | null = null;
@@ -122,10 +114,6 @@ export class ScheduleBuilder {
                 `Unknown feature type: "${intervalData.featureTypeName}" in category "${categoryName}"`
               );
             }
-            console.log(
-              `[ScheduleBuilder] Found descriptor for '${descriptor.typeName}'. Attempting createFeature...`
-            );
-
             // --- Call createFeature with parsed intervalSettings and categoryName ---
             if (intervalSettings) {
               feature = descriptor.createFeature(
@@ -136,21 +124,12 @@ export class ScheduleBuilder {
                 maxCanvasHeight,
                 categoryName // Pass category name string
               );
-              console.log(
-                `[ScheduleBuilder] Successfully created feature instance for '${descriptor.typeName}'.`
-              );
             } else {
               // This case should be less likely now due to fallback in step 2
               throw new Error(
                 `Could not create feature "${descriptor.typeName}" due to missing interval settings.`
               );
             }
-          } else {
-            console.log(
-              `[ScheduleBuilder] No feature specified for interval ${
-                index + 1
-              }.`
-            );
           }
 
           // 4. Create Interval and add to Schedule
@@ -164,9 +143,6 @@ export class ScheduleBuilder {
             categoryName
           );
           schedule.addInterval(interval);
-          console.log(
-            `[ScheduleBuilder] Added interval ${index + 1} to schedule.`
-          );
         } catch (error: any) {
           const errorMessage = `[ScheduleBuilder] Error processing interval ${
             index + 1
@@ -179,13 +155,6 @@ export class ScheduleBuilder {
           this.errorDisplay.showMessage(errorMessage);
           hasErrors = true; // Set flag to stop processing
         }
-      } else if (rowData.rowType === "group") {
-        // Groups are currently ignored during schedule building
-        console.log(
-          `[ScheduleBuilder] Skipping group row ${index + 1}: '${
-            (rowData as GroupDataJSON).name
-          }'`
-        );
       }
     });
 
@@ -205,10 +174,6 @@ export class ScheduleBuilder {
         "warning"
       );
       // Return the empty schedule or null? Returning schedule for now.
-    } else {
-      console.log(
-        `[ScheduleBuilder] Schedule built successfully with ${schedule.intervals.length} intervals.`
-      );
     }
     return schedule;
   }

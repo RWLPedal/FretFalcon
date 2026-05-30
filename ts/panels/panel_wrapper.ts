@@ -24,19 +24,11 @@ let dragOffsetX = 0;
 let dragOffsetY = 0;
 let draggedElement: HTMLElement | null = null;
 
-// Global capture-phase listener: logs what element actually receives mousedown.
-// Remove after diagnosing the drag issue.
-document.addEventListener('mousedown', (e) => {
-  const el = e.target as HTMLElement;
-  console.log('[Drag:global] mousedown target', { tag: el.tagName, id: el.id, classes: el.className, x: e.clientX, y: e.clientY });
-}, true /* capture */);
-
 function startDrag(e: MouseEvent, element: HTMLElement) {
   draggedElement = element;
   const rect = element.getBoundingClientRect();
   dragOffsetX = e.clientX - rect.left;
   dragOffsetY = e.clientY - rect.top;
-  console.log('[Drag] startDrag', { rect: { left: rect.left, top: rect.top, w: rect.width, h: rect.height }, offsetX: dragOffsetX, offsetY: dragOffsetY });
   document.addEventListener("mousemove", doDrag);
   document.addEventListener("mouseup", stopDrag);
   element.style.cursor = "grabbing";
@@ -47,7 +39,6 @@ function doDrag(e: MouseEvent) {
   if (!draggedElement) return;
   let newX = e.clientX - dragOffsetX;
   let newY = e.clientY - dragOffsetY;
-  console.log('[Drag] doDrag raw', { newX, newY });
 
   const parent = (draggedElement.offsetParent as HTMLElement) || document.body;
   const parentRect = parent.getBoundingClientRect();
@@ -55,7 +46,6 @@ function doDrag(e: MouseEvent) {
 
   const clampedX = Math.max(0, Math.min(newX, parentRect.width - elemRect.width));
   const clampedY = Math.max(0, Math.min(newY, parentRect.height - elemRect.height));
-  console.log('[Drag] doDrag clamp', { parentW: parentRect.width, parentH: parentRect.height, parentTop: parentRect.top, parentLeft: parentRect.left, elemW: elemRect.width, elemH: elemRect.height, clampedX, clampedY });
   newX = snapToGrid(clampedX);
   newY = snapToGrid(clampedY);
 
@@ -169,8 +159,6 @@ export class FloatingViewWrapper {
     titleBar.classList.add("floating-view-titlebar");
     titleBar.style.cursor = "grab";
     titleBar.addEventListener("mousedown", (e) => {
-      const hit = document.elementFromPoint(e.clientX, e.clientY);
-      console.log('[Drag] titlebar mousedown', { instanceId: state.instanceId, x: e.clientX, y: e.clientY, topElement: hit?.tagName, topClass: (hit as HTMLElement)?.className });
       startDrag(e, this.element);
     });
 
@@ -363,13 +351,10 @@ export class FloatingViewWrapper {
           const titleBarH = titleBarEl?.offsetHeight ?? 30;
           const evtW = this.contentElement.clientWidth;
           const evtH = this.element.clientHeight - titleBarH;
-          console.log('[PanelWrapper] dispatching wrapper-user-resized', { w: evtW, h: evtH, wasProgrammatic, isFirst });
           this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
             bubbles: false,
             detail: { width: evtW, height: evtH },
           }));
-        } else {
-          console.log('[PanelWrapper] skipping wrapper-user-resized', { wasProgrammatic, isFirst, w, h });
         }
       }, 150);
     });

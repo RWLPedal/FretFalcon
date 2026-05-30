@@ -42,9 +42,6 @@ export function registerCategory(categoryInstance: Category): void {
     featureTypeRegistry.set(fullKey, featureType);
   });
 
-  console.log(
-    `Registered Category: ${categoryName} with ${featureTypes?.size ?? 0} feature types.`
-  );
 }
 
 /**

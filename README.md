@@ -6,7 +6,7 @@ Users define a practice schedule, and PracTempo tracks it with a timer and notif
 
 ## Try it out
 
-If you want to see what all the fuss is about, you can try out PracTempo [here](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/index.html). Most powerful on desktop, but works on mobile too.
+If you want to see what all the fuss is about, you can try out PracTempo [here](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html). Most powerful on desktop, but works on mobile too.
 
 ## Key Features
 
@@ -70,12 +70,19 @@ PracTempo is developed using TypeScript and bundled with Webpack.
    This compiles TypeScript (entry point: `reference_main.ts`) and serves the application locally.
 5. The server will be running at `localhost:4000`.
 
+###
+
+To build for single-file deployment:
+
+```bash
+node build.js
+```
+
 ## Dependencies
 
 - **Node.js / npm** — runtime and package management
 - **TypeScript** — language and type checking
 - **Webpack / tsify** — bundling
-- **Bulma** — CSS framework for layout and panels
 
 ---
 

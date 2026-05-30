@@ -16,9 +16,6 @@ export function registerFloatingView(descriptor: FloatingViewDescriptor): void {
     );
   }
   registry.set(descriptor.viewId, descriptor);
-  console.log(
-    `Registered Floating View: <span class="math-inline">\{descriptor\.displayName\} \(</span>{descriptor.viewId})`
-  );
 }
 
 export function getFloatingViewDescriptor(
