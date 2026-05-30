@@ -268,6 +268,9 @@ export const BASS_BEAD_TUNING: Tuning   = { name: "BEAD (Drop)",  notes: [2, 7, 
 // Ukulele tunings (4-string)
 export const UKULELE_GCEA_TUNING: Tuning = { name: "GCEA",        notes: [10, 3, 7, 0],             openStringMidi: [67, 60, 64, 69] };  // G-C-E-A (high G)
 
+// Charango tunings (5-string)
+export const CHARANGO_GCEAE_TUNING: Tuning = { name: "GCEAE",     notes: [10, 3, 7, 0, 7],          openStringMidi: [67, 72, 64, 69, 76] };  // G-C-E-A-E (re-entrant)
+
 // Bouzouki tunings (4-course)
 export const BOUZOUKI_GDAD_TUNING: Tuning = { name: "GDAD",       notes: [10, 5, 0, 5],             openStringMidi: [43, 50, 57, 62] };  // G-D-A-D
 export const BOUZOUKI_GDGD_TUNING: Tuning = { name: "GDGD",       notes: [10, 5, 10, 5],            openStringMidi: [43, 50, 55, 62] };  // G-D-G-D
@@ -286,6 +289,7 @@ export enum InstrumentName {
   TenorGuitar    = "Tenor Guitar",
   TenorBanjo     = "Tenor Banjo",
   IrishBouzouki  = "Irish Bouzouki",
+  Charango       = "Charango",
   SevenStrGuitar = "7-String Guitar",
   EightStrGuitar = "8-String Guitar",
 }
@@ -354,6 +358,13 @@ export const INSTRUMENTS: Record<InstrumentName, Instrument> = {
     stringCount: 4,
     defaultTuning: BOUZOUKI_GDAD_TUNING,
     availableTunings: [BOUZOUKI_GDAD_TUNING, BOUZOUKI_GDGD_TUNING],
+  },
+  [InstrumentName.Charango]: {
+    name: InstrumentName.Charango,
+    displayText: "Charango (5-string)",
+    stringCount: 5,
+    defaultTuning: CHARANGO_GCEAE_TUNING,
+    availableTunings: [CHARANGO_GCEAE_TUNING],
   },
   [InstrumentName.SevenStrGuitar]: {
     name: InstrumentName.SevenStrGuitar,

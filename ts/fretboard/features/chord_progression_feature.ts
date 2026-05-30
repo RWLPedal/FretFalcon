@@ -6,7 +6,7 @@ import {
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, degreesArg } from './chord_degree_base';
 import { BaseView } from '../../base_view';
-import { Chord, getChordLibraryForInstrument } from '../chords';
+import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../chords';
 import { AppSettings } from '../../settings';
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';
 import { AudioController } from '../../audio_controller';
@@ -23,7 +23,7 @@ import { DiatonicMode, DIATONIC_MODE_LABELS } from '../music_types';
 import { scales } from '../scales';
 import { getChordInKey } from '../progressions';
 import { ChordDiagramView } from '../views/chord_diagram_view';
-import { getEasiestMoveableShape } from '../moveable_shapes';
+import { getEasiestMoveableShape, MOVEABLE_CHORD_LIBRARIES } from '../moveable_shapes';
 import { planChordDiagramGrid } from '../fretboard_layout';
 import { getRomansForMode, resolveAbsoluteChordKey } from '../chord_key_resolver';
 
@@ -146,10 +146,15 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     super.destroy?.();
   }
 
-  static getConfigurationSchema(): ConfigurationSchema {
+  static getConfigurationSchema(settings?: AppSettings): ConfigurationSchema {
+    const instrument = (settings?.instrumentSettings?.instrument as InstrumentName) ?? InstrumentName.Guitar;
+    const hasMoveable = instrument in MOVEABLE_CHORD_LIBRARIES;
+    const roots = hasMoveable
+      ? undefined
+      : getAvailableRoots(getChordLibraryForInstrument(instrument));
     return {
       description: `Config: ${this.typeName},RootNote,Mode[,Deg1,...][,InstrumentSettings]`,
-      args: [rootNoteArg(), modeArg(), degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      args: [rootNoteArg(roots), modeArg(), degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 

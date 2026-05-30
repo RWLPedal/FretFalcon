@@ -16,7 +16,11 @@ import { TriadFeature } from "./features/triad_feature";
 import { MetronomeFeature } from "./features/metronome_feature";
 
 // Import Guitar Settings related items
-import { DEFAULT_INSTRUMENT_SETTINGS, FretboardLabelDisplay, InstrumentSettings } from "./fretboard_settings";
+import {
+  DEFAULT_INSTRUMENT_SETTINGS,
+  FretboardLabelDisplay,
+  InstrumentSettings,
+} from "./fretboard_settings";
 import {
   InstrumentIntervalSettings,
   InstrumentIntervalSettingsJSON,
@@ -32,29 +36,38 @@ import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_fea
 import { AnyFeature } from "./features/any_feature";
 import { NearbyTriadsFeature } from "./features/nearby_triads_feature";
 
-export const COLOR_SCHEME_OPTIONS: { value: FretboardColorScheme; text: string }[] = [
+export const COLOR_SCHEME_OPTIONS: {
+  value: FretboardColorScheme;
+  text: string;
+}[] = [
   { value: "interval", text: "Interval Colors (Default)" },
   { value: "note", text: "Note Name Colors" },
   { value: "simplified", text: "Simplified (Root Only)" },
 ];
 
-export const LABEL_DISPLAY_OPTIONS: { value: FretboardLabelDisplay; text: string }[] = [
+export const LABEL_DISPLAY_OPTIONS: {
+  value: FretboardLabelDisplay;
+  text: string;
+}[] = [
   { value: "interval", text: "Interval (R, 3, 5…)" },
   { value: "note", text: "Note Name (C, F#…)" },
   { value: "none", text: "None (dots only)" },
 ];
 
 function getInstrumentGlobalSettingsUISchema(
-  customTunings?: Partial<Record<string, CustomTuning[]>>
+  customTunings?: Partial<Record<string, CustomTuning[]>>,
 ): SettingsUISchemaItem[] {
-  const instrumentOptions = Object.values(INSTRUMENTS).map(i => ({ value: i.name as string, text: i.displayText }));
+  const instrumentOptions = Object.values(INSTRUMENTS).map((i) => ({
+    value: i.name as string,
+    text: i.displayText,
+  }));
   const handednessOptions = [
     { value: "right", text: "Right-Handed" },
     { value: "left", text: "Left-Handed" },
   ];
   const orientationOptions = [
-    { value: "vertical", text: "Vertical (Default)" },
-    { value: "horizontal", text: "Horizontal" },
+    { value: "horizontal", text: "Horizontal (Default)" },
+    { value: "vertical", text: "Vertical" },
   ];
   const colorSchemeOptions = COLOR_SCHEME_OPTIONS;
   const labelDisplayOptions = LABEL_DISPLAY_OPTIONS;
@@ -65,7 +78,8 @@ function getInstrumentGlobalSettingsUISchema(
       type: "select",
       options: instrumentOptions,
       triggersRebuild: true,
-      description: "Select the instrument type. Changes the available tunings and features.",
+      description:
+        "Select the instrument type. Changes the available tunings and features.",
     },
     {
       key: "handedness",
@@ -86,11 +100,16 @@ function getInstrumentGlobalSettingsUISchema(
       label: "Tuning",
       type: "select",
       getDynamicOptions: (draft) => {
-        const instrument = (draft.instrument as InstrumentName) ?? InstrumentName.Guitar;
-        return getAvailableTunings(instrument, customTunings).map(t => ({ value: t.name, text: t.name }));
+        const instrument =
+          (draft.instrument as InstrumentName) ?? InstrumentName.Guitar;
+        return getAvailableTunings(instrument, customTunings).map((t) => ({
+          value: t.name,
+          text: t.name,
+        }));
       },
       triggersRebuild: true,
-      description: "Select the tuning (options depend on the selected instrument).",
+      description:
+        "Select the tuning (options depend on the selected instrument).",
     },
     {
       key: "colorScheme",
@@ -136,8 +155,14 @@ export class InstrumentCategory implements Category {
         MultiLayerFretboardFeature as unknown as FeatureTypeDescriptor,
       ],
       [AnyFeature.typeName, AnyFeature as unknown as FeatureTypeDescriptor],
-      [NearbyTriadsFeature.typeName, NearbyTriadsFeature as unknown as FeatureTypeDescriptor],
-      [ArpeggioFeature.typeName, ArpeggioFeature as unknown as FeatureTypeDescriptor],
+      [
+        NearbyTriadsFeature.typeName,
+        NearbyTriadsFeature as unknown as FeatureTypeDescriptor,
+      ],
+      [
+        ArpeggioFeature.typeName,
+        ArpeggioFeature as unknown as FeatureTypeDescriptor,
+      ],
     ]);
   }
 
@@ -164,16 +189,18 @@ export class InstrumentCategory implements Category {
   }
 
   createIntervalSettingsFromJSON(
-    json: IntervalSettingsJSON | undefined | null
+    json: IntervalSettingsJSON | undefined | null,
   ): InstrumentIntervalSettings {
     // Use the static method on the specific class
     // Cast the input json; the registry ensures this method is called for the correct category.
     return InstrumentIntervalSettings.fromJSON(
-      json as InstrumentIntervalSettingsJSON | undefined | null
+      json as InstrumentIntervalSettingsJSON | undefined | null,
     );
   }
 
-  updateCustomTunings(customTunings: Partial<Record<string, CustomTuning[]>> | undefined): void {
+  updateCustomTunings(
+    customTunings: Partial<Record<string, CustomTuning[]>> | undefined,
+  ): void {
     this.customTunings = customTunings;
   }
 

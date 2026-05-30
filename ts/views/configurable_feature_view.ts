@@ -77,7 +77,7 @@ export class ConfigurableFeatureView extends BaseView {
         }
         this.featureClass = FeatureClass;
 
-        const schema = this.featureClass.getConfigurationSchema();
+        const schema = this.featureClass.getConfigurationSchema(this.appSettings);
 
         this.configView = new ConfigView(schema, this.configContainer, (config) => {
             this.createAndRenderFeature(config);
@@ -387,8 +387,11 @@ export class ConfigurableFeatureView extends BaseView {
                 }));
             }
 
-            // Auto-size the wrapper the first time a feature renders (tile was empty before).
-            if (isFirstRender) {
+            // Auto-size the wrapper the first time a feature renders, but only when the user
+            // hasn't already set a panel size via drag. If _availableWidth > 0 the user
+            // explicitly sized the panel before the first config was complete — respect that
+            // size instead of overriding it with the feature's unconstrained natural size.
+            if (isFirstRender && this._availableWidth === 0) {
                 this.featureContainer.dispatchEvent(new CustomEvent('feature-auto-size', { bubbles: true }));
             }
 

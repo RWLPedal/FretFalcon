@@ -13,7 +13,10 @@ import {
   ChordType,
   CHORD_TYPE_SORT_ORDER,
   CHORD_LIBRARIES,
+  ALL_CHORD_ROOTS,
   getChordLibraryForInstrument,
+  getAvailableRoots,
+  getAvailableChordTypes,
   findChordByRootAndType,
 } from "../chords";
 import { AudioController } from "../../audio_controller";
@@ -107,9 +110,13 @@ export class ChordFeature extends InstrumentFeature {
   // --- Static Methods ---
   static readonly ALL_TYPES_VALUE = "All";
 
-  static getConfigurationSchema(): ConfigurationSchema {
-    const availableRoots = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab'];
-    const chordTypes = [ChordFeature.ALL_TYPES_VALUE, ...CHORD_TYPE_SORT_ORDER.map(t => t as string)];
+  static getConfigurationSchema(settings?: AppSettings): ConfigurationSchema {
+    const instrument = (settings?.instrumentSettings?.instrument as InstrumentName) ?? InstrumentName.Guitar;
+    const hasMoveable = instrument in MOVEABLE_CHORD_LIBRARIES;
+    const library = getChordLibraryForInstrument(instrument);
+    const availableRoots: string[] = hasMoveable ? [...ALL_CHORD_ROOTS] : getAvailableRoots(library);
+    const filteredTypes = hasMoveable ? CHORD_TYPE_SORT_ORDER : getAvailableChordTypes(library);
+    const chordTypes = [ChordFeature.ALL_TYPES_VALUE, ...filteredTypes.map(t => t as string)];
 
     const specificArgs: ConfigurationSchemaArg[] = [
       {

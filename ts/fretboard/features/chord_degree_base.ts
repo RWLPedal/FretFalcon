@@ -28,12 +28,12 @@ export function buildChordDegreeLabelsByMode(): Record<string, { basic: LabelVal
 
 export const CHORD_DEGREE_LABELS_BY_MODE = buildChordDegreeLabelsByMode();
 
-export function rootNoteArg(): ConfigurationSchemaArg {
+export function rootNoteArg(availableRoots?: string[]): ConfigurationSchemaArg {
   return {
     name: 'Root Note',
     type: ArgType.Enum,
     required: true,
-    enum: NOTE_NAMES_FROM_A as string[],
+    enum: availableRoots ?? (NOTE_NAMES_FROM_A as string[]),
     description: 'Root note of the progression.',
   };
 }

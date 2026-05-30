@@ -537,6 +537,14 @@ export class FloatingViewWrapper {
     // Persist so the size survives save/restore
     this.state.size = { width: newWidth, height: newHeight };
     this.onStateChangeCallback(this.state);
+
+    // Notify content of the new available space so ConfigurableFeatureView updates
+    // _availableWidth/Height and rebuilds the feature to correctly fill the auto-sized
+    // panel. Mirrors the "saved size restored" path in the constructor (lines 305-316).
+    this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
+      bubbles: false,
+      detail: { width: newWidth, height: newHeight - titleBarH },
+    }));
   }
 
   /** Reflects the current zoom state on the zoom button (active = zoomed). */
