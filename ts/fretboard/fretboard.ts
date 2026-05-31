@@ -104,13 +104,24 @@ export interface BarreData {
   color?: string;
 }
 
+function _avgHexColors(c1: string, c2: string): string {
+  const p = (c: string) => {
+    const h = c.startsWith('#') ? c.slice(1) : '';
+    if (h.length !== 6) return null;
+    return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  };
+  const a = p(c1), b = p(c2);
+  if (!a || !b) return c1;
+  return '#' + [0,1,2].map(i => Math.round((a[i]+b[i])/2).toString(16).padStart(2,'0')).join('');
+}
+
 // --- String width presets by string count ---
 const STRING_WIDTH_PRESETS: Record<number, number[]> = {
-  4: [3, 2, 2, 1],
-  5: [3, 2, 2, 1, 1],
-  6: [3, 3, 2, 2, 1, 1],
-  7: [3, 3, 2, 2, 1, 1, 1],
-  8: [3, 3, 2, 2, 1, 1, 1, 1],
+  4: [4, 2, 2, 1],
+  5: [4, 3, 2, 1, 1],
+  6: [4, 3, 2, 2, 1, 1],
+  7: [4, 3, 2, 2, 1, 1, 1],
+  8: [4, 3, 2, 2, 1, 1, 1, 1],
 };
 
 function defaultStringWidths(stringCount: number): number[] {
@@ -121,7 +132,7 @@ function defaultStringWidths(stringCount: number): number[] {
 export class FretboardConfig {
   public readonly baseStringSpacingPx = 32;
   public readonly baseFretLengthPx = 39;
-  public readonly baseMarkerDotRadiusPx = 7;
+  public readonly baseMarkerDotRadiusPx = 5;
   public readonly baseNoteRadiusPx = NOTE_RADIUS_PX;
 
   public readonly stringSpacingPx: number;
@@ -141,8 +152,8 @@ export class FretboardConfig {
       0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 0, 2, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0,
     ],
     public readonly sideNumbers = [
-      "", "", "", "III", "", "V", "", "VII", "", "IX", "", "",
-      "XII", "", "", "XV", "", "XVII", "", "XIX", "", "XXI", "",
+      "", "", "", "3", "", "5", "", "7", "", "9", "", "",
+      "12", "", "", "15", "", "17", "", "19", "", "21", "",
     ],
     stringWidths?: number[],
     maxCanvasHeight?: number,
@@ -625,7 +636,38 @@ export class Fretboard {
     const isHorizontal = config.orientation === "horizontal";
     const stringCount = config.stringCount;
 
-    ctx.fillStyle = "#aaa";
+    const themeStyle = getComputedStyle(document.documentElement);
+    const stringColor = themeStyle.getPropertyValue('--text-muted').trim() || '#999';
+    const fretColor = themeStyle.getPropertyValue('--border').trim() || '#ccc';
+    const gridColor = _avgHexColors(stringColor, fretColor);
+
+    // Soften strings/frets: lighter on light themes, darker on dark themes
+    const bgRaw = themeStyle.getPropertyValue('--bg').trim();
+    const bgHex = bgRaw.startsWith('#') ? bgRaw.slice(1) : '';
+    const isLightBg = bgHex.length === 6
+      ? (parseInt(bgHex.slice(0, 2), 16) * 0.299 + parseInt(bgHex.slice(2, 4), 16) * 0.587 + parseInt(bgHex.slice(4, 6), 16) * 0.114) / 255 > 0.5
+      : false;
+
+    // Single two-tone tint: lower strings (high-vx side), bounded by board edges, no overflow
+    const halfSpacing = config.stringSpacingPx / 2;
+    const tintBoardLeft  = this.absoluteLeftPx;
+    const tintBoardRight = tintBoardLeft + (stringCount - 1) * config.stringSpacingPx;
+    const tintMidVx = tintBoardLeft + Math.floor(stringCount / 2) * config.stringSpacingPx;
+    {
+      const tintTL = this._toCanvas(tintMidVx - halfSpacing, this.nutLineY);
+      const tintBR = this._toCanvas(tintBoardRight, this.nutLineY + this.fretCount * config.fretLengthPx);
+      ctx.save();
+      ctx.fillStyle = isLightBg ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.06)';
+      ctx.fillRect(
+        Math.min(tintTL.x, tintBR.x), Math.min(tintTL.y, tintBR.y),
+        Math.abs(tintBR.x - tintTL.x), Math.abs(tintBR.y - tintTL.y)
+      );
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.globalAlpha = isLightBg ? 0.8 : 0.9;
+
+    ctx.fillStyle = gridColor;
 
     // --- Strings ---
     for (let visualIndex = 0; visualIndex < stringCount; visualIndex++) {
@@ -637,14 +679,14 @@ export class Fretboard {
       ctx.lineWidth = (stringWidths[visualIndex] ?? 1) * scaleFactor;
       ctx.moveTo(p1.x, p1.y);
       ctx.lineTo(p2.x, p2.y);
-      ctx.strokeStyle = "#aaa";
+      ctx.strokeStyle = gridColor;
       ctx.stroke();
     }
 
     // --- Frets & Markers ---
-    ctx.font = `400 ${textHeight}px 'DM Mono', monospace`;
-    ctx.strokeStyle = "#555";
-    ctx.fillStyle = "#aaa";
+    ctx.font = `400 ${textHeight}px 'Spline Sans Mono', monospace`;
+    ctx.strokeStyle = gridColor;
+    ctx.fillStyle = gridColor;
 
     const totalBoardSpan = (stringCount - 1) * config.stringSpacingPx;
     const leftEdge_v = this.absoluteLeftPx;
@@ -729,6 +771,7 @@ export class Fretboard {
 
     ctx.textAlign = "left";
     ctx.lineWidth = 1; // Reset default line width
+    ctx.restore(); // pair for the light-theme globalAlpha save
   }
 
 
@@ -849,7 +892,7 @@ export class Fretboard {
     const scaleFactor = this.config.scaleFactor;
     const noteRadius = this.config.noteRadiusPx;
     const padding = 2 * scaleFactor;
-    const noteAltColor = getComputedStyle(document.documentElement).getPropertyValue('--note-alt').trim() || '#777';
+    const noteAltColor = getComputedStyle(document.documentElement).getPropertyValue('--note-second').trim() || '#777';
 
     this.barresToRender.forEach((barre) => {
       const displayFret = barre.fret - this.startFret;
@@ -1127,6 +1170,20 @@ export class Fretboard {
             );
           }
 
+          // Faint outer ring for root notes
+          if (noteData.intervalLabel === "R" && !isDonut) {
+            const ringFill = Array.isArray(finalFillColor) ? finalFillColor[0] : finalFillColor;
+            ctx.save();
+            ctx.globalAlpha = (noteData.opacity ?? 1) * 0.35;
+            ctx.beginPath();
+            ctx.arc(x, y, effectiveRadius + 2.5 * scaleFactor, 0, 2 * Math.PI);
+            ctx.strokeStyle = ringFill;
+            ctx.lineWidth = 1.5 * scaleFactor;
+            ctx.setLineDash([]);
+            ctx.stroke();
+            ctx.restore();
+          }
+
           // Determine Content Hierarchy
           let contentToDraw: string | null = null;
           let drawIconType: NoteIcon | undefined =
@@ -1305,7 +1362,7 @@ export class Fretboard {
   ): void {
     ctx.save();
     ctx.fillStyle = color;
-    ctx.font = `400 ${fontSize}px 'DM Mono', monospace`;
+    ctx.font = `600 ${fontSize}px 'Hanken Grotesk', sans-serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     const textYOffset = fontSize * 0.05;

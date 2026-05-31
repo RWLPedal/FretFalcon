@@ -28,7 +28,6 @@ import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_se
 const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC"; // Lighter grey for contrast
 const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B"; // Muted red for out-of-scale highlights
 const IN_SCALE_HIGHLIGHT_STROKE = "#333333"; // Dark grey/black for in-scale highlights
-const DEFAULT_STROKE = "rgba(50, 50, 50, 0.7)"; // Subtle stroke for default interval view
 
 /** Displays scale diagrams on the fretboard using FretboardView. */
 export class ScaleFeature extends InstrumentFeature {
@@ -202,7 +201,7 @@ export class ScaleFeature extends InstrumentFeature {
 
         let shouldRender = false;
         let fillColor: string | undefined = undefined;
-        let strokeColor: string | string[] = DEFAULT_STROKE;
+        let strokeColor: string | string[] = "transparent";
         let strokeWidth: number = 1;
         let colorSchemeOverride: "note" | "interval" | undefined = undefined;
         let displayLabel: string = noteName;
@@ -223,7 +222,6 @@ export class ScaleFeature extends InstrumentFeature {
           } else if (isNoteInScale) {
             shouldRender = true;
             fillColor = NON_HIGHLIGHTED_SCALE_COLOR; // fixed grey for non-highlighted scale notes
-            strokeColor = DEFAULT_STROKE;
             strokeWidth = 1;
             displayLabel = ""; // always hide label for non-highlighted background notes
           }
@@ -233,11 +231,7 @@ export class ScaleFeature extends InstrumentFeature {
             shouldRender = true;
             const intervalLabel = getIntervalLabel(noteRelativeToKey);
             // colorSchemeOverride left undefined: global colorScheme flows through
-            strokeColor =
-              intervalLabel === "R"
-                ? IN_SCALE_HIGHLIGHT_STROKE
-                : DEFAULT_STROKE;
-            strokeWidth = intervalLabel === "R" ? 2.0 : 1;
+            // Root ring is handled by the fretboard renderer; no explicit stroke needed
             displayLabel = labelDisplay === "note" ? noteName
               : labelDisplay === "none" ? ""
               : intervalLabel;

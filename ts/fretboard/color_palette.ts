@@ -1,11 +1,14 @@
 /**
  * Theme-aware chromatic palette for the guitar fretboard.
  *
- * Four semantic tiers, driven by CSS custom properties from theme-tokens.css:
- *   --note-root    Root note
- *   --note-third   Strong consonances (major 3rd, perfect 5th)
- *   --note-fifth   Mild consonances (minor 3rd, minor 6th, minor 7th)
- *   --note-alt     Extensions and tensions (2, 4, 6, b2, d5, 7)
+ * Seven semantic tiers, driven by CSS custom properties from theme-tokens.css:
+ *   --note-root     Root note
+ *   --note-second   2nd / b2
+ *   --note-third    3rd / b3
+ *   --note-fourth   4th / tritone
+ *   --note-fifth    Perfect 5th
+ *   --note-sixth    6th / b6
+ *   --note-seventh  7th / b7
  *
  * Colors are resolved at call time via getComputedStyle so they automatically
  * reflect the active theme without any manual invalidation.
@@ -16,18 +19,18 @@
 // ---------------------------------------------------------------------------
 
 const PALETTE_TIER: readonly string[] = [
-  "--note-root",   //  0  A  / R
-  "--note-alt",    //  1  A# / b2
-  "--note-alt",    //  2  B  / 2
-  "--note-fifth",  //  3  C  / b3
-  "--note-third",  //  4  C# / 3
-  "--note-alt",    //  5  D  / 4
-  "--note-alt",    //  6  D# / d5
-  "--note-third",  //  7  E  / 5
-  "--note-fifth",  //  8  F  / b6
-  "--note-alt",    //  9  F# / 6
-  "--note-fifth",  // 10  G  / b7
-  "--note-alt",    // 11  G# / 7
+  "--note-root",    //  0  A  / R
+  "--note-second",  //  1  A# / b2
+  "--note-second",  //  2  B  / 2
+  "--note-third",   //  3  C  / b3
+  "--note-third",   //  4  C# / 3
+  "--note-fourth",  //  5  D  / 4
+  "--note-fourth",  //  6  D# / d5   (tritone)
+  "--note-fifth",   //  7  E  / 5
+  "--note-sixth",   //  8  F  / b6
+  "--note-sixth",   //  9  F# / 6
+  "--note-seventh", // 10  G  / b7
+  "--note-seventh", // 11  G# / 7
 ] as const;
 
 /** Retained for enumeration; values are now CSS custom property names, not hex. */
@@ -123,11 +126,11 @@ export const INTERVAL_PALETTE_INDEX: Readonly<Record<string, number>> = {
 /** Returns the theme colour for a note name, or PALETTE_DEFAULT. */
 export function getNoteColor(noteName: string): string {
   const idx = NOTE_PALETTE_INDEX[noteName];
-  return resolveThemeColor(idx !== undefined ? PALETTE_TIER[idx] : "--note-alt");
+  return resolveThemeColor(idx !== undefined ? PALETTE_TIER[idx] : "--note-second");
 }
 
 /** Returns the theme colour for an interval label, or PALETTE_DEFAULT. */
 export function getIntervalColor(intervalLabel: string): string {
   const idx = INTERVAL_PALETTE_INDEX[intervalLabel];
-  return resolveThemeColor(idx !== undefined ? PALETTE_TIER[idx] : "--note-alt");
+  return resolveThemeColor(idx !== undefined ? PALETTE_TIER[idx] : "--note-second");
 }

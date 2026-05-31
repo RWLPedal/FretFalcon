@@ -3,7 +3,7 @@ import { NoteName } from "./music_types";
 
 // Feature configuration constants
 export const START_PX = 35;
-export const NOTE_RADIUS_PX = 15; // Base radius
+export const NOTE_RADIUS_PX = 13.5; // Base radius
 export const OPEN_NOTE_RADIUS_FACTOR = 0.7; // Make open note circles smaller
 export const CANVAS_WIDTH_PX = 400;
 export const CANVAS_HEIGHT_PX = 500;
