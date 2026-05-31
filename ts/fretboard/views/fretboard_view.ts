@@ -57,8 +57,8 @@ export class FretboardView extends BaseView {
     if (!this.canvas) {
       this.createCanvas(container);
     } else {
-      if (!this.canvas.parentNode) {
-        // Re-attach if detached
+      if (!this.canvas.isConnected) {
+        // Re-attach if detached or in a detached subtree
         container.appendChild(this.canvas);
       }
     }

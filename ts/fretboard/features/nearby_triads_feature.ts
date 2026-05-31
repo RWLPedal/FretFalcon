@@ -39,10 +39,28 @@ import {
   parseChordKey,
 } from '../nearby_triads_algo';
 import { SignalKind, SignalState, ChordSignal, KeySignal } from '../../panels/link_types';
+import { TriadsWizard, WizardChord, WizardInProgressState } from './nearby_triads_wizard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type NearbyTriadsMode = 'reference' | 'compact';
+
+/** Compact key identifying a voicing by its physical position (frets + string group). */
+function wizardVoicingKey(v: TriadVoicing): string {
+  return `${v.frets.join(',')}|${v.stringGroup.join(',')}`;
+}
+
+/** Persisted to the container DOM element so wizard state survives feature recreation. */
+interface NTWizardPersisted {
+  chords: Array<{
+    chordKey:   string;
+    display:    string;
+    roman:      string | null;
+    voicingKey: string;  // identifies the selected voicing by physical position
+    seen:       boolean; // if true, user explicitly chose this voicing; preserve across re-ranks
+  }>;
+  dismissed: boolean;
+}
 
 const PALETTE_VARS = [
   'var(--dm-palette-1)',
@@ -175,6 +193,15 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private runtimeDrivenActive: boolean = false;
   private linkStatusHandler: ((e: Event) => void) | null = null;
   private linkStatusContainer: HTMLElement | null = null;
+
+  // Wizard state (compact mode only)
+  private wizard: TriadsWizard | null = null;
+  private wizardActive: boolean = false;
+  private wizardDismissed: boolean = false;
+  private wizardApplied: WizardChord[] | null = null;
+  private _renderContainer: HTMLElement | null = null;
+  private _wizardStateRestored: boolean = false;
+  private _wizardInProgressState: WizardInProgressState | null = null;
 
   constructor(
     config: ReadonlyArray<string>,
@@ -340,6 +367,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   private updateCompactFretboard(): void {
     if (!this.compactFretboardView) return;
+    if (!this.wizardApplied) { this.compactFretboardView.clearMarkings(); return; }
     const fb = this.compactFretboardView.getFretboard();
 
     // Resolve CSS palette vars → actual rgb() strings for canvas use.
@@ -351,9 +379,12 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     type PosEntry = { noteName: string; intervalLabel: string; colors: string[] };
     const noteMap = new Map<string, PosEntry>();
 
-    for (let si = 0; si < this.slots.length; si++) {
-      const slot    = this.slots[si];
-      const voicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
+    const source: Array<{ rankedVoicings: RankedVoicing[]; selectedIndex: number }> =
+      this.wizardApplied ?? this.slots;
+
+    for (let si = 0; si < source.length; si++) {
+      const item    = source[si];
+      const voicing = item.rankedVoicings[item.selectedIndex]?.voicing;
       if (!voicing) continue;
       const color = resolvedColors[si % resolvedColors.length];
 
@@ -392,9 +423,9 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const lines: LineData[] = [];
     const r = fb.config.noteRadiusPx;
 
-    for (let si = 0; si < this.slots.length; si++) {
-      const slot    = this.slots[si];
-      const voicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
+    for (let si = 0; si < source.length; si++) {
+      const item    = source[si];
+      const voicing = item.rankedVoicings[item.selectedIndex]?.voicing;
       if (!voicing) continue;
       const color = resolvedColors[si % resolvedColors.length];
 
@@ -466,6 +497,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       this.linkStatusContainer = null;
     }
     this.runtimeDrivenActive = false;
+    this._renderContainer = container;
+    this._tryRestoreWizardState();
 
     clearAllChildren(container);
     const header = addHeader(container, this.buildHeaderText());
@@ -508,7 +541,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
             this.updateSlotHighlights();
           }
         } else {
-          this.renderCompact(contentArea);
+          this.renderCompact(contentArea, renderContent);
         }
       }
     };
@@ -659,39 +692,106 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   // ─── Compact mode ────────────────────────────────────────────────────────────
 
-  private renderCompact(container: HTMLElement): void {
+  private renderCompact(container: HTMLElement, reRender: () => void): void {
     if (!this.compactFretboardView) return;
 
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:8px;';
     container.appendChild(wrap);
 
-    const canvasWrap = document.createElement('div');
-    wrap.appendChild(canvasWrap);
-    this.compactFretboardView.render(canvasWrap);
-    this.updateCompactFretboard();
+    // Auto-open wizard on first load (no previous result and not explicitly dismissed)
+    if (!this.wizardActive && this.wizardApplied === null && !this.wizardDismissed) {
+      this.wizardActive = true;
+    }
 
-    wrap.appendChild(this.buildCompactLegend());
+    if (this.wizardActive) {
+      // Lazy-create wizard; initialize from previously applied chords only (no slot defaults)
+      if (!this.wizard) {
+        this.wizard = new TriadsWizard(this.fretboardConfig, this.maxFretSpan, this.targetFret);
+        if (this._wizardInProgressState) {
+          this.wizard.restoreState(this._wizardInProgressState);
+          this._wizardInProgressState = null;
+        } else {
+          const initialChords = (this.wizardApplied ?? [])
+            .map(c => ({ chordKey: c.chordKey, display: c.display, roman: c.roman }));
+          this.wizard.setInitialChords(initialChords);
+        }
+      }
+      this.wizard.renderInto(wrap,
+        (chords) => {
+          this.wizardApplied = chords;
+          this.wizardActive  = false;
+          this._persistWizardState(false);
+          reRender();
+        },
+        () => {
+          this.wizardActive    = false;
+          this.wizardDismissed = true;
+          this._persistWizardState(true);
+          reRender();
+        }
+      );
+      return;
+    }
+
+    // Standard compact view
+    const editBtn = document.createElement('button');
+    editBtn.className = 'button is-small';
+    editBtn.style.cssText = 'align-self:flex-end;margin-right:4px;font-size:0.75rem;';
+    editBtn.textContent = '✎ Edit chords & voicings';
+    editBtn.addEventListener('click', () => {
+      this.wizardActive = true;
+      // Reset wizard so it re-initializes from current applied state
+      this.wizard?.destroy();
+      this.wizard = null;
+      reRender();
+    });
+    wrap.appendChild(editBtn);
+
+    if (this.wizardApplied) {
+      const canvasWrap = document.createElement('div');
+      wrap.appendChild(canvasWrap);
+      this.compactFretboardView.render(canvasWrap);
+      this.updateCompactFretboard();
+      wrap.appendChild(this.buildCompactLegend());
+    } else {
+      const placeholder = document.createElement('div');
+      placeholder.style.cssText =
+        'font-size:0.82rem;color:var(--clr-text-subtle,#888);text-align:center;padding:16px 0;';
+      placeholder.textContent = 'No chords selected yet. Click Edit to set up your progression.';
+      wrap.appendChild(placeholder);
+    }
   }
 
   private buildCompactLegend(): HTMLElement {
     const legend = document.createElement('div');
     legend.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;font-size:0.8rem;';
 
-    this.slots.forEach((slot, i) => {
-      const item = document.createElement('span');
-      item.style.cssText = 'display:flex;align-items:center;gap:4px;';
-
-      const dot = document.createElement('span');
-      dot.style.cssText = `display:inline-block;width:12px;height:12px;border-radius:50%;background:${PALETTE_VARS[i % PALETTE_VARS.length]};flex-shrink:0;`;
-
-      const text = document.createElement('span');
-      text.textContent = `${slot.roman} = ${slot.chordName}`;
-
-      item.appendChild(dot);
-      item.appendChild(text);
-      legend.appendChild(item);
-    });
+    if (this.wizardApplied) {
+      this.wizardApplied.forEach((c, i) => {
+        const item = document.createElement('span');
+        item.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        const dot = document.createElement('span');
+        dot.style.cssText = `display:inline-block;width:12px;height:12px;border-radius:50%;background:${PALETTE_VARS[i % PALETTE_VARS.length]};flex-shrink:0;`;
+        const text = document.createElement('span');
+        text.textContent = c.roman ? `${c.roman} = ${c.display}` : c.display;
+        item.appendChild(dot);
+        item.appendChild(text);
+        legend.appendChild(item);
+      });
+    } else {
+      this.slots.forEach((slot, i) => {
+        const item = document.createElement('span');
+        item.style.cssText = 'display:flex;align-items:center;gap:4px;';
+        const dot = document.createElement('span');
+        dot.style.cssText = `display:inline-block;width:12px;height:12px;border-radius:50%;background:${PALETTE_VARS[i % PALETTE_VARS.length]};flex-shrink:0;`;
+        const text = document.createElement('span');
+        text.textContent = `${slot.roman} = ${slot.chordName}`;
+        item.appendChild(dot);
+        item.appendChild(text);
+        legend.appendChild(item);
+      });
+    }
     return legend;
   }
 
@@ -798,6 +898,89 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     }
   }
 
+  // ─── Wizard persistence (survives feature recreation on config change) ───────
+
+  /** Save applied wizard state to the outer container element. */
+  private _persistWizardState(dismissed: boolean): void {
+    if (!this._renderContainer) return;
+    const chords = (this.wizardApplied ?? []).map(c => {
+      const v = c.rankedVoicings[c.selectedIndex]?.voicing;
+      return {
+        chordKey:   c.chordKey,
+        display:    c.display,
+        roman:      c.roman,
+        voicingKey: v ? wizardVoicingKey(v) : '',
+        seen:       c.seen,
+      };
+    });
+    (this._renderContainer as any).__ntWizard = { chords, dismissed } satisfies NTWizardPersisted;
+  }
+
+  /** On first render after recreation, restore wizard state from the container. */
+  private _tryRestoreWizardState(): void {
+    if (this.ntMode !== 'compact') return;
+    if (this._wizardStateRestored) return;
+    this._wizardStateRestored = true;
+
+    const ip = (this._renderContainer as any)?.__ntWizardInProgress as WizardInProgressState | undefined;
+    if (ip) {
+      delete (this._renderContainer as any).__ntWizardInProgress;
+      this.wizardActive = true;
+      this._wizardInProgressState = ip;
+      // Also restore applied state so cancel returns to the compact view correctly.
+      const p2 = (this._renderContainer as any)?.__ntWizard as NTWizardPersisted | undefined;
+      if (p2) {
+        this.wizardDismissed = p2.dismissed;
+        if (p2.chords.length > 0) {
+          this.wizardApplied = this._restoreWizardApplied(p2.chords);
+        }
+      }
+      return;
+    }
+
+    const p = (this._renderContainer as any)?.__ntWizard as NTWizardPersisted | undefined;
+    if (!p) return;
+    this.wizardDismissed = p.dismissed;
+    if (p.chords.length > 0) {
+      this.wizardApplied = this._restoreWizardApplied(p.chords);
+    }
+  }
+
+  /**
+   * Re-enumerate and re-rank voicings with the current targetFret.
+   * Seen chords: find the same physical voicing in the new ranking (by frets+strings key).
+   * Unseen chords: use index 0 — cheapest under the new cost function.
+   */
+  private _restoreWizardApplied(
+    saved: NTWizardPersisted['chords']
+  ): WizardChord[] {
+    const result: WizardChord[] = [];
+    let prevVoicing: TriadVoicing | null = null;
+
+    for (const p of saved) {
+      const raw    = enumerateVoicings(p.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
+      const ranked = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret);
+
+      let selectedIndex = 0;
+      if (p.seen && p.voicingKey) {
+        const idx = ranked.findIndex(r => wizardVoicingKey(r.voicing) === p.voicingKey);
+        if (idx !== -1) selectedIndex = idx;
+      }
+
+      result.push({
+        chordKey:       p.chordKey,
+        display:        p.display,
+        roman:          p.roman,
+        rankedVoicings: ranked,
+        selectedIndex,
+        seen:           p.seen,
+      });
+      prevVoicing = ranked[selectedIndex]?.voicing ?? null;
+    }
+
+    return result;
+  }
+
   // ─── Lifecycle ────────────────────────────────────────────────────────────────
 
   destroy?(): void {
@@ -817,6 +1000,11 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this.compactFretboardView = null;
     this.drivenFretboardView?.destroy();
     this.drivenFretboardView  = null;
+    if (this.wizardActive && this.wizard && this._renderContainer) {
+      (this._renderContainer as any).__ntWizardInProgress = this.wizard.exportState();
+    }
+    this.wizard?.destroy();
+    this.wizard = null;
 
     super.destroy?.();
   }
