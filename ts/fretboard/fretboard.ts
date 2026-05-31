@@ -29,6 +29,7 @@ export interface NoteRenderData {
   radiusOverride?: number; // Scaled override for radius (e.g., open notes)
   opacity?: number; // 0–1, defaults to 1
   dashed?: boolean; // draw stroke as a dashed circle
+  donut?: boolean;  // render as multi-color wedge sectors with hollow center (requires array fillColor)
   // Coords are calculated internally, not passed in
 }
 
@@ -40,6 +41,7 @@ export interface LineData {
   color: string;
   strokeWidth?: number; // Unscaled width
   dashed?: boolean;
+  opacity?: number;  // 0-1, applied as globalAlpha during render
 }
 
 /** An outlined rounded rectangle drawn around a region of the fretboard. */
@@ -1011,8 +1013,9 @@ export class Fretboard {
 
   private _renderLines(ctx: CanvasRenderingContext2D): void {
     const scaleFactor = this.config.scaleFactor;
-    ctx.save();
     this.linesToRender.forEach((line) => {
+      ctx.save();
+      if (line.opacity !== undefined) ctx.globalAlpha = line.opacity;
       ctx.strokeStyle = line.color || "grey";
       ctx.lineWidth = (line.strokeWidth || 2) * scaleFactor;
       if (line.dashed) {
@@ -1025,8 +1028,8 @@ export class Fretboard {
       ctx.moveTo(line.startX, line.startY);
       ctx.lineTo(line.endX, line.endY);
       ctx.stroke();
+      ctx.restore();
     });
-    ctx.restore();
   }
 
   private _renderNotes(ctx: CanvasRenderingContext2D): void {
@@ -1099,17 +1102,30 @@ export class Fretboard {
             }
           }
 
-          // Draw Circle(s)
+          // Donut: hollow center — override fgColor with theme text color
+          const isDonut = noteData.donut === true
+            && Array.isArray(finalFillColor)
+            && (finalFillColor as string[]).length >= 2;
+          if (isDonut) {
+            fgColor = getComputedStyle(document.documentElement)
+              .getPropertyValue('--text-primary').trim() || '#333';
+          }
+
+          // Draw circle or donut
           if (noteData.dashed) ctx.setLineDash([4, 3]);
-          this._drawCircle(
-            ctx,
-            x,
-            y,
-            effectiveRadius,
-            finalFillColor,
-            finalStrokeColor,
-            effectiveStrokeWidth
-          );
+          if (isDonut) {
+            this._drawDonut(ctx, x, y, effectiveRadius, finalFillColor as string[]);
+          } else {
+            this._drawCircle(
+              ctx,
+              x,
+              y,
+              effectiveRadius,
+              finalFillColor,
+              finalStrokeColor,
+              effectiveStrokeWidth
+            );
+          }
 
           // Determine Content Hierarchy
           let contentToDraw: string | null = null;
@@ -1131,9 +1147,10 @@ export class Fretboard {
             this._drawIcon(ctx, drawIconType, x, y, effectiveRadius, fgColor);
           } else if (contentToDraw) {
             const fontSizeRatio = 0.9;
+            const innerR = isDonut ? effectiveRadius * 0.40 : effectiveRadius;
             const effectiveFontSize = Math.min(
               baseFontSize,
-              effectiveRadius * 2 * fontSizeRatio * 0.7
+              innerR * 2 * fontSizeRatio * 0.7
             );
             this._drawText(ctx, contentToDraw, x, y, effectiveFontSize, fgColor);
           }
@@ -1215,6 +1232,47 @@ export class Fretboard {
         ctx.stroke();
       }
     }
+    ctx.restore();
+  }
+
+  private _drawDonut(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radius: number,
+    colors: string[]
+  ): void {
+    const n = colors.length;
+    if (n === 0) return;
+    const innerRadius = radius * 0.40;
+    const sliceAngle = (2 * Math.PI) / n;
+    const startAngle = -Math.PI / 2;  // 12 o'clock
+    const halfGap = Math.min(0.04, sliceAngle * 0.06);  // ~2.3° or 6% of slice
+
+    ctx.save();
+    ctx.setLineDash([]);
+
+    for (let i = 0; i < n; i++) {
+      const a0 = startAngle + i * sliceAngle + halfGap;
+      const a1 = startAngle + (i + 1) * sliceAngle - halfGap;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, a0, a1);
+      ctx.arc(x, y, innerRadius, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = colors[i];
+      ctx.fill();
+    }
+
+    // Subtle outlines for outer edge and inner hole
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.18)';
+    ctx.lineWidth = Math.max(0.5, this.config.scaleFactor * 0.8);
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x, y, innerRadius, 0, 2 * Math.PI);
+    ctx.stroke();
+
     ctx.restore();
   }
 

@@ -151,6 +151,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private readonly rootNote: string;
   private readonly diatonicMode: DiatonicMode;
   private readonly maxFretSpan: number;
+  private readonly targetFret: number | null;
 
   // Sized for one slot in reference mode (full-width ÷ N); equals fretboardConfig in other modes.
   private slotFretboardConfig: FretboardConfig;
@@ -182,6 +183,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     rootNote: string,
     diatonicMode: DiatonicMode,
     maxFretSpan: number,
+    targetFret: number | null,
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
@@ -194,6 +196,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this.rootNote     = rootNote;
     this.diatonicMode = diatonicMode;
     this.maxFretSpan  = maxFretSpan;
+    this.targetFret   = targetFret;
 
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -278,7 +281,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const slot    = this.slots[i];
       const prev    = this.slots[(i - 1 + this.slots.length) % this.slots.length];
       const prevVoicing = prev.rankedVoicings[prev.selectedIndex]?.voicing ?? null;
-      slot.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings);
+      slot.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings, this.targetFret);
       slot.selectedIndex  = 0;
       slot.previewIndex   = 0;
     }
@@ -291,7 +294,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const prevVoicing = prev.rankedVoicings[prev.selectedIndex]?.voicing ?? null;
 
     const currentVoicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
-    slot.rankedVoicings  = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings);
+    slot.rankedVoicings  = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings, this.targetFret);
     slot.selectedIndex   = Math.max(
       0,
       Math.min(slot.selectedIndex, slot.rankedVoicings.length - 1)
@@ -337,24 +340,33 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   private updateCompactFretboard(): void {
     if (!this.compactFretboardView) return;
+    const fb = this.compactFretboardView.getFretboard();
 
-    const noteMap = new Map<string, { notes: string[]; labels: string[]; colors: string[] }>();
+    // Resolve CSS palette vars → actual rgb() strings for canvas use.
+    // Canvas 2D fillStyle/strokeStyle cannot use var() or oklch(), so we
+    // assign each var as a CSS color property on a temp element and read
+    // back the browser-resolved rgb() string.
+    const resolvedColors = this._resolveCanvasPaletteColors();
+
+    type PosEntry = { noteName: string; intervalLabel: string; colors: string[] };
+    const noteMap = new Map<string, PosEntry>();
 
     for (let si = 0; si < this.slots.length; si++) {
       const slot    = this.slots[si];
       const voicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
       if (!voicing) continue;
-      const color = PALETTE_VARS[si % PALETTE_VARS.length];
+      const color = resolvedColors[si % resolvedColors.length];
 
       for (let i = 0; i < 3; i++) {
         const posKey = `${voicing.stringGroup[i]}:${voicing.frets[i]}`;
         if (!noteMap.has(posKey)) {
-          noteMap.set(posKey, { notes: [], labels: [], colors: [] });
+          noteMap.set(posKey, {
+            noteName:      voicing.notes[i],
+            intervalLabel: voicing.intervalLabels[i],
+            colors:        [],
+          });
         }
-        const entry = noteMap.get(posKey)!;
-        entry.notes.push(voicing.notes[i]);
-        entry.labels.push(voicing.intervalLabels[i]);
-        entry.colors.push(color);
+        noteMap.get(posKey)!.colors.push(color);
       }
     }
 
@@ -363,18 +375,69 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const [strStr, fretStr] = posKey.split(':');
       const strIdx  = parseInt(strStr, 10);
       const fretNum = parseInt(fretStr, 10);
-      const fills: string[] = entry.colors;
+      const n = entry.colors.length;
       notes.push({
         fret:          fretNum,
         stringIndex:   strIdx,
-        noteName:      entry.notes[0],
-        intervalLabel: entry.labels[0],
-        displayLabel:  entry.labels[0],
-        fillColor:     fills.length >= 2 ? [fills[0], fills[1]] : fills[0],
+        noteName:      entry.noteName,
+        intervalLabel: entry.intervalLabel,
+        displayLabel:  entry.noteName,  // always note name, not interval
+        fillColor:     n >= 2 ? entry.colors : entry.colors[0],
         strokeColor:   'transparent',
+        donut:         n >= 2,
       });
     }
+
+    // Draw faint connecting lines between every pair of notes in each triad.
+    const lines: LineData[] = [];
+    const r = fb.config.noteRadiusPx;
+
+    for (let si = 0; si < this.slots.length; si++) {
+      const slot    = this.slots[si];
+      const voicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
+      if (!voicing) continue;
+      const color = resolvedColors[si % resolvedColors.length];
+
+      for (let a = 0; a < 3; a++) {
+        for (let b = a + 1; b < 3; b++) {
+          const from = fb.getNoteCoordinates(voicing.stringGroup[a], voicing.frets[a]);
+          const to   = fb.getNoteCoordinates(voicing.stringGroup[b], voicing.frets[b]);
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < r * 2) continue;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          lines.push({
+            startX: from.x + r * nx,
+            startY: from.y + r * ny,
+            endX:   to.x   - r * nx,
+            endY:   to.y   - r * ny,
+            color,
+            strokeWidth: 1,
+            opacity:     0.3,
+          });
+        }
+      }
+    }
+
+    // Set notes first, then lines. Both calls queue a rAF redraw, but since
+    // JS is single-threaded, both setNotes() and setLines() complete before
+    // any rAF fires — so the first rAF already sees both data sets.
     this.compactFretboardView.setNotes(notes);
+    this.compactFretboardView.setLines(lines);
+  }
+
+  private _resolveCanvasPaletteColors(): string[] {
+    const tmp = document.createElement('span');
+    tmp.style.display = 'none';
+    document.body.appendChild(tmp);
+    const resolved = PALETTE_VARS.map(cssVar => {
+      tmp.style.color = cssVar;
+      return getComputedStyle(tmp).color || '#888888';
+    });
+    document.body.removeChild(tmp);
+    return resolved;
   }
 
   // ─── Header text ─────────────────────────────────────────────────────────────
@@ -693,7 +756,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const currentVoicings = enumerateVoicings(
       this.drivenCurrentKey, this.fretboardConfig, 15, this.maxFretSpan
     );
-    const ranked = rankVoicingsByTransitionCost(this.drivenLastVoicing, currentVoicings);
+    const ranked = rankVoicingsByTransitionCost(this.drivenLastVoicing, currentVoicings, this.targetFret);
     const selected = ranked[0]?.voicing ?? null;
 
     let notes: NoteRenderData[] = [];
@@ -705,7 +768,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         const nextVoicings = enumerateVoicings(
           this.drivenNextKey, this.fretboardConfig, 15, this.maxFretSpan
         );
-        const nextRanked = rankVoicingsByTransitionCost(selected, nextVoicings);
+        const nextRanked = rankVoicingsByTransitionCost(selected, nextVoicings, this.targetFret);
         const nextSelected = nextRanked[0]?.voicing;
         if (nextSelected) {
           notes.push(...buildNextNotes(nextSelected));
@@ -810,9 +873,19 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       enumLabels: ['Reference', 'Compact'],
       description: 'Display mode.',
     };
+    const fretNums = Array.from({ length: 15 }, (_, i) => i + 1);
+    const targetFretArg: ConfigurationSchemaArg = {
+      name: 'Target Fret',
+      type: ArgType.Enum,
+      required: false,
+      enum: ['none', ...fretNums.map(n => `fret:${n}`)],
+      enumLabels: ['None', ...fretNums.map(String)],
+      defaultValue: 'none',
+      description: 'Center voicings around this fret position (adds 0.5 cost per fret of distance per note).',
+    };
     return {
-      description: `Config: ${this.typeName},RootNote,Mode,Display[,Deg1,...][,InstrumentSettings]`,
-      args: [rootNoteArg(), modeArg(), displayArg, degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,Deg1,...][,InstrumentSettings]`,
+      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 
@@ -847,7 +920,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const ntMode: NearbyTriadsMode =
       displayStr === 'compact' ? 'compact' : 'reference';
 
-    // Remaining args after the first 3 are degree index strings ("0"–"6")
+    // Remaining args after the first 3 are degree index strings ("0"–"6") and/or a target fret ("fret:N").
+    const targetFretStr = config.slice(3).find(s => /^fret:\d+$/.test(s));
+    const targetFret = targetFretStr ? parseInt(targetFretStr.slice(5), 10) : null;
+
     const degreeStrings = config.slice(3).filter(s => /^\d$/.test(s));
     const progDegrees = degreeStrings.length > 0
       ? degreeStrings.map(s => parseInt(s, 10) + 1)
@@ -860,6 +936,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       validRoot as string,
       diatonicMode,
       4,
+      targetFret,
       settings,
       intervalSettings as InstrumentIntervalSettings,
       audioController,

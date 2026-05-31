@@ -149,16 +149,29 @@ function neckPosition(v: TriadVoicing): number {
   return fretted.length > 0 ? Math.min(...fretted) : 0;
 }
 
+function targetFretCost(v: TriadVoicing, targetFret: number): number {
+  return v.frets.reduce((sum, f) => sum + Math.abs(f - targetFret) * 0.5, 0);
+}
+
 export function rankVoicingsByTransitionCost(
   from: TriadVoicing | null,
-  candidates: TriadVoicing[]
+  candidates: TriadVoicing[],
+  targetFret: number | null = null
 ): RankedVoicing[] {
   if (!from) {
+    if (targetFret !== null) {
+      return candidates
+        .map(v => ({ voicing: v, cost: targetFretCost(v, targetFret) }))
+        .sort((a, b) => a.cost - b.cost);
+    }
     return candidates
       .map(v => ({ voicing: v, cost: 0 }))
       .sort((a, b) => neckPosition(a.voicing) - neckPosition(b.voicing));
   }
   return candidates
-    .map(v => ({ voicing: v, cost: transitionCost(from, v) }))
+    .map(v => ({
+      voicing: v,
+      cost: transitionCost(from, v) + (targetFret !== null ? targetFretCost(v, targetFret) : 0),
+    }))
     .sort((a, b) => a.cost - b.cost || neckPosition(a.voicing) - neckPosition(b.voicing));
 }
