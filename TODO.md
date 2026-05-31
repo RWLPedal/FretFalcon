@@ -5,7 +5,6 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 ## General Features
 
 *   Add a basic sheet music display tool (consider common notation, potentially MIDI integration).
-*   Implement versioning for modules/features to handle saved data compatibility.
 *   Add a "chord hints" mode showing adjacent/related chord shapes based on the current scale/key.
 *   Allow sub-intervals within a scheduled task (e.g., automatically cycle through keys during an interval).
 *   Improve documentation around the schedule format, with hints for supported options per feature class.
@@ -23,7 +22,6 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 
 ## Audio
 
-*   Add more backing track patterns and drum kit sounds.
 *   Support tempo changes within a backing track pattern.
 
 ## Infrastructure & Development
