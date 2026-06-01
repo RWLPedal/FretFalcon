@@ -44,10 +44,10 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "drone_view",
     displayName: "Drone",
-    defaultWidth: 175,
+    defaultWidth: 320,
     defaultHeight: 80,
     minHeight: 80,
-    minWidth: 175,
+    minWidth: 310,
     createView: (initialState?: any) => new DroneView(initialState),
   });
 

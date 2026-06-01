@@ -1,24 +1,51 @@
 import { BaseView } from '../base_view';
-import { NoteName, NOTE_NAMES, SustainedNote, getGuitarWave } from '../sounds/note_sounds';
+import { NoteName, NOTE_NAMES, SustainedNote, SustainedNoteOptions, getGuitarWave } from '../sounds/note_sounds';
 import { DriveSignal, SignalKind, StrumSignal } from '../panels/link_types';
 import { volumeManager } from '../sounds/volume_manager';
+
+type ChordMode = 'note' | 'fifth' | 'major' | 'minor';
+type EnvelopeMode = 'sustain' | 'slow' | 'fast';
+
+const CHORD_OPTIONS: { value: ChordMode; label: string }[] = [
+  { value: 'note',  label: 'Note'  },
+  { value: 'fifth', label: '+5th'  },
+  { value: 'major', label: 'Major' },
+  { value: 'minor', label: 'Minor' },
+];
+
+const ENV_OPTIONS: { value: EnvelopeMode; label: string }[] = [
+  { value: 'sustain', label: 'Sustain' },
+  { value: 'slow',    label: 'Slow ~'  },
+  { value: 'fast',    label: 'Fast ~~' },
+];
+
+const CHROMATIC = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
 export class DroneView extends BaseView {
   private note: NoteName;
   private octave: number;
+  private chordMode: ChordMode;
+  private envelope: EnvelopeMode;
   private isPlaying = false;
   private hasStrumLink = false;
-  private drone = new SustainedNote();
+
+  private droneRoot   = new SustainedNote();
+  private droneVoice2 = new SustainedNote();
+  private droneVoice3 = new SustainedNote();
 
   private playBtn: HTMLButtonElement | null = null;
   private noteSelect: HTMLSelectElement | null = null;
   private octaveSelect: HTMLSelectElement | null = null;
+  private chordSelect: HTMLSelectElement | null = null;
+  private envSelect: HTMLSelectElement | null = null;
   private drivenOption: HTMLOptionElement | null = null;
 
   constructor(initialState?: any) {
     super();
     this.note = (initialState?.note as NoteName) ?? NoteName.A;
     this.octave = (initialState?.octave as number) ?? 4;
+    this.chordMode = (initialState?.chordMode as ChordMode) ?? 'note';
+    this.envelope = (initialState?.envelope as EnvelopeMode) ?? 'sustain';
   }
 
   render(container: HTMLElement): void {
@@ -31,6 +58,7 @@ export class DroneView extends BaseView {
     const controls = document.createElement('div');
     controls.classList.add('drone-controls', 'config-compact');
 
+    // Note select
     const noteWrap = document.createElement('div');
     noteWrap.classList.add('config-select-wrap');
     this.noteSelect = document.createElement('select');
@@ -45,13 +73,14 @@ export class DroneView extends BaseView {
       const val = this.noteSelect!.value;
       if (val === 'driven') return;
       this.note = val as NoteName;
-      this.drone.setNote(this.note, this.octave);
+      if (this.isPlaying && !this.hasStrumLink) this.updateDroneNote();
       this.dispatchTitle();
       this.saveState();
     });
     noteWrap.appendChild(this.noteSelect);
     controls.appendChild(noteWrap);
 
+    // Octave select
     const octaveWrap = document.createElement('div');
     octaveWrap.classList.add('config-select-wrap', 'drone-octave-select');
     this.octaveSelect = document.createElement('select');
@@ -64,12 +93,51 @@ export class DroneView extends BaseView {
     }
     this.octaveSelect.addEventListener('change', () => {
       this.octave = Number(this.octaveSelect!.value);
-      this.drone.setNote(this.note, this.octave);
+      if (this.isPlaying && !this.hasStrumLink) this.updateDroneNote();
       this.saveState();
     });
     octaveWrap.appendChild(this.octaveSelect);
     controls.appendChild(octaveWrap);
 
+    // Chord mode select
+    const chordWrap = document.createElement('div');
+    chordWrap.classList.add('config-select-wrap', 'drone-chord-select');
+    this.chordSelect = document.createElement('select');
+    for (const { value, label } of CHORD_OPTIONS) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      if (value === this.chordMode) opt.selected = true;
+      this.chordSelect.appendChild(opt);
+    }
+    this.chordSelect.addEventListener('change', () => {
+      this.chordMode = this.chordSelect!.value as ChordMode;
+      if (this.isPlaying && !this.hasStrumLink) this.startDrone();
+      this.saveState();
+    });
+    chordWrap.appendChild(this.chordSelect);
+    controls.appendChild(chordWrap);
+
+    // Envelope select
+    const envWrap = document.createElement('div');
+    envWrap.classList.add('config-select-wrap', 'drone-envelope-select');
+    this.envSelect = document.createElement('select');
+    for (const { value, label } of ENV_OPTIONS) {
+      const opt = document.createElement('option');
+      opt.value = value;
+      opt.textContent = label;
+      if (value === this.envelope) opt.selected = true;
+      this.envSelect.appendChild(opt);
+    }
+    this.envSelect.addEventListener('change', () => {
+      this.envelope = this.envSelect!.value as EnvelopeMode;
+      if (this.isPlaying && !this.hasStrumLink) this.startDrone();
+      this.saveState();
+    });
+    envWrap.appendChild(this.envSelect);
+    controls.appendChild(envWrap);
+
+    // Play button
     this.playBtn = document.createElement('button');
     this.playBtn.classList.add('button', 'drone-play-btn');
     this.playBtn.innerHTML = '<span class="material-icons">play_arrow</span>';
@@ -97,7 +165,7 @@ export class DroneView extends BaseView {
       if (!NOTE_NAMES.includes(rootNote)) return;
       this.note = rootNote;
       if (this.drivenOption) this.drivenOption.textContent = `Driven (${rootNote})`;
-      this.drone.setNote(this.note, this.octave);
+      if (this.isPlaying && !this.hasStrumLink) this.updateDroneNote();
       this.dispatchTitle();
     });
 
@@ -119,8 +187,7 @@ export class DroneView extends BaseView {
         }
         if (this.noteSelect) this.noteSelect.value = this.note;
         this.dispatchTitle();
-        // Restore continuous sustain if we were playing in pluck mode
-        if (this.isPlaying) this.drone.start(this.note, this.octave);
+        if (this.isPlaying) this.startDrone();
       }
     });
 
@@ -129,26 +196,106 @@ export class DroneView extends BaseView {
   }
 
   destroy(): void {
-    this.drone.destroy();
+    this.droneRoot.destroy();
+    this.droneVoice2.destroy();
+    this.droneVoice3.destroy();
     this.isPlaying = false;
     this.playBtn = null;
     this.noteSelect = null;
     this.octaveSelect = null;
+    this.chordSelect = null;
+    this.envSelect = null;
     this.drivenOption = null;
     super.destroy();
   }
 
   private togglePlay(): void {
     if (this.isPlaying) {
-      this.drone.stop();
+      this.stopDrone();
       this.isPlaying = false;
     } else {
       this.isPlaying = true;
-      // In strum-link mode, don't start a continuous sustain — plucks fire on strum signals.
-      if (!this.hasStrumLink) this.drone.start(this.note, this.octave);
+      if (!this.hasStrumLink) this.startDrone();
     }
     this.updatePlayBtn();
     this.dispatchTransportChanged();
+  }
+
+  private startDrone(): void {
+    this.stopDrone();
+    const opts = this.envelopeOptions();
+    switch (this.chordMode) {
+      case 'note':
+        this.droneRoot.start(this.note, this.octave, { ...opts, volume: 0.625 });
+        break;
+      case 'fifth': {
+        const [n2, o2] = this.noteAtOffset(7);
+        this.droneRoot.start(this.note, this.octave, { ...opts, volume: 0.50 });
+        this.droneVoice2.start(n2, o2, { ...opts, volume: 0.38 });
+        break;
+      }
+      case 'major': {
+        const [n2, o2] = this.noteAtOffset(4);
+        const [n3, o3] = this.noteAtOffset(7);
+        this.droneRoot.start(this.note, this.octave, { ...opts, volume: 0.42 });
+        this.droneVoice2.start(n2, o2, { ...opts, volume: 0.28 });
+        this.droneVoice3.start(n3, o3, { ...opts, volume: 0.32 });
+        break;
+      }
+      case 'minor': {
+        const [n2, o2] = this.noteAtOffset(3);
+        const [n3, o3] = this.noteAtOffset(7);
+        this.droneRoot.start(this.note, this.octave, { ...opts, volume: 0.42 });
+        this.droneVoice2.start(n2, o2, { ...opts, volume: 0.30 });
+        this.droneVoice3.start(n3, o3, { ...opts, volume: 0.32 });
+        break;
+      }
+    }
+  }
+
+  private stopDrone(): void {
+    this.droneRoot.stop();
+    this.droneVoice2.stop();
+    this.droneVoice3.stop();
+  }
+
+  private updateDroneNote(): void {
+    this.droneRoot.setNote(this.note, this.octave);
+    switch (this.chordMode) {
+      case 'fifth': {
+        const [n2, o2] = this.noteAtOffset(7);
+        this.droneVoice2.setNote(n2, o2);
+        break;
+      }
+      case 'major': {
+        const [n2, o2] = this.noteAtOffset(4);
+        const [n3, o3] = this.noteAtOffset(7);
+        this.droneVoice2.setNote(n2, o2);
+        this.droneVoice3.setNote(n3, o3);
+        break;
+      }
+      case 'minor': {
+        const [n2, o2] = this.noteAtOffset(3);
+        const [n3, o3] = this.noteAtOffset(7);
+        this.droneVoice2.setNote(n2, o2);
+        this.droneVoice3.setNote(n3, o3);
+        break;
+      }
+    }
+  }
+
+  private envelopeOptions(): Partial<SustainedNoteOptions> {
+    if (this.envelope === 'slow') return { tremolo: { rate: 3.5, depth: 0.175 } };
+    if (this.envelope === 'fast') return { tremolo: { rate: 6.5, depth: 0.175 } };
+    return {};
+  }
+
+  private noteAtOffset(semitones: number): [NoteName, number] {
+    const idx = CHROMATIC.indexOf(this.note as string);
+    const newIdx = idx + semitones;
+    const note = CHROMATIC[((newIdx % 12) + 12) % 12] as NoteName;
+    const octave = this.octave + Math.floor(newIdx / 12);
+    return [note, octave];
   }
 
   private handleStrumPluck(signal: StrumSignal): void {
@@ -183,9 +330,7 @@ export class DroneView extends BaseView {
         return;
       }
 
-      // Pitched pluck — compute drone frequency
-      const SEMITONE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
-      const noteIdx = SEMITONE_NAMES.indexOf(this.note as string);
+      const noteIdx = CHROMATIC.indexOf(this.note as string);
       if (noteIdx === -1) return;
       const freq = 440 * Math.pow(2, (noteIdx + 12 * (this.octave - 4)) / 12);
 
@@ -248,7 +393,7 @@ export class DroneView extends BaseView {
     if (!this.container) return;
     this.container.dispatchEvent(new CustomEvent('feature-state-changed', {
       bubbles: true,
-      detail: { note: this.note, octave: this.octave },
+      detail: { note: this.note, octave: this.octave, chordMode: this.chordMode, envelope: this.envelope },
     }));
   }
 }

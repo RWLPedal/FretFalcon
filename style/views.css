@@ -552,6 +552,17 @@ body.dark-theme .color-swatch {
   padding-right: 18px;
 }
 
+.drone-view .config-compact .drone-chord-select select {
+  width: 62px;
+  min-width: unset;
+}
+
+.drone-view .config-compact .drone-envelope-select select {
+  width: auto;
+  min-width: unset;
+  padding-right: 22px;
+}
+
 .drone-play-btn {
   display: inline-flex;
   align-items: center;

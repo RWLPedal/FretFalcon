@@ -152,24 +152,31 @@ export function playNote(note: NoteName, octave: number = 4, options: PlayNoteOp
 export interface SustainedNoteOptions {
   wave?: WaveType;
   volume?: number;
+  tremolo?: { rate: number; depth: number };
 }
 
 /** A continuously-playing note that can be started, retargeted, and stopped with a fade. */
 export class SustainedNote {
   private oscillator: OscillatorNode | null = null;
   private gainNode: GainNode | null = null;
+  private lfo: OscillatorNode | null = null;
+  private lfoGain: GainNode | null = null;
   private unsubscribeVolume: (() => void) | null = null;
   private baseVolume = 0.5;
+  private tremoloOpts: { rate: number; depth: number } | undefined;
 
   start(note: NoteName, octave = 4, options: SustainedNoteOptions = {}): void {
     this.destroy();
-    const { wave = 'guitar', volume = 0.625 } = options;
+    const { wave = 'guitar', volume = 0.625, tremolo } = options;
     this.baseVolume = volume;
+    this.tremoloOpts = tremolo;
     try {
       const ctx = getContext();
+      const masterVol = volumeManager.getVolume();
       const gain = ctx.createGain();
+      const dc = tremolo ? volume * (1 - tremolo.depth) * masterVol : volume * masterVol;
       gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(volume * volumeManager.getVolume(), ctx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(dc, ctx.currentTime + 0.05);
       gain.connect(ctx.destination);
 
       const osc = ctx.createOscillator();
@@ -184,9 +191,27 @@ export class SustainedNote {
 
       this.oscillator = osc;
       this.gainNode = gain;
+
+      if (tremolo) {
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.type = 'sine';
+        lfo.frequency.value = tremolo.rate;
+        lfoGain.gain.value = volume * tremolo.depth * masterVol;
+        lfo.connect(lfoGain);
+        lfoGain.connect(gain.gain);
+        lfo.start();
+        this.lfo = lfo;
+        this.lfoGain = lfoGain;
+      }
+
       this.unsubscribeVolume = volumeManager.onChange((v) => {
-        if (this.gainNode) {
-          this.gainNode.gain.setTargetAtTime(this.baseVolume * v, getContext().currentTime, 0.05);
+        if (!this.gainNode) return;
+        const t = this.tremoloOpts;
+        const newDc = t ? this.baseVolume * (1 - t.depth) * v : this.baseVolume * v;
+        this.gainNode.gain.setTargetAtTime(newDc, getContext().currentTime, 0.05);
+        if (this.lfoGain && t) {
+          this.lfoGain.gain.setTargetAtTime(this.baseVolume * t.depth * v, getContext().currentTime, 0.05);
         }
       });
     } catch (e) {
@@ -210,6 +235,8 @@ export class SustainedNote {
     this.oscillator = null;
     this.gainNode = null;
 
+    this._destroyLFO();
+
     gain.gain.cancelScheduledValues(ctx.currentTime);
     gain.gain.setValueAtTime(gain.gain.value, ctx.currentTime);
     gain.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.08);
@@ -224,6 +251,7 @@ export class SustainedNote {
   destroy(): void {
     this.unsubscribeVolume?.();
     this.unsubscribeVolume = null;
+    this._destroyLFO();
     if (this.oscillator) {
       try { this.oscillator.stop(); } catch {}
       try { this.oscillator.disconnect(); } catch {}
@@ -232,6 +260,18 @@ export class SustainedNote {
     if (this.gainNode) {
       try { this.gainNode.disconnect(); } catch {}
       this.gainNode = null;
+    }
+  }
+
+  private _destroyLFO(): void {
+    if (this.lfo) {
+      try { this.lfo.stop(); } catch {}
+      try { this.lfo.disconnect(); } catch {}
+      this.lfo = null;
+    }
+    if (this.lfoGain) {
+      try { this.lfoGain.disconnect(); } catch {}
+      this.lfoGain = null;
     }
   }
 }
