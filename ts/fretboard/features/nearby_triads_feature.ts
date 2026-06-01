@@ -62,6 +62,8 @@ interface NTWizardPersisted {
   dismissed: boolean;
 }
 
+const NT_COMPACT_STORAGE_KEY = 'practempo_nearby_triads_compact_v1';
+
 const PALETTE_VARS = [
   'var(--dm-palette-1)',
   'var(--dm-palette-2)',
@@ -900,7 +902,16 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   // ─── Wizard persistence (survives feature recreation on config change) ───────
 
-  /** Save applied wizard state to the outer container element. */
+  private _loadFromLocalStorage(): NTWizardPersisted | null {
+    try {
+      const stored = localStorage.getItem(NT_COMPACT_STORAGE_KEY);
+      return stored ? JSON.parse(stored) as NTWizardPersisted : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Save applied wizard state to the outer container element and localStorage. */
   private _persistWizardState(dismissed: boolean): void {
     if (!this._renderContainer) return;
     const chords = (this.wizardApplied ?? []).map(c => {
@@ -913,7 +924,9 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         seen:       c.seen,
       };
     });
-    (this._renderContainer as any).__ntWizard = { chords, dismissed } satisfies NTWizardPersisted;
+    const data: NTWizardPersisted = { chords, dismissed };
+    (this._renderContainer as any).__ntWizard = data;
+    try { localStorage.setItem(NT_COMPACT_STORAGE_KEY, JSON.stringify(data)); } catch {}
   }
 
   /** On first render after recreation, restore wizard state from the container. */
@@ -938,7 +951,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       return;
     }
 
-    const p = (this._renderContainer as any)?.__ntWizard as NTWizardPersisted | undefined;
+    const domState = (this._renderContainer as any)?.__ntWizard as NTWizardPersisted | undefined;
+    const p = domState ?? this._loadFromLocalStorage();
     if (!p) return;
     this.wizardDismissed = p.dismissed;
     if (p.chords.length > 0) {

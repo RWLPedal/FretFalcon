@@ -1204,7 +1204,7 @@ export class Fretboard {
             this._drawIcon(ctx, drawIconType, x, y, effectiveRadius, fgColor);
           } else if (contentToDraw) {
             const fontSizeRatio = 0.9;
-            const innerR = isDonut ? effectiveRadius * 0.40 : effectiveRadius;
+            const innerR = isDonut ? effectiveRadius * 0.75 : effectiveRadius;
             const effectiveFontSize = Math.min(
               baseFontSize,
               innerR * 2 * fontSizeRatio * 0.7
@@ -1301,7 +1301,7 @@ export class Fretboard {
   ): void {
     const n = colors.length;
     if (n === 0) return;
-    const innerRadius = radius * 0.40;
+    const innerRadius = radius * 0.58;
     const sliceAngle = (2 * Math.PI) / n;
     const startAngle = -Math.PI / 2;  // 12 o'clock
     const halfGap = Math.min(0.04, sliceAngle * 0.06);  // ~2.3° or 6% of slice
