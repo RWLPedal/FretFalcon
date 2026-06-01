@@ -302,106 +302,158 @@
    DARK — Near-black · Crimson · Amber Gold
    ─────────────────────────────────────── */
 :root[data-theme="dark"] {
-  --bg: #15100b; /* deep espresso */
-  --panel-bg: #1f1812; /* warm tobacco */
-  --sidebar-bg: #0e0907; /* bean dark */
-  --settings-bg: #261c16;
-  --input-bg: #251a12;
-  --border: #3d2e20; /* aged wood */
-  --text-primary: #efe2cc; /* warm ivory */
-  --text-muted: #8a7058; /* milky coffee */
-  --text-sidebar: #c9a582; /* café au lait */
-  --accent: oklch(0.66 0.13 65); /* honey amber — primary */
-  --accent-dim: oklch(0.48 0.09 65);
-  --accent-warm: oklch(0.46 0.14 28); /* burgundy cherry — secondary */
-  --note-root: oklch(0.66 0.13 65); /* honey amber */
-  --note-second: oklch(0.6 0.05 200); /* pale slate */
-  --note-third: oklch(0.46 0.14 28); /* burgundy */
-  --note-fourth: oklch(0.52 0.07 200); /* vintage teal */
-  --note-fifth: oklch(0.62 0.1 85); /* aged brass */
-  --note-sixth: oklch(0.44 0.06 200); /* dark teal */
-  --note-seventh: oklch(0.36 0.04 200); /* deep slate */
-  --danger: oklch(0.58 0.18 22); /* ember red */
-  --pad-off: #2a1e14;
-  --shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
-  --shadow-panel: 0 4px 28px rgba(15, 10, 6, 0.7);
+  --bg: #241c16; /* warm faded cream-brown */
+  --panel-bg: #2e251c; /* sun-warmed card */
+  --sidebar-bg: #1c150f; /* shaded edge */
+  --settings-bg: #322820;
+  --input-bg: #32271a;
+  --border: #5c4430; /* faded plastic seam */
+  --text-primary: #ece0be; /* bleached ivory */
+  --text-muted: #9c8369; /* milky coffee */
+  --text-sidebar: #cdb48e; /* café au lait */
+
+  --accent: oklch(0.66 0.1 48); /* sun-faded terracotta — primary */
+  --accent-dim: oklch(0.74 0.07 55);
+  --accent-warm: oklch(0.74 0.08 80); /* faded ochre gold — secondary */
+
+  --note-root: oklch(0.66 0.1 48); /* faded terracotta */
+  --note-second: oklch(0.72 0.04 110); /* pale dust */
+  --note-third: oklch(0.62 0.07 122); /* sun-faded sage */
+  --note-fourth: oklch(0.6 0.08 40); /* faded brick */
+  --note-fifth: oklch(0.74 0.08 80); /* faded ochre */
+  --note-sixth: oklch(0.5 0.06 90); /* olive drab */
+  --note-seventh: oklch(0.42 0.04 70); /* warm grey-brown */
+  --danger: oklch(0.55 0.13 30); /* faded brick red */
+
+  --pad-off: #3f3020;
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
+  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.42);
+
   /* multifret layer fills */
-  --layer-scale: oklch(0.38 0.04 50 / 0.55); /* shadow-brown — base scale */
-  --layer-chord: oklch(0.46 0.14 28 / 0.72); /* burgundy — chord */
-  --layer-notes: oklch(0.66 0.13 65 / 0.78); /* honey amber — notes */
-  --layer-driven: oklch(0.62 0.1 85 / 0.82); /* aged brass — driven */
-  /* drum machine palette */
-  --dm-palette-1: oklch(0.66 0.13 65); /* honey amber */
-  --dm-palette-2: oklch(0.46 0.14 28); /* burgundy */
-  --dm-palette-3: oklch(0.62 0.1 85); /* aged brass */
-  --dm-palette-4: oklch(0.48 0.06 200); /* vintage teal */
-  --dm-palette-5: oklch(0.55 0.12 350); /* dusk plum */
-  --dm-palette-6: oklch(0.58 0.08 145); /* faded jade */
-  --dm-palette-7: oklch(0.52 0.1 240); /* cold steel */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  --layer-scale: oklch(0.4 0.03 60 / 0.55); /* faded brown base */
+  --layer-chord: oklch(0.6 0.1 42 / 0.72); /* terracotta */
+  --layer-notes: oklch(0.72 0.09 72 / 0.78); /* faded honey */
+  --layer-driven: oklch(0.64 0.07 115 / 0.8); /* faded sage */
+
+  /* drum machine palette — sun-bleached but distinct */
+  --dm-palette-1: oklch(0.66 0.1 48); /* terracotta */
+  --dm-palette-2: oklch(0.74 0.08 80); /* faded ochre */
+  --dm-palette-3: oklch(0.62 0.07 122); /* sage */
+  --dm-palette-4: oklch(0.58 0.06 200); /* faded teal */
+  --dm-palette-5: oklch(0.58 0.07 350); /* dusty mauve */
+  --dm-palette-6: oklch(0.52 0.06 60); /* warm brown */
+  --dm-palette-7: oklch(0.55 0.06 250); /* muted slate-blue */
+
+  /* heavier film grain than the other dark themes */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.095'/%3E%3C/svg%3E");
 }
 
-/* ── BODY: pendant-light spotlight + film grain ── */
+/* ── BODY: warm daylight wash + centre-spot vignette + heavy grain ── */
 :root[data-theme="dark"] body {
   background-color: var(--bg);
   background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 7px,
+      rgba(255, 220, 150, 0.012) 7px,
+      rgba(255, 220, 150, 0.012) 8px
+    ),
     radial-gradient(
-      ellipse 90% 55% at 50% -8%,
-      rgba(232, 168, 88, 0.06) 0%,
+      ellipse 70% 50% at 60% 0%,
+      rgba(231, 196, 120, 0.1) 0%,
       transparent 55%
+    ),
+    radial-gradient(
+      ellipse 120% 95% at 50% 42%,
+      transparent 42%,
+      rgba(0, 0, 0, 0.3) 100%
     ),
     var(--grain);
 }
 
-/* ── PANEL: cream binding hairline + tobacco rim ── */
+/* ── PANELS: matte sun-warmed card, soft rounded, faded wood rim ── */
 :root[data-theme="dark"] .floating-view-wrapper {
-  border-color: #2a1f16;
+  border: 1px solid var(--border);
+  border-radius: 10px;
   box-shadow:
-    inset 0 0 0 1px rgba(232, 208, 168, 0.07),
-    /* cream binding */ inset 0 1px 0 rgba(255, 220, 170, 0.04),
-    /* top sheen */ 0 4px 24px rgba(10, 6, 4, 0.65);
+    inset 0 1px 0 rgba(255, 240, 175, 0.09),
+    var(--shadow-panel);
 }
 :root[data-theme="dark"] .floating-view-wrapper:hover {
   box-shadow:
-    inset 0 0 0 1px rgba(232, 208, 168, 0.14),
-    inset 0 1px 0 rgba(255, 220, 170, 0.05),
-    0 6px 30px rgba(10, 6, 4, 0.75);
+    inset 0 1px 0 rgba(255, 236, 200, 0.05),
+    0 12px 30px rgba(0, 0, 0, 0.5);
 }
 
-/* ── PANEL HEADER: italic serif title + brass seam ── */
+/* ── PANEL HEADER: rounded lowercase Quicksand, faded rule ── */
 :root[data-theme="dark"] .floating-view-titlebar {
-  background: linear-gradient(180deg, #1a130d 0%, #1f1812 100%);
-  border-bottom: 1px solid rgba(184, 146, 74, 0.22);
-  padding: 5px 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 236, 200, 0.07) 0%,
+    transparent 100%
+  );
+  border-bottom: 1px solid rgba(231, 196, 120, 0.14);
+  padding: 6px 11px;
 }
 :root[data-theme="dark"] .floating-view-title-text {
-  font-family: "EB Garamond", serif;
-  font-style: italic;
-  font-size: 12px;
+  font-family: "Quicksand", "DM Sans", sans-serif;
+  font-style: normal;
   font-weight: 600;
+  font-size: 13px;
   letter-spacing: 0.01em;
-  text-transform: none;
-  color: #d8b88a;
+  text-transform: lowercase;
+  color: var(--text-primary);
 }
 
-/* ── NAV: warm honey active state, no fill ── */
-:root[data-theme="dark"] .sidebar-nav-btn.is-active {
-  background: color-mix(in oklch, var(--accent) 12%, transparent);
-  color: var(--accent);
-}
-:root[data-theme="dark"] .sidebar-nav-btn.is-active::before {
-  background: linear-gradient(180deg, var(--accent), var(--accent-warm));
-  box-shadow: 0 0 5px rgba(198, 138, 62, 0.5);
-}
-
-/* ── SIDEBAR: subtle vertical grain ── */
+/* ── SIDEBAR: rounded type, soft warm gradient ── */
 :root[data-theme="dark"] .side-bar-container {
   background: linear-gradient(
     180deg,
     var(--sidebar-bg) 0%,
-    color-mix(in oklch, var(--sidebar-bg) 94%, var(--accent)) 100%
+    color-mix(in oklch, var(--sidebar-bg) 80%, black) 100%
   );
+  border-top: 2px solid oklch(0.42 0.09 32);
   border-right: 1px solid var(--border);
+  box-shadow:
+    inset -4px 0 12px rgba(0, 0, 0, 0.3),
+    inset 3px 0 6px rgba(255, 200, 100, 0.025);
+}
+:root[data-theme="dark"] .sidebar-app-name {
+  font-family: "Quicksand", "DM Sans", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.005em;
+}
+:root[data-theme="dark"] .sidebar-section-label {
+  font-family: "Quicksand", "DM Sans", sans-serif;
+  text-transform: lowercase;
+  letter-spacing: 0.04em;
+  opacity: 0.52;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+}
+:root[data-theme="dark"] .sidebar-nav-btn {
+  font-family: "Quicksand", "DM Sans", sans-serif;
+  font-weight: 500;
+  border-radius: 9px;
+  opacity: 0.72;
+}
+:root[data-theme="dark"] .sidebar-nav-btn.is-active {
+  opacity: 1;
+}
+/* active = soft rounded pill with faded label border, no slab bar */
+:root[data-theme="dark"] .sidebar-nav-btn.is-active {
+  background: color-mix(in oklch, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in oklch, var(--accent) 32%, transparent);
+  color: var(--accent);
+}
+:root[data-theme="dark"] .sidebar-nav-btn.is-active::before {
+  display: none;
+}
+
+/* ── SCROLLBAR: magnetic-tape strip ── */
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: oklch(0.42 0.09 32);
+  border-radius: 1px;
 }
 
 /* ───────────────────────────────────────
