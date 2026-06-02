@@ -58,20 +58,20 @@ export class AnyFeature implements Feature {
 
   static createFeature(
     config: ReadonlyArray<string>,
-    _audioController: AudioController,
+    audioController: AudioController | undefined,
     settings: AppSettings,
     _intervalSettings: IntervalSettings,
     _maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
-    return new AnyFeature(config, settings);
+    return new AnyFeature(config, settings, audioController);
   }
 
-  constructor(config: ReadonlyArray<string>, appSettings: AppSettings) {
+  constructor(config: ReadonlyArray<string>, appSettings: AppSettings, audioController?: AudioController) {
     this.config = config;
     this.appSettings = appSettings;
     this.mode = config[0] === SignalState.Next ? SignalState.Next : SignalState.Current;
-    this.audioController = new AudioController(
+    this.audioController = audioController ?? new AudioController(
       document.querySelector('#intro-end-sound') as HTMLAudioElement | null,
       document.querySelector('#interval-end-sound') as HTMLAudioElement | null,
       document.querySelector('#metronome-sound') as HTMLAudioElement | null,

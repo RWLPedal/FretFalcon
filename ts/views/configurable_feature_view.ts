@@ -3,7 +3,6 @@ import { AppSettings } from "../settings";
 import { instrumentCategory } from "../fretboard/fretboard_category";
 import { Feature, FeatureTypeDescriptor } from "../feature";
 import { ConfigView } from "./config_view";
-import { AudioController } from "../audio_controller";
 import { InstrumentIntervalSettings } from "../fretboard/fretboard_interval_settings";
 import { getDriveTargetSlots } from "../panels/drive_registry";
 import { DriveSignal, SignalState } from "../panels/link_types";
@@ -23,8 +22,6 @@ export class ConfigurableFeatureView extends BaseView {
     private featureContainer!: HTMLElement;
 
     private featureClass: FeatureTypeDescriptor | null = null;
-    private audioController: AudioController;
-
     // Exposed for signal handling
     private configView: ConfigView | null = null;
     // Available canvas space (px) measured from the last user-initiated wrapper resize.
@@ -50,8 +47,6 @@ export class ConfigurableFeatureView extends BaseView {
         this.featureTypeName = initialState?.featureTypeName;
         this.initialConfig = Array.isArray(initialState?.config) ? initialState.config : undefined;
 
-        // A better solution for audio would be needed in a real app
-        this.audioController = new AudioController(null, null, null, null);
     }
 
     render(container: HTMLElement): void {
@@ -357,7 +352,7 @@ export class ConfigurableFeatureView extends BaseView {
             const intervalSettings = new InstrumentIntervalSettings(); // Placeholder
             this.feature = this.featureClass.createFeature(
                 finalConfig,
-                this.audioController,
+                undefined,
                 this.appSettings,
                 intervalSettings,
                 maxCanvasHeight,

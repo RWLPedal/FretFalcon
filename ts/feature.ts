@@ -90,7 +90,7 @@ export interface FeatureTypeDescriptor {
    */
   createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
+    audioController: AudioController | undefined,
     settings: AppSettings,
     intervalSettings: IntervalSettings, // Use the generic base type
     maxCanvasHeight: number | undefined,

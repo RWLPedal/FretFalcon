@@ -29,5 +29,3 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 *   Add tests (unit, integration).
 *   Support mobile/responsive design (including rotation).
 *   Support multiple languages (internationalization/i18n).
-*   Decompose some classes into more basic, reusable components.
-*   Reconcile schedule view and reference view, consolidating into a single view.

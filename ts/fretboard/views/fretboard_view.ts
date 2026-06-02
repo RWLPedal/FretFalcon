@@ -18,6 +18,7 @@ export class FretboardView extends BaseView {
   private fretboard: Fretboard; // Internal Fretboard logic instance
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
+  private soundEnabled: boolean;
 
   // Store calculated dimensions (mostly for canvas creation)
   private requiredWidth: number = 0;
@@ -28,10 +29,11 @@ export class FretboardView extends BaseView {
    * @param fretboardConfig - The configuration for the fretboard appearance.
    * @param fretCount - The number of frets to display.
    */
-  constructor(fretboardConfig: FretboardConfig, fretCount: number) {
+  constructor(fretboardConfig: FretboardConfig, fretCount: number, soundEnabled = true) {
     super();
     this.fretboardConfig = fretboardConfig;
     this.fretCount = fretCount > 0 ? fretCount : 12;
+    this.soundEnabled = soundEnabled;
 
     // Calculate dimensions needed for the canvas based on config and fret count
     this.calculateDimensions();
@@ -85,7 +87,9 @@ export class FretboardView extends BaseView {
       this.canvas = null;
       return;
     }
-    this.fretboard.attachClickHandler(this.canvas);
+    if (this.soundEnabled) {
+      this.fretboard.attachClickHandler(this.canvas);
+    }
   }
 
   // --- Public Methods to Pass Data to Fretboard Instance ---

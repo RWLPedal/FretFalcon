@@ -334,11 +334,9 @@ export function registerBuiltins(): void {
     supportsRotate: true,
     supportsZoom: true,
     createView: (initialState?: any, appSettings?: AppSettings) => {
-      // No audio output — AudioController is required by the feature API but unused here.
-      const audio = new AudioController(null, null, null, null);
       const feature = NotesFeature.createFeature(
         ["None"],
-        audio,
+        undefined,
         appSettings,
         new InstrumentIntervalSettings(),
         650,

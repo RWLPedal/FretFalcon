@@ -17,10 +17,6 @@ export class AudioController {
     this.metronomeAudioEl = metronomeAudioEl;
     this.accentMetronomeAudioEl = accentMetronomeAudioEl;
 
-    if (!this.metronomeAudioEl)
-      console.warn("AudioController: Standard metronome element not provided.");
-    if (!this.accentMetronomeAudioEl)
-      console.warn("AudioController: Accent metronome element not provided.");
   }
 
   private playSound(audioElement: HTMLAudioElement | null): void {

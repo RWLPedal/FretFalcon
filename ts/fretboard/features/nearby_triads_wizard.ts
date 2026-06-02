@@ -568,7 +568,7 @@ export class TriadsWizard {
     wrap.appendChild(canvasWrap);
 
     if (!this.voicingFb) {
-      this.voicingFb = new FretboardView(this.fretboardConfig, 15);
+      this.voicingFb = new FretboardView(this.fretboardConfig, 15, false);
     }
     this.voicingFb.render(canvasWrap);
 
