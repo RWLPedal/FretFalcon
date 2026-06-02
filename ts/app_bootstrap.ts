@@ -14,6 +14,7 @@ import { ColorLegendView } from "./fretboard/views/color_legend_view";
 import { MetronomeView } from "./fretboard/views/metronome_view";
 import { StrumView } from "./views/strum_view";
 import { CircleOfFifthsView } from "./views/circle_of_fifths_view";
+import { GlobalKeyView, GLOBAL_KEY_VIEW_ID } from "./views/global_key_view";
 import { NotesFeature } from "./fretboard/features/notes_feature";
 import { ScaleFeature } from "./fretboard/features/scale_feature";
 import { ChordFeature } from "./fretboard/features/chord_feature";
@@ -403,6 +404,17 @@ export function registerBuiltins(): void {
     minWidth: 290,
     minHeight: 430,
     createView: (initialState?: any) => new CircleOfFifthsView(initialState),
+  });
+
+  registerFloatingView({
+    viewId: GLOBAL_KEY_VIEW_ID,
+    displayName: "Global Key",
+    defaultWidth: 300,
+    defaultHeight: 55,
+    minWidth: 240,
+    minHeight: 60,
+    singleton: true,
+    createView: (initialState?: any) => new GlobalKeyView(initialState),
   });
 
   registerFloatingView({

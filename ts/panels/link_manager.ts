@@ -26,15 +26,22 @@ export class LinkManager {
   // RAF handle for debounced redraws
   private redrawScheduled = false;
 
+  // The viewId whose instances act as global broadcast sources (e.g. 'global_key').
+  // When set, signals from that panel go to ALL instances and suppress competing kinds.
+  private readonly globalKeyViewId: string | null;
+  private globalSourceInstanceId: string | null = null;
+
   constructor(
     private viewAreaEl: HTMLElement,
     private getWrapperEl: (instanceId: string) => HTMLElement | null,
     getViewId: (instanceId: string) => string | null,
     private getContentEl: (instanceId: string) => HTMLElement | null = () => null,
-    getFeatureTypeName: ((instanceId: string) => string | null) | null = null
+    getFeatureTypeName: ((instanceId: string) => string | null) | null = null,
+    globalKeyViewId: string | null = null
   ) {
     this.instanceIdToViewId = getViewId;
     this.instanceIdToFeatureTypeName = getFeatureTypeName;
+    this.globalKeyViewId = globalKeyViewId;
     this.overlay = new LinkOverlay(viewAreaEl);
 
     this.overlay.onLinkCreated = (srcId, srcHandle, tgtId, tgtHandle) => {
@@ -208,6 +215,19 @@ export class LinkManager {
   public onWindowSpawned(instanceId: string, wrapperEl: HTMLElement): void {
     this.wrapperToInstanceId.set(wrapperEl, instanceId);
     this.overlay.registerWrapper(instanceId, wrapperEl);
+
+    if (this.globalKeyViewId && this.instanceIdToViewId(instanceId) === this.globalKeyViewId) {
+      // This is the global source panel; mark it, then notify all existing panels so
+      // they switch to "Driven" mode before the initial broadcast arrives on the next rAF.
+      this.globalSourceInstanceId = instanceId;
+      this.notifyAllLinkStatuses();
+    } else if (this.globalSourceInstanceId !== null) {
+      // Deliver current cached global signals to the newly opened panel, and notify it
+      // that it has an incoming link so it switches to "Driven" mode first.
+      this.notifyLinkStatus(instanceId);
+      const cached = this.lastSourceSignals.get(this.globalSourceInstanceId);
+      if (cached?.length) this.deliverSignalsToInstance(instanceId, cached);
+    }
   }
 
   public onWindowDestroyed(instanceId: string): void {
@@ -215,6 +235,11 @@ export class LinkManager {
     if (wrapperEl) {
       this.overlay.unregisterWrapper(instanceId);
       this.wrapperToInstanceId.delete(wrapperEl);
+    }
+    if (instanceId === this.globalSourceInstanceId) {
+      this.globalSourceInstanceId = null;
+      // Re-notify all panels so those without explicit links leave "Driven" mode.
+      this.notifyAllLinkStatuses();
     }
     this.lastSourceSignals.delete(instanceId);
     // Remove all links involving this instance
@@ -286,8 +311,43 @@ export class LinkManager {
     const newKeys = new Set(signals.map(s => `${s.kind}:${s.state ?? SignalState.Current}`));
     const merged = [...existing.filter(s => !newKeys.has(`${s.kind}:${s.state ?? SignalState.Current}`)), ...signals];
     this.lastSourceSignals.set(sourceInstanceId, merged);
+
+    if (sourceInstanceId === this.globalSourceInstanceId) {
+      // Global source: broadcast to every registered panel.
+      this.deliverToAll(sourceInstanceId, signals);
+      return;
+    }
+
+    // Non-global source: suppress any signal kinds that the global source already owns.
+    let effectiveSignals = signals;
+    if (this.globalSourceInstanceId !== null) {
+      const globalCache = this.lastSourceSignals.get(this.globalSourceInstanceId) ?? [];
+      const globalKinds = new Set(globalCache.map(s => s.kind));
+      effectiveSignals = signals.filter(s => !globalKinds.has(s.kind));
+      if (!effectiveSignals.length) return;
+    }
+
     const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
-    outgoing.forEach(link => this.routeSignalsToTarget(link, signals));
+    outgoing.forEach(link => this.routeSignalsToTarget(link, effectiveSignals));
+  }
+
+  private deliverToAll(sourceInstanceId: string, signals: DriveSignal[]): void {
+    for (const [, targetInstanceId] of this.wrapperToInstanceId) {
+      if (targetInstanceId !== sourceInstanceId) {
+        this.deliverSignalsToInstance(targetInstanceId, signals);
+      }
+    }
+  }
+
+  private deliverSignalsToInstance(targetInstanceId: string, signals: DriveSignal[]): void {
+    const targetEl = this.getContentEl(targetInstanceId) ?? this.getWrapperEl(targetInstanceId);
+    if (!targetEl) return;
+    signals.forEach(signal => {
+      targetEl.dispatchEvent(new CustomEvent('drive-signal', {
+        bubbles: true,
+        detail: { signal, linkId: 'global' },
+      }));
+    });
   }
 
   // Routes a per-beat groove tick without touching the signal cache, so cached
@@ -342,10 +402,13 @@ export class LinkManager {
   // ─── Link status notifications ─────────────────────────────────────────────
 
   private notifyLinkStatus(instanceId: string): void {
+    // Skip notifying the global source panel itself.
+    if (instanceId === this.globalSourceInstanceId) return;
     const targetEl = this.getContentEl(instanceId) ?? this.getWrapperEl(instanceId);
     if (!targetEl) return;
     const incoming = this.links.filter(l => l.targetInstanceId === instanceId);
-    const hasIncoming = incoming.length > 0;
+    // A panel has "incoming links" if it has explicit links OR if the global source is open.
+    const hasIncoming = incoming.length > 0 || this.globalSourceInstanceId !== null;
     const hasNextSignals = incoming.some(l => {
       const viewId = this.instanceIdToViewId(l.sourceInstanceId) ?? '';
       const ftName = this.instanceIdToFeatureTypeName?.(l.sourceInstanceId) ?? undefined;

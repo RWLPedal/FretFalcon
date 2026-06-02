@@ -15,6 +15,8 @@ export interface FloatingViewDescriptor {
   minWidth?: number; // Optional minimum width (enforced via CSS min-width)
   minHeight?: number; // Optional minimum height (enforced via CSS min-height)
   showInMenu?: boolean; // Optional: If false, won't be shown in spawnable view lists. Defaults to true.
+  /** When true, opening the view while it is already open focuses the existing instance instead of spawning a second. */
+  singleton?: boolean;
   /** When true, a config-toggle button (⚙) is shown in the title bar. */
   supportsConfigToggle?: boolean;
   // Factory function to create an instance of the view's logic

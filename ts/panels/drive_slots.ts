@@ -538,6 +538,28 @@ registerDriveTarget({
   resolveValue(_signal: DriveSignal): string | null { return null; },
 });
 
+// ─── GlobalKeyView as source ──────────────────────────────────────────────────
+// Dispatches 'cof-key-selected' on mount and on every root/mode change.
+// Broadcasts to ALL panels via LinkManager's global-source mechanism.
+
+registerDriveSource({
+  viewId: 'global_key',
+  emittedKinds: [SignalKind.Key, SignalKind.Chord],
+  extractSignals(detail: any): DriveSignal[] {
+    const rootNote: string = detail?.root ?? 'C';
+    const scaleKey: DiatonicMode = detail?.mode ?? DiatonicMode.Ionian;
+    const keySignal: KeySignal = { kind: SignalKind.Key, rootNote, scaleKey };
+    const chordSignal: ChordSignal = {
+      kind: SignalKind.Chord,
+      chordKey: null,
+      rootNote,
+      keyType: tonicIsMinor(scaleKey) ? KeyType.Minor : KeyType.Major,
+      roman: null,
+    };
+    return [keySignal, chordSignal];
+  },
+});
+
 // ─── CircleOfFifthsView as source ─────────────────────────────────────────────
 // Dispatches 'cof-key-selected' when the user clicks a key wedge or chord chip.
 // Signal 0 = KeySignal (always); Signal 1 = ChordSignal (always, chordKey null when no chord selected).

@@ -220,6 +220,20 @@ export class FloatingViewManager {
       return;
     }
 
+    // Singleton: focus the existing instance instead of opening a second one.
+    if (descriptor.singleton) {
+      for (const [, wrapper] of this.activeViews) {
+        const wState = wrapper['state'] as FloatingViewInstanceState;
+        if (wState.viewId === viewId) {
+          this.currentMaxZIndex++;
+          wState.zIndex = this.currentMaxZIndex;
+          wrapper.element.style.zIndex = String(this.currentMaxZIndex);
+          wrapper.element.scrollIntoView({ block: 'nearest' });
+          return;
+        }
+      }
+    }
+
     const instanceId = `fv-${this.nextInstanceId++}`;
     this.currentMaxZIndex++;
 

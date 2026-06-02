@@ -530,6 +530,14 @@ body.dark-theme .color-swatch {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
+/* ─── GlobalKeyView ──────────────────────────────────────────────────────── */
+.global-key-view {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+}
+
 /* ─── DroneView ──────────────────────────────────────────────────────────── */
 .drone-view {
   display: flex;

@@ -7,6 +7,7 @@ import { TriadFeature } from "../fretboard/features/triad_feature";
 import { SettingsManager } from "../settings_manager";
 import { LinkManager } from '../panels/link_manager';
 import '../panels/drive_slots'; // registers all drive sources/targets as a side effect
+import { GLOBAL_KEY_VIEW_ID } from '../views/global_key_view';
 import { registerBuiltins } from '../app_bootstrap';
 import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
@@ -37,7 +38,8 @@ class ReferencePage {
                 (id) => this.floatingViewManager.getWrapperElement(id),
                 (id) => this.floatingViewManager.getViewId(id),
                 (id) => this.floatingViewManager.getContentElement(id),
-                (id) => this.floatingViewManager.getFeatureTypeName(id)
+                (id) => this.floatingViewManager.getFeatureTypeName(id),
+                GLOBAL_KEY_VIEW_ID
             );
             this.floatingViewManager.setLinkManager(linkManager);
         }

@@ -39,8 +39,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { id: 'timer-feature',        icon: 'alarm',       label: 'Timer',         viewId: 'floating_timer' },
             { id: 'drum-machine-feature', icon: 'queue_music', label: 'Backing Track', viewId: 'drum_machine' },
             { id: 'strum-view-feature',   icon: 'music_note',  label: 'Strum',         viewId: 'strum_view' },
-            { id: 'drone-feature',        icon: 'graphic_eq',  label: 'Drone',         viewId: 'drone_view',                visibility: Visibility.DESKTOP },
-            { id: 'legend-feature',       icon: 'palette',     label: 'Legend',        viewId: 'instrument_color_legend',   visibility: Visibility.DESKTOP },
+            { id: 'drone-feature',        icon: 'graphic_eq',  label: 'Drone',         viewId: 'drone_view',              visibility: Visibility.DESKTOP },
         ],
     },
     {
@@ -48,6 +47,13 @@ export const NAV_SECTIONS: NavSection[] = [
         buttons: [
             { id: 'schedule-feature', icon: 'event_note',   label: 'Schedule Editor', viewId: 'schedule_floating_view' },
             { id: 'any-feature',      icon: 'smart_display', label: 'Any',            viewId: 'any_floating_view' },
+        ],
+    },
+    {
+        label: 'Utilities',
+        buttons: [
+            { id: 'global-key-feature', icon: 'cell_tower', label: 'Global Key',  viewId: 'global_key' },
+            { id: 'legend-feature',     icon: 'palette',     label: 'Legend',      viewId: 'instrument_color_legend', visibility: Visibility.DESKTOP },
         ],
     },
 ];
