@@ -39,19 +39,77 @@ import { NearbyTriadsFeature } from "./features/nearby_triads_feature";
 export const COLOR_SCHEME_OPTIONS: {
   value: FretboardColorScheme;
   text: string;
+  description: string;
+  dots: Array<{ label: string; color: string; dim?: boolean }>;
 }[] = [
-  { value: "interval", text: "Interval Colors (Default)" },
-  { value: "note", text: "Note Name Colors" },
-  { value: "simplified", text: "Simplified (Root Only)" },
+  {
+    value: "interval",
+    text: "Interval colors",
+    description: "Color by harmonic role",
+    dots: [
+      { label: "R", color: "var(--note-root)" },
+      { label: "3", color: "var(--note-third)" },
+      { label: "5", color: "var(--note-fifth)" },
+    ],
+  },
+  {
+    value: "note",
+    text: "By note name",
+    description: "Chromatic, 12 hues",
+    dots: [
+      { label: "A",  color: "var(--note-root)" },
+      { label: "A#", color: "var(--note-third)" },
+      { label: "B",  color: "var(--note-fifth)" },
+    ],
+  },
+  {
+    value: "simplified",
+    text: "Single color",
+    description: "One accent everywhere",
+    dots: [
+      { label: "R", color: "var(--accent)" },
+      { label: "3", color: "var(--accent)", dim: true },
+      { label: "5", color: "var(--accent)", dim: true },
+    ],
+  },
 ];
 
 export const LABEL_DISPLAY_OPTIONS: {
   value: FretboardLabelDisplay;
   text: string;
+  description: string;
+  dots: Array<{ label: string; color: string; dim?: boolean }>;
 }[] = [
-  { value: "interval", text: "Interval (R, 3, 5…)" },
-  { value: "note", text: "Note Name (C, F#…)" },
-  { value: "none", text: "None (dots only)" },
+  {
+    value: "interval",
+    text: "Intervals",
+    description: "Scale degrees",
+    dots: [
+      { label: "R", color: "var(--note-root)" },
+      { label: "3", color: "var(--note-third)" },
+      { label: "5", color: "var(--note-fifth)" },
+    ],
+  },
+  {
+    value: "note",
+    text: "Note names",
+    description: "Chromatic names",
+    dots: [
+      { label: "A",  color: "var(--note-root)" },
+      { label: "A#", color: "var(--note-third)" },
+      { label: "B",  color: "var(--note-fifth)" },
+    ],
+  },
+  {
+    value: "none",
+    text: "None",
+    description: "Dots only",
+    dots: [
+      { label: "", color: "var(--note-root)" },
+      { label: "", color: "var(--note-third)" },
+      { label: "", color: "var(--note-fifth)" },
+    ],
+  },
 ];
 
 function getInstrumentGlobalSettingsUISchema(
@@ -61,16 +119,6 @@ function getInstrumentGlobalSettingsUISchema(
     value: i.name as string,
     text: i.displayText,
   }));
-  const handednessOptions = [
-    { value: "right", text: "Right-Handed" },
-    { value: "left", text: "Left-Handed" },
-  ];
-  const orientationOptions = [
-    { value: "horizontal", text: "Horizontal (Default)" },
-    { value: "vertical", text: "Vertical" },
-  ];
-  const colorSchemeOptions = COLOR_SCHEME_OPTIONS;
-  const labelDisplayOptions = LABEL_DISPLAY_OPTIONS;
   return [
     {
       key: "instrument",
@@ -78,22 +126,24 @@ function getInstrumentGlobalSettingsUISchema(
       type: "select",
       options: instrumentOptions,
       triggersRebuild: true,
-      description:
-        "Select the instrument type. Changes the available tunings and features.",
     },
     {
       key: "handedness",
-      label: "Diagram Handedness",
-      type: "select",
-      options: handednessOptions,
-      description: "Orientation of fretboard diagrams.",
+      label: "Handedness",
+      type: "segmented",
+      options: [
+        { value: "left",  text: "Left" },
+        { value: "right", text: "Right" },
+      ],
     },
     {
       key: "orientation",
-      label: "Fretboard Layout",
-      type: "select",
-      options: orientationOptions,
-      description: "Display the fretboard vertically or horizontally.",
+      label: "Default layout",
+      type: "segmented",
+      options: [
+        { value: "horizontal", text: "Horizontal" },
+        { value: "vertical",   text: "Vertical" },
+      ],
     },
     {
       key: "tuning",
@@ -108,22 +158,20 @@ function getInstrumentGlobalSettingsUISchema(
         }));
       },
       triggersRebuild: true,
-      description:
-        "Select the tuning (options depend on the selected instrument).",
     },
     {
       key: "colorScheme",
-      label: "Fretboard Color Scheme",
-      type: "select",
-      options: colorSchemeOptions,
-      description: "How notes on the fretboard are colored.",
+      label: "Default color scheme",
+      type: "radio-cards",
+      description: "What the dot colors mean",
+      options: COLOR_SCHEME_OPTIONS,
     },
     {
       key: "labelDisplay",
-      label: "Note Label",
-      type: "select",
-      options: labelDisplayOptions,
-      description: "What text is shown inside each note dot.",
+      label: "Default note labels",
+      type: "radio-cards",
+      description: "What text appears on fretboard dots.",
+      options: LABEL_DISPLAY_OPTIONS,
     },
   ];
 }

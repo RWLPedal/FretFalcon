@@ -170,14 +170,16 @@ export type ConfigurationSchema =
 export interface SettingsUISchemaItem {
   key: string;
   label: string;
-  type: "select" | "number" | "text" | "checkbox";
-  options?: { value: string; text: string }[];
+  type: "select" | "number" | "text" | "checkbox" | "segmented" | "radio-cards";
+  /** Subtitle shown below the field label. */
+  description?: string;
+  options?: { value: string; text: string; description?: string; dots?: Array<{ label: string; color: string; dim?: boolean }> }[];
   /**
    * When present, options are computed from the current draft settings for this
    * category. Takes precedence over `options`. Used for fields whose choices
    * depend on other fields (e.g. tuning depends on instrument).
    */
-  getDynamicOptions?: (draft: Record<string, any>) => { value: string; text: string }[];
+  getDynamicOptions?: (draft: Record<string, any>) => { value: string; text: string; description?: string }[];
   /**
    * When true, changing this field triggers a re-render of the category settings
    * section so dependent fields (those with `getDynamicOptions`) can update.
@@ -187,5 +189,4 @@ export interface SettingsUISchemaItem {
   min?: number;
   max?: number;
   step?: number;
-  description?: string;
 }

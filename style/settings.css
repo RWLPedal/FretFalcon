@@ -1,0 +1,451 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   settings.css — Settings modal layout, sections, and custom controls.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Modal header ─────────────────────────────────────────────────────── */
+.settings-modal-head {
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 16px;
+  gap: 0;
+}
+
+.settings-modal-title {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.settings-app-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-muted);
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.settings-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+/* ─── Modal body ───────────────────────────────────────────────────────── */
+.settings-modal-body {
+  background: var(--settings-bg, var(--bg));
+  padding: 20px 24px 16px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.settings-modal-body::-webkit-scrollbar {
+  width: 5px;
+}
+.settings-modal-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.settings-modal-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+.settings-modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* ─── Modal footer ─────────────────────────────────────────────────────── */
+.settings-modal-foot {
+  background: var(--panel-bg);
+  border-top: 1px solid var(--border);
+  justify-content: space-between;
+}
+
+.settings-apply-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.settings-apply-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4caf50;
+  flex-shrink: 0;
+}
+
+/* ─── Sections ─────────────────────────────────────────────────────────── */
+.settings-section + .settings-section {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.settings-section-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.settings-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.settings-section-tag {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ─── Field rows ───────────────────────────────────────────────────────── */
+.settings-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.settings-row:last-child {
+  border-bottom: none;
+}
+
+.settings-row-label {
+  flex: 0 0 140px;
+  padding-top: 2px;
+}
+
+.settings-row-label-text {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-row-label-desc {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+  line-height: 1.3;
+}
+
+.settings-row-control {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* ─── Segmented control ────────────────────────────────────────────────── */
+.settings-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--input-bg);
+}
+
+.settings-segmented-btn {
+  padding: 5px 14px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  background: none;
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: background 0.1s, color 0.1s;
+  white-space: nowrap;
+}
+
+.settings-segmented-btn:last-child {
+  border-right: none;
+}
+
+.settings-segmented-btn:hover:not(.is-active) {
+  background: var(--border);
+  color: var(--text-primary);
+}
+
+.settings-segmented-btn.is-active {
+  background: var(--accent);
+  color: var(--panel-bg);
+  font-weight: 600;
+}
+
+/* ─── Instrument family grid ───────────────────────────────────────────── */
+.settings-instrument-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.settings-instrument-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 14px 7px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 60px;
+  background: var(--input-bg);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.settings-instrument-card:hover:not(.is-active) {
+  border-color: var(--text-muted);
+}
+
+.settings-instrument-card.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--input-bg));
+}
+
+.settings-instrument-abbrev {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1;
+}
+
+.settings-instrument-card.is-active .settings-instrument-abbrev {
+  color: var(--accent);
+}
+
+.settings-instrument-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 4px;
+  line-height: 1;
+}
+
+/* ─── Radio cards (color scheme) ───────────────────────────────────────── */
+.settings-radio-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.settings-radio-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  background: var(--input-bg);
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.settings-radio-card:hover:not(.is-active) {
+  border-color: var(--text-muted);
+}
+
+.settings-radio-card.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--input-bg));
+}
+
+.settings-radio-card-preview {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-radio-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 6.5px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  letter-spacing: -0.3px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.settings-radio-dot--dim {
+  opacity: 0.28;
+}
+
+.settings-radio-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.settings-radio-card-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.settings-radio-card-desc {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.settings-radio-card-check {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.settings-radio-card.is-active .settings-radio-card-check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ─── TuningEditor inside settings modal ──────────────────────────────── */
+
+/* Re-use the settings-row layout for the Strings pills row */
+.settings-modal-body .tuning-editor .field.is-horizontal {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  margin-bottom: 0;
+}
+
+.settings-modal-body .tuning-editor .field.is-horizontal:last-child,
+.settings-modal-body .tuning-editor .tuning-save-section {
+  border-bottom: none;
+}
+
+.settings-modal-body .tuning-editor .field-label.is-normal {
+  flex: 0 0 140px;
+  padding: 2px 0 0;
+  text-align: left;
+  justify-content: flex-start;
+  margin: 0;
+  padding-right: 0;
+}
+
+.settings-modal-body .tuning-editor .field-label .label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0;
+}
+
+.settings-modal-body .tuning-editor .field-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-modal-body .tuning-editor .field-body .field {
+  margin-bottom: 0;
+}
+
+.settings-modal-body .tuning-pills-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-modal-body .tuning-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Pills styled like settings-string-pill but interactive */
+.settings-modal-body .tuning-pill.tag {
+  display: inline-block;
+  padding: 3px 9px;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  background: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+  line-height: 1.4;
+  height: auto;
+  cursor: pointer;
+  transition: border-color 0.1s, background 0.1s;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.settings-modal-body .tuning-pill.tag:hover {
+  border-color: var(--accent) !important;
+  background: color-mix(in srgb, var(--accent) 10%, var(--input-bg)) !important;
+}
+
+.settings-modal-body .tuning-pills-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Save/delete row */
+.settings-modal-body .tuning-save-section {
+  padding: 6px 0 0;
+}
+
+.settings-modal-body .tuning-save-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ─── String note display ──────────────────────────────────────────────── */
+.settings-string-display {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.settings-string-pill {
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.78rem;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.settings-string-hint {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  width: 100%;
+  margin-top: 4px;
+}

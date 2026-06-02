@@ -1,383 +1,661 @@
 import { AppSettings } from "./settings";
 import { InstrumentCategory } from "./fretboard/fretboard_category";
 import { DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
-import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard/fretboard";
+import { DEFAULT_PRACTICE_SETTINGS } from "./practice_settings";
+import {
+  INSTRUMENTS,
+  InstrumentName,
+  getAvailableTunings,
+} from "./fretboard/fretboard";
 import { TuningEditor } from "./fretboard/tuning_editor";
 import { ThemeSwatchPicker } from "./views/theme_swatch_picker";
+import { Theme } from "./theme_manager";
 
-type PageType = 'practice' | 'reference';
+type PageType = "practice" | "reference";
 type SaveCallback = (newSettings: AppSettings) => void;
+
+interface InstrumentVariant {
+  name: InstrumentName;
+  label: string;
+}
+interface InstrumentFamily {
+  key: string;
+  label: string;
+  abbrev: string;
+  instruments: InstrumentVariant[];
+}
+
+const INSTRUMENT_FAMILIES: InstrumentFamily[] = [
+  {
+    key: "guitar",
+    label: "Guitar",
+    abbrev: "GTR",
+    instruments: [
+      { name: InstrumentName.Guitar, label: "6-string" },
+      { name: InstrumentName.SevenStrGuitar, label: "7-string" },
+      { name: InstrumentName.EightStrGuitar, label: "8-string" },
+      { name: InstrumentName.TenorGuitar, label: "Tenor" },
+    ],
+  },
+  {
+    key: "bass",
+    label: "Bass",
+    abbrev: "BASS",
+    instruments: [{ name: InstrumentName.Bass, label: "4-string" }],
+  },
+  {
+    key: "ukulele",
+    label: "Ukulele",
+    abbrev: "UKE",
+    instruments: [{ name: InstrumentName.Ukulele, label: "Standard" }],
+  },
+  {
+    key: "mandolin",
+    label: "Mandolin",
+    abbrev: "MAND",
+    instruments: [
+      { name: InstrumentName.Mandolin, label: "Mandolin" },
+      { name: InstrumentName.Mandola, label: "Mandola" },
+      { name: InstrumentName.IrishBouzouki, label: "Bouzouki" },
+    ],
+  },
+  {
+    key: "charango",
+    label: "Charango",
+    abbrev: "CHGO",
+    instruments: [{ name: InstrumentName.Charango, label: "Standard" }],
+  },
+  {
+    key: "banjo",
+    label: "Banjo",
+    abbrev: "BJO",
+    instruments: [{ name: InstrumentName.TenorBanjo, label: "Tenor" }],
+  },
+];
+
+function familyForInstrument(
+  name: InstrumentName,
+): InstrumentFamily | undefined {
+  return INSTRUMENT_FAMILIES.find((f) =>
+    f.instruments.some((v) => v.name === name),
+  );
+}
 
 const MODAL_HTML = `
 <div class="modal" id="settings-modal">
   <div class="modal-background"></div>
   <div class="modal-card">
-    <header class="modal-card-head">
-      <p class="modal-card-title">Application Settings</p>
+    <header class="modal-card-head settings-modal-head">
+      <div class="settings-modal-title">
+        <span class="settings-app-label">PracTempo</span>
+        <h2 class="settings-title">Settings</h2>
+      </div>
       <button class="delete" aria-label="close" id="settings-modal-close"></button>
     </header>
-    <section class="modal-card-body">
-      <!-- Content will be generated here -->
+    <section class="modal-card-body settings-modal-body">
     </section>
-    <footer class="modal-card-foot is-justify-content-flex-end">
-      <button class="button is-success" id="settings-save-button">Save changes</button>
-      <button class="button" id="settings-cancel-button">Cancel</button>
+    <footer class="modal-card-foot settings-modal-foot">
+      <span class="settings-apply-indicator">
+        <span class="settings-apply-dot"></span>
+        Changes apply instantly
+      </span>
+      <button class="button is-ghost" id="settings-reset-button">Reset to defaults</button>
     </footer>
   </div>
 </div>
 `;
 
-const PRACTICE_SETTINGS_HTML = `
-<h4 class="title is-6">Practice Settings</h4>
-<div class="field is-horizontal">
-    <div class="field-label is-normal"><label class="label">Warmup (sec)</label></div>
-    <div class="field-body"><div class="field"><div class="control">
-        <input class="input" type="number" id="warmup-input" min="0" step="1" value="0">
-    </div></div></div>
-</div>
-`;
-
-const GLOBAL_SETTINGS_HTML = `
-<h4 class="title is-6">Global Settings</h4>
-<div class="field is-horizontal">
-  <div class="field-label is-normal"><label class="label">Theme</label></div>
-  <div class="field-body"><div class="field"><div class="control">
-      <div id="theme-picker-mount"></div>
-  </div></div></div>
-</div>
-<div class="field is-horizontal">
-  <div class="field-label is-normal"><label class="label" for="show-grid-checkbox">Show Grid</label></div>
-  <div class="field-body"><div class="field"><div class="control">
-      <label class="toggle-switch"><input type="checkbox" id="show-grid-checkbox"><span class="toggle-switch__slider"></span></label>
-  </div></div></div>
-</div>
-<hr>
-<div id="category-settings-container"></div>
-`;
-
 export class SettingsManager {
-    private settings: AppSettings;
-    private pageType: PageType;
-    private modalEl: HTMLElement | null = null;
-    private onSave: SaveCallback;
-    private themePicker: ThemeSwatchPicker | null = null;
-    private tuningEditor: TuningEditor | null = null;
-    private category: InstrumentCategory;
+  private settings: AppSettings;
+  private pageType: PageType;
+  private modalEl: HTMLElement | null = null;
+  private onSave: SaveCallback;
+  private themePicker: ThemeSwatchPicker | null = null;
+  private category: InstrumentCategory;
 
-    constructor(settings: AppSettings, pageType: PageType, onSave: SaveCallback) {
-        this.settings = settings;
-        this.pageType = pageType;
-        this.onSave = onSave;
-        this.category = new InstrumentCategory();
-        this.category.updateCustomTunings(settings.customTunings);
-        this.injectModal();
+  constructor(settings: AppSettings, pageType: PageType, onSave: SaveCallback) {
+    this.settings = settings;
+    this.pageType = pageType;
+    this.onSave = onSave;
+    this.category = new InstrumentCategory();
+    this.category.updateCustomTunings(settings.customTunings);
+    this._injectModal();
+  }
+
+  private _injectModal(): void {
+    if (document.getElementById("settings-modal")) return;
+    const container = document.createElement("div");
+    container.innerHTML = MODAL_HTML;
+    document.body.appendChild(container);
+    this.modalEl = document.getElementById("settings-modal");
+
+    this.modalEl
+      .querySelector("#settings-modal-close")
+      ?.addEventListener("click", () => this.close());
+    this.modalEl
+      .querySelector(".modal-background")
+      ?.addEventListener("click", () => this.close());
+    this.modalEl
+      .querySelector("#settings-reset-button")
+      ?.addEventListener("click", () => this._resetToDefaults());
+  }
+
+  public open(): void {
+    if (!this.modalEl) return;
+    this._populate();
+    this.modalEl.classList.add("is-active");
+  }
+
+  public close(): void {
+    this.modalEl?.classList.remove("is-active");
+  }
+
+  public isOpen(): boolean {
+    return this.modalEl?.classList.contains("is-active") ?? false;
+  }
+
+  public updateSettings(settings: AppSettings): void {
+    this.settings = settings;
+    this.category.updateCustomTunings(settings.customTunings);
+    if (this.isOpen()) {
+      this.themePicker?.setValue(settings.theme);
+      const gridEl = this.modalEl?.querySelector(
+        "#settings-show-grid",
+      ) as HTMLInputElement | null;
+      if (gridEl) gridEl.checked = !!settings.showGrid;
+    }
+  }
+
+  // ── Apply changes immediately ──────────────────────────────────────────────
+
+  private _applyChange(updates: Partial<AppSettings>): void {
+    this.settings = { ...this.settings, ...updates };
+    this.onSave(this.settings);
+  }
+
+  private _applyInstrumentChange(key: string, value: any): void {
+    this.settings = {
+      ...this.settings,
+      instrumentSettings: { ...this.settings.instrumentSettings, [key]: value },
+    };
+    this.onSave(this.settings);
+  }
+
+  private _resetToDefaults(): void {
+    this.settings = {
+      ...this.settings,
+      theme: Theme.WARM,
+      showGrid: true,
+      instrumentSettings: { ...DEFAULT_INSTRUMENT_SETTINGS },
+      ...(this.pageType === "practice"
+        ? { practice: { ...DEFAULT_PRACTICE_SETTINGS } }
+        : {}),
+    };
+    this.onSave(this.settings);
+    this._populate();
+  }
+
+  // ── Section rendering ──────────────────────────────────────────────────────
+
+  private _populate(): void {
+    const body = this.modalEl?.querySelector(
+      ".settings-modal-body",
+    ) as HTMLElement;
+    if (!body) return;
+    body.innerHTML = "";
+
+    this.category.updateCustomTunings(this.settings.customTunings);
+
+    let sectionNum = 1;
+
+    if (this.pageType === "practice") {
+      this._renderSessionSection(body, sectionNum++);
+    }
+    this._renderAppearanceSection(body, sectionNum++);
+    this._renderInstrumentSection(body, sectionNum++);
+    this._renderFretboardSection(body, sectionNum++);
+  }
+
+  private _renderSessionSection(parent: HTMLElement, num: number): void {
+    const section = this._makeSection(num, "Session", "TIMING");
+
+    const warmupInput = document.createElement("input");
+    warmupInput.type = "number";
+    warmupInput.id = "settings-warmup";
+    warmupInput.className = "input";
+    warmupInput.min = "0";
+    warmupInput.step = "1";
+    warmupInput.value = String(this.settings.practice.warmupPeriod);
+    warmupInput.style.width = "90px";
+    warmupInput.addEventListener("change", () => {
+      const val = Math.max(0, parseInt(warmupInput.value, 10) || 0);
+      warmupInput.value = String(val);
+      this._applyChange({
+        practice: { ...this.settings.practice, warmupPeriod: val },
+      });
+    });
+
+    this._appendRow(section, "Warmup (sec)", "", warmupInput);
+    parent.appendChild(section);
+  }
+
+  private _renderAppearanceSection(parent: HTMLElement, num: number): void {
+    const section = this._makeSection(num, "Appearance", "THEME & CANVAS");
+
+    // Theme picker
+    this.themePicker = new ThemeSwatchPicker(
+      this.settings.theme,
+      "normal",
+      (theme) => this._applyChange({ theme }),
+    );
+    this._appendRow(
+      section,
+      "Theme",
+      "Re-skins the whole app",
+      this.themePicker.el,
+    );
+
+    // Show grid toggle
+    const toggleWrap = document.createElement("label");
+    toggleWrap.className = "toggle-switch";
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.id = "settings-show-grid";
+    checkbox.checked = !!this.settings.showGrid;
+    checkbox.addEventListener("change", () =>
+      this._applyChange({ showGrid: checkbox.checked }),
+    );
+    const slider = document.createElement("span");
+    slider.className = "toggle-switch__slider";
+    toggleWrap.append(checkbox, slider);
+    this._appendRow(
+      section,
+      "Show grid",
+      "Faint alignment grid on the canvas",
+      toggleWrap,
+    );
+
+    parent.appendChild(section);
+  }
+
+  private _renderInstrumentSection(parent: HTMLElement, num: number): void {
+    const section = this._makeSection(num, "Instrument", "PICK YOUR TOOL");
+    this._populateInstrumentSection(section);
+    parent.appendChild(section);
+  }
+
+  private _populateInstrumentSection(section: HTMLElement): void {
+    // Clear existing rows (keep the section header)
+    const header = section.querySelector(".settings-section-header");
+    section.innerHTML = "";
+    if (header) section.appendChild(header);
+
+    const instrument = this.settings.instrumentSettings.instrument;
+    const activeFamily =
+      familyForInstrument(instrument) ?? INSTRUMENT_FAMILIES[0];
+
+    // Instrument family picker
+    const grid = document.createElement("div");
+    grid.className = "settings-instrument-grid";
+    INSTRUMENT_FAMILIES.forEach((family) => {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className =
+        "settings-instrument-card" +
+        (family.key === activeFamily.key ? " is-active" : "");
+      const abbrev = document.createElement("span");
+      abbrev.className = "settings-instrument-abbrev";
+      abbrev.textContent = family.abbrev;
+      const name = document.createElement("span");
+      name.className = "settings-instrument-name";
+      name.textContent = family.label;
+      card.append(abbrev, name);
+      card.addEventListener("click", () => {
+        const defaultVariant = family.instruments[0];
+        const defaultTuning =
+          INSTRUMENTS[defaultVariant.name]?.defaultTuning.name ?? "Standard";
+        this.settings = {
+          ...this.settings,
+          instrumentSettings: {
+            ...this.settings.instrumentSettings,
+            instrument: defaultVariant.name,
+            tuning: defaultTuning,
+          },
+        };
+        this.onSave(this.settings);
+        this._populateInstrumentSection(section);
+      });
+      grid.appendChild(card);
+    });
+    this._appendRow(
+      section,
+      "Instrument",
+      "Picking one loads sensible defaults",
+      grid,
+    );
+
+    // Configuration segmented (only for families with >1 variant)
+    if (activeFamily.instruments.length > 1) {
+      const configControl = this._renderSegmented(
+        activeFamily.instruments.map((v) => ({
+          value: v.name as string,
+          text: v.label,
+        })),
+        instrument as string,
+        (val) => {
+          const newInstrument = val as InstrumentName;
+          const newTuning =
+            INSTRUMENTS[newInstrument]?.defaultTuning.name ?? "Standard";
+          this.settings = {
+            ...this.settings,
+            instrumentSettings: {
+              ...this.settings.instrumentSettings,
+              instrument: newInstrument,
+              tuning: newTuning,
+            },
+          };
+          this.onSave(this.settings);
+          this._populateInstrumentSection(section);
+        },
+      );
+      this._appendRow(section, "Configuration", "", configControl);
     }
 
-    private injectModal(): void {
-        if (document.getElementById('settings-modal')) {
-            return;
-        }
-        const modalContainer = document.createElement('div');
-        modalContainer.innerHTML = MODAL_HTML;
-        document.body.appendChild(modalContainer);
-        this.modalEl = document.getElementById('settings-modal');
+    // Tuning dropdown
+    const tuningOptions = getAvailableTunings(
+      instrument,
+      this.settings.customTunings,
+    );
+    const currentTuning = this.settings.instrumentSettings.tuning;
+    const tuningSelect = document.createElement("select");
+    const tuningSelectWrap = document.createElement("div");
+    tuningSelectWrap.className = "select is-fullwidth";
+    tuningOptions.forEach((t) => {
+      const opt = document.createElement("option");
+      opt.value = t.name;
+      opt.textContent = t.name;
+      opt.selected = t.name === currentTuning;
+      tuningSelect.appendChild(opt);
+    });
+    tuningSelectWrap.appendChild(tuningSelect);
+    tuningSelect.addEventListener("change", () => {
+      this._applyInstrumentChange("tuning", tuningSelect.value);
+      this._populateInstrumentSection(section);
+    });
+    this._appendRow(section, "Tuning", "", tuningSelectWrap);
 
-        // Add event listeners for closing
-        this.modalEl.querySelector('#settings-modal-close').addEventListener('click', () => this.close());
-        this.modalEl.querySelector('.modal-background').addEventListener('click', () => this.close());
-        this.modalEl.querySelector('#settings-cancel-button').addEventListener('click', () => this.close());
-        this.modalEl.querySelector('#settings-save-button').addEventListener('click', () => this.save());
+    // TuningEditor — interactive string pills + custom tuning save/delete
+    const instrumentDef = INSTRUMENTS[instrument];
+    if (instrumentDef) {
+      const allTunings = getAvailableTunings(
+        instrument,
+        this.settings.customTunings,
+      );
+      const resolvedTuning =
+        allTunings.find((t) => t.name === currentTuning) ??
+        instrumentDef.defaultTuning;
+      const tuningEditor = new TuningEditor(
+        instrumentDef,
+        resolvedTuning,
+        allTunings,
+        {
+          onSave: (name, notes) => {
+            if (!this.settings.customTunings) this.settings.customTunings = {};
+            const existing = this.settings.customTunings[instrument] ?? [];
+            const idx = existing.findIndex((t) => t.name === name);
+            if (idx >= 0) existing[idx] = { name, notes };
+            else existing.push({ name, notes });
+            this.settings.customTunings[instrument] = existing;
+            this.category.updateCustomTunings(this.settings.customTunings);
+            this.settings = {
+              ...this.settings,
+              instrumentSettings: {
+                ...this.settings.instrumentSettings,
+                tuning: name,
+              },
+            };
+            this.onSave(this.settings);
+            this._populateInstrumentSection(section);
+          },
+          onDelete: (name) => {
+            if (!this.settings.customTunings?.[instrument]) return;
+            this.settings.customTunings[instrument] =
+              this.settings.customTunings[instrument]!.filter(
+                (t) => t.name !== name,
+              );
+            this.category.updateCustomTunings(this.settings.customTunings);
+            this.settings = {
+              ...this.settings,
+              instrumentSettings: {
+                ...this.settings.instrumentSettings,
+                tuning: instrumentDef.defaultTuning.name,
+              },
+            };
+            this.onSave(this.settings);
+            this._populateInstrumentSection(section);
+          },
+        },
+      );
+      section.appendChild(tuningEditor.el);
     }
+  }
 
-    public open(): void {
-        if (!this.modalEl) return;
-        this.populate();
-        this.modalEl.classList.add('is-active');
-    }
+  private _renderFretboardSection(parent: HTMLElement, num: number): void {
+    const section = this._makeSection(
+      num,
+      "Fretboard & diagrams",
+      "HOW NOTES ARE DRAWN",
+    );
+    const schemaItems = this.category.getGlobalSettingsUISchema();
+    const draft: Record<string, any> = {
+      ...DEFAULT_INSTRUMENT_SETTINGS,
+      ...this.settings.instrumentSettings,
+    };
 
-    public close(): void {
-        this.modalEl?.classList.remove('is-active');
-    }
+    schemaItems.forEach((item) => {
+      if (item.key === "instrument" || item.key === "tuning") return;
 
-    public isOpen(): boolean {
-        return this.modalEl?.classList.contains('is-active') ?? false;
-    }
+      const currentValue = draft[item.key];
 
-    public updateSettings(settings: AppSettings): void {
-        this.settings = settings;
-        this.category.updateCustomTunings(settings.customTunings);
-        if (this.isOpen()) {
-            this.themePicker?.setValue(settings.theme);
-            const showGridEl = this.modalEl?.querySelector('#show-grid-checkbox') as HTMLInputElement | null;
-            if (showGridEl) showGridEl.checked = !!settings.showGrid;
-        }
-    }
-
-    private populate(): void {
-        const body = this.modalEl.querySelector('.modal-card-body') as HTMLElement;
-        if (!body) return;
-        let content = '';
-
-        if (this.pageType === 'practice') {
-            content += PRACTICE_SETTINGS_HTML;
-        }
-
-        content += GLOBAL_SETTINGS_HTML;
-        body.innerHTML = content;
-
-        const themeMount = body.querySelector('#theme-picker-mount') as HTMLElement;
-        this.themePicker = new ThemeSwatchPicker(this.settings.theme, 'normal');
-        themeMount.appendChild(this.themePicker.el);
-
-        (body.querySelector("#show-grid-checkbox") as HTMLInputElement).checked = !!this.settings.showGrid;
-        if (this.pageType === 'practice') {
-            (body.querySelector("#warmup-input") as HTMLInputElement).value = String(this.settings.practice.warmupPeriod);
-        }
-
-        this.populateCategorySettings(body.querySelector('#category-settings-container'));
-    }
-
-    private populateCategorySettings(container: HTMLElement): void {
-        if (!container) {
-            console.error("Cannot find category settings container in modal!");
-            return;
-        }
-        container.innerHTML = "";
-
-        this.category.updateCustomTunings(this.settings.customTunings);
-        const schemaItems = this.category.getGlobalSettingsUISchema();
-        const categoryName = this.category.getName();
-        if (!schemaItems || schemaItems.length === 0) return;
-
-        const initialDraft = this.getInstrumentSettings();
-
-        const categoryHeader = document.createElement("h5");
-        categoryHeader.textContent = `${this.category.getDisplayName()} Settings`;
-        categoryHeader.classList.add("title", "is-6", "category-settings-header", "mt-4");
-        container.appendChild(categoryHeader);
-
-        const sectionEl = document.createElement("div");
-        sectionEl.dataset.categorySectionName = categoryName;
-        container.appendChild(sectionEl);
-
-        this._renderCategorySection(sectionEl, schemaItems, categoryName, initialDraft);
-    }
-
-    /**
-     * Renders (or re-renders) one category's settings fields into `sectionEl`.
-     * `draft` is the current in-memory values to show; fields with `triggersRebuild`
-     * will re-render the section when their value changes.
-     */
-    private _renderCategorySection(
-        sectionEl: HTMLElement,
-        schemaItems: import("./feature").SettingsUISchemaItem[],
-        categoryName: string,
-        draft: Record<string, any>
-    ): void {
-        sectionEl.innerHTML = "";
-
-        schemaItems.forEach((item) => {
-            const fieldDiv = document.createElement("div");
-            fieldDiv.classList.add("field", "is-horizontal");
-            const fieldLabel = document.createElement("div");
-            fieldLabel.classList.add("field-label", "is-normal");
-            const label = document.createElement("label");
-            label.classList.add("label");
-            label.textContent = item.label;
-            if (item.description) label.title = item.description;
-            fieldLabel.appendChild(label);
-            const fieldBody = document.createElement("div");
-            fieldBody.classList.add("field-body");
-            const fieldInner = document.createElement("div");
-            fieldInner.classList.add("field");
-            const control = document.createElement("div");
-            control.classList.add("control", "is-expanded");
-            let inputElement: HTMLInputElement | HTMLSelectElement | null = null;
-            const inputId = `setting-${categoryName}-${item.key}`;
-            const currentValue = draft[item.key];
-
-            if (item.type === "select") {
-                const options = item.getDynamicOptions
-                    ? item.getDynamicOptions(draft)
-                    : (item.options ?? []);
-                const selectElement = document.createElement("select");
-                selectElement.id = inputId;
-                const selectWrapper = document.createElement("div");
-                selectWrapper.classList.add("select", "is-fullwidth");
-                options.forEach((opt) => {
-                    const option = document.createElement("option");
-                    option.value = opt.value;
-                    option.textContent = opt.text;
-                    if (currentValue !== undefined && String(currentValue) === opt.value) {
-                        option.selected = true;
-                    }
-                    selectElement.appendChild(option);
-                });
-                selectWrapper.appendChild(selectElement);
-                control.appendChild(selectWrapper);
-                inputElement = selectElement;
-
-                if (item.triggersRebuild) {
-                    selectElement.addEventListener("change", () => {
-                        const newDraft = this._readSectionDraft(sectionEl, draft);
-                        this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
-                    });
-                }
-            } else if (item.type === "checkbox") {
-                const checkboxElement = document.createElement("input");
-                checkboxElement.id = inputId;
-                checkboxElement.type = "checkbox";
-                checkboxElement.checked = !!currentValue;
-                const toggleLabel = document.createElement("label");
-                toggleLabel.classList.add("toggle-switch");
-                const slider = document.createElement("span");
-                slider.classList.add("toggle-switch__slider");
-                toggleLabel.append(checkboxElement, slider);
-                control.appendChild(toggleLabel);
-                inputElement = checkboxElement;
-                if (item.triggersRebuild) {
-                    checkboxElement.addEventListener("change", () => {
-                        const newDraft = this._readSectionDraft(sectionEl, draft);
-                        this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
-                    });
-                }
-            } else {
-                const textInputElement = document.createElement("input");
-                textInputElement.id = inputId;
-                textInputElement.type = item.type === "number" ? "number" : "text";
-                textInputElement.classList.add("input");
-                textInputElement.value = currentValue !== undefined ? String(currentValue) : "";
-                if (item.placeholder) textInputElement.placeholder = item.placeholder;
-                if (item.min !== undefined) textInputElement.min = String(item.min);
-                if (item.max !== undefined) textInputElement.max = String(item.max);
-                if (item.step !== undefined) textInputElement.step = String(item.step);
-                control.appendChild(textInputElement);
-                inputElement = textInputElement;
-            }
-
-            if (inputElement) {
-                inputElement.dataset.category = categoryName;
-                inputElement.dataset.setting = item.key;
-                label.htmlFor = inputId;
-            } else {
-                console.warn(`Could not create input element for setting: ${categoryName}.${item.key}`);
-            }
-
-            fieldInner.appendChild(control);
-            fieldBody.appendChild(fieldInner);
-            fieldDiv.appendChild(fieldLabel);
-            fieldDiv.appendChild(fieldBody);
-            sectionEl.appendChild(fieldDiv);
-
-            // Mount TuningEditor immediately after the tuning dropdown row
-            if (item.key === "tuning") {
-                this._mountTuningEditor(sectionEl, draft, sectionEl, schemaItems, categoryName);
-            }
-        });
-    }
-
-    private _mountTuningEditor(
-        mountAfterEl: HTMLElement,
-        draft: Record<string, any>,
-        sectionEl: HTMLElement,
-        schemaItems: import("./feature").SettingsUISchemaItem[],
-        categoryName: string
-    ): void {
-        const instrument = (draft.instrument as InstrumentName) ?? InstrumentName.Guitar;
-        const instrumentDef = INSTRUMENTS[instrument];
-        if (!instrumentDef) return;
-
-        const allTunings = getAvailableTunings(instrument, this.settings.customTunings);
-        const tuningName: string = draft.tuning ?? instrumentDef.defaultTuning.name;
-        const initialTuning = allTunings.find(t => t.name === tuningName) ?? instrumentDef.defaultTuning;
-
-        this.tuningEditor = new TuningEditor(
-            instrumentDef,
-            initialTuning,
-            allTunings,
-            {
-                onSave: (name, notes) => {
-                    if (!this.settings.customTunings) this.settings.customTunings = {};
-                    const existing = this.settings.customTunings[instrument] ?? [];
-                    const idx = existing.findIndex(t => t.name === name);
-                    if (idx >= 0) existing[idx] = { name, notes };
-                    else existing.push({ name, notes });
-                    this.settings.customTunings[instrument] = existing;
-                    this.category.updateCustomTunings(this.settings.customTunings);
-                    // Re-render so dropdown picks up new tuning
-                    const newDraft = this._readSectionDraft(sectionEl, draft);
-                    newDraft.tuning = name;
-                    this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
-                },
-                onDelete: (name) => {
-                    if (!this.settings.customTunings?.[instrument]) return;
-                    this.settings.customTunings[instrument] = this.settings.customTunings[instrument]!.filter(t => t.name !== name);
-                    this.category.updateCustomTunings(this.settings.customTunings);
-                    const newDraft = this._readSectionDraft(sectionEl, draft);
-                    newDraft.tuning = instrumentDef.defaultTuning.name;
-                    this._renderCategorySection(sectionEl, schemaItems, categoryName, newDraft);
-                },
-            }
+      if (item.type === "segmented") {
+        const options = item.options ?? [];
+        const control = this._renderSegmented(
+          options,
+          currentValue !== undefined
+            ? String(currentValue)
+            : (options[0]?.value ?? ""),
+          (val) => this._applyInstrumentChange(item.key, val),
         );
-        mountAfterEl.appendChild(this.tuningEditor.el);
+        this._appendRow(section, item.label, item.description ?? "", control);
+      } else if (item.type === "radio-cards") {
+        const options = item.options ?? [];
+        const control = this._renderRadioCards(
+          options,
+          currentValue !== undefined
+            ? String(currentValue)
+            : (options[0]?.value ?? ""),
+          (val) => this._applyInstrumentChange(item.key, val),
+        );
+        this._appendRow(section, item.label, item.description ?? "", control);
+      } else if (item.type === "select") {
+        const options = item.getDynamicOptions
+          ? item.getDynamicOptions(draft)
+          : (item.options ?? []);
+        const selectEl = document.createElement("select");
+        const selectWrap = document.createElement("div");
+        selectWrap.className = "select is-fullwidth";
+        options.forEach((opt) => {
+          const o = document.createElement("option");
+          o.value = opt.value;
+          o.textContent = opt.text;
+          o.selected = String(currentValue) === opt.value;
+          selectEl.appendChild(o);
+        });
+        selectWrap.appendChild(selectEl);
+        selectEl.addEventListener("change", () =>
+          this._applyInstrumentChange(item.key, selectEl.value),
+        );
+        this._appendRow(
+          section,
+          item.label,
+          item.description ?? "",
+          selectWrap,
+        );
+      }
+    });
+
+    parent.appendChild(section);
+  }
+
+  // ── Control builders ───────────────────────────────────────────────────────
+
+  private _renderSegmented(
+    options: { value: string; text: string }[],
+    currentValue: string,
+    onChange: (val: string) => void,
+  ): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "settings-segmented";
+
+    options.forEach((opt) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className =
+        "settings-segmented-btn" +
+        (opt.value === currentValue ? " is-active" : "");
+      btn.textContent = opt.text;
+      btn.addEventListener("click", () => {
+        wrap
+          .querySelectorAll(".settings-segmented-btn")
+          .forEach((b) => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        onChange(opt.value);
+      });
+      wrap.appendChild(btn);
+    });
+
+    return wrap;
+  }
+
+  private _renderRadioCards(
+    options: {
+      value: string;
+      text: string;
+      description?: string;
+      dots?: Array<{ label: string; color: string; dim?: boolean }>;
+    }[],
+    currentValue: string,
+    onChange: (val: string) => void,
+  ): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.className = "settings-radio-cards";
+
+    options.forEach((opt) => {
+      const card = document.createElement("div");
+      card.className =
+        "settings-radio-card" +
+        (opt.value === currentValue ? " is-active" : "");
+
+      const preview = document.createElement("span");
+      preview.className = `settings-radio-card-preview settings-radio-card-preview--${opt.value}`;
+      if (opt.dots?.length) {
+        opt.dots.forEach((dot) => {
+          const dotEl = document.createElement("span");
+          dotEl.className =
+            "settings-radio-dot" + (dot.dim ? " settings-radio-dot--dim" : "");
+          dotEl.style.background = dot.color;
+          dotEl.textContent = dot.label;
+          preview.appendChild(dotEl);
+        });
+      }
+
+      const content = document.createElement("span");
+      content.className = "settings-radio-card-content";
+      const title = document.createElement("span");
+      title.className = "settings-radio-card-title";
+      title.textContent = opt.text;
+      content.appendChild(title);
+      if (opt.description) {
+        const desc = document.createElement("span");
+        desc.className = "settings-radio-card-desc";
+        desc.textContent = opt.description;
+        content.appendChild(desc);
+      }
+
+      const check = document.createElement("span");
+      check.className = "settings-radio-card-check";
+
+      card.append(preview, content, check);
+      card.addEventListener("click", () => {
+        wrap
+          .querySelectorAll(".settings-radio-card")
+          .forEach((c) => c.classList.remove("is-active"));
+        card.classList.add("is-active");
+        onChange(opt.value);
+      });
+      wrap.appendChild(card);
+    });
+
+    return wrap;
+  }
+
+  // ── Layout helpers ─────────────────────────────────────────────────────────
+
+  private _makeSection(num: number, title: string, tag: string): HTMLElement {
+    const section = document.createElement("div");
+    section.className = "settings-section";
+
+    const header = document.createElement("div");
+    header.className = "settings-section-header";
+
+    const numEl = document.createElement("span");
+    numEl.className = "settings-section-num";
+    numEl.textContent = String(num).padStart(2, "0");
+
+    const titleEl = document.createElement("h3");
+    titleEl.className = "settings-section-title";
+    titleEl.textContent = title;
+
+    const tagEl = document.createElement("span");
+    tagEl.className = "settings-section-tag";
+    tagEl.textContent = tag;
+
+    header.append(numEl, titleEl, tagEl);
+    section.appendChild(header);
+    return section;
+  }
+
+  private _appendRow(
+    section: HTMLElement,
+    labelText: string,
+    descText: string,
+    controlEl: HTMLElement,
+  ): void {
+    const row = document.createElement("div");
+    row.className = "settings-row";
+    // data attribute for targeted updates (e.g. strings display refresh)
+    row.dataset.rowKey = labelText.toLowerCase().replace(/\s+/g, "-");
+
+    const labelCol = document.createElement("div");
+    labelCol.className = "settings-row-label";
+
+    const label = document.createElement("span");
+    label.className = "settings-row-label-text";
+    label.textContent = labelText;
+    labelCol.appendChild(label);
+
+    if (descText) {
+      const desc = document.createElement("span");
+      desc.className = "settings-row-label-desc";
+      desc.textContent = descText;
+      labelCol.appendChild(desc);
     }
 
-    /** Reads current form values within a category section into a draft object. */
-    private _readSectionDraft(sectionEl: HTMLElement, baseDraft: Record<string, any>): Record<string, any> {
-        const draft = { ...baseDraft };
-        sectionEl.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[data-setting], select[data-setting]")
-            .forEach((el) => {
-                const key = el.dataset.setting;
-                if (!key) return;
-                if (el.type === "checkbox") draft[key] = (el as HTMLInputElement).checked;
-                else if (el.type === "number") draft[key] = parseFloat(el.value) || 0;
-                else draft[key] = el.value;
-            });
-        return draft;
-    }
+    const controlCol = document.createElement("div");
+    controlCol.className = "settings-row-control";
+    controlCol.appendChild(controlEl);
 
-    private getInstrumentSettings(): Record<string, any> {
-        return { ...DEFAULT_INSTRUMENT_SETTINGS, ...this.settings.instrumentSettings };
-    }
-
-
-    private save(): void {
-        const newSettings: AppSettings = JSON.parse(JSON.stringify(this.settings));
-
-        // 1. Update global settings (Theme + Grid)
-        newSettings.theme = this.themePicker?.getValue() ?? this.settings.theme;
-        newSettings.showGrid = (this.modalEl.querySelector("#show-grid-checkbox") as HTMLInputElement).checked;
-
-        // 2. Update page-specific settings
-        if (this.pageType === 'practice') {
-            newSettings.practice.warmupPeriod = Math.max(0, parseInt((this.modalEl.querySelector("#warmup-input") as HTMLInputElement).value, 10) || 0);
-        }
-
-        // 3. Update Instrument Settings
-        const container = this.modalEl.querySelector<HTMLElement>(`#category-settings-container`);
-        if (container) {
-            const settingElements = container.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input[data-setting], select[data-setting]");
-            settingElements.forEach((element) => {
-                const settingKey = element.dataset.setting;
-                if (!settingKey) return;
-                let value: string | number | boolean;
-                if (element.type === "checkbox") value = (element as HTMLInputElement).checked;
-                else if (element.type === "number") {
-                    const numVal = parseFloat(element.value);
-                    value = isNaN(numVal) ? 0 : numVal;
-                    const min = element.getAttribute("min");
-                    const max = element.getAttribute("max");
-                    if (min !== null) value = Math.max(parseFloat(min), value);
-                    if (max !== null) value = Math.min(parseFloat(max), value);
-                } else value = element.value;
-                (newSettings.instrumentSettings as any)[settingKey] = value;
-            });
-        } else {
-            console.error("Category settings container not found during save operation!");
-        }
-
-        this.settings = newSettings;
-        this.onSave(newSettings);
-        this.close();
-    }
+    row.append(labelCol, controlCol);
+    section.appendChild(row);
+  }
 }
