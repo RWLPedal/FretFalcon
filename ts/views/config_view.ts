@@ -1,5 +1,5 @@
 import { ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType, LabelValue } from "../feature";
-import { createLayerListInput, extractLayerListValues } from "../schedule/editor/interval/common_ui_elements";
+import { createLayerListInput, extractLayerListValues } from "../fretboard/features/layer_list_ui";
 
 export type ConfigChangeCallback = (config: (string | null)[]) => void;
 

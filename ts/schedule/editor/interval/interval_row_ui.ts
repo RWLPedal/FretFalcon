@@ -27,12 +27,12 @@ import {
   createEllipsisDropdown,
   populateEllipsisDropdownContent,
   createVariadicInputElement,
-  createLayerListInput,
   createDragHandleCell,
   createCopyButtonCell,
   createRemoveButtonElement,
   applyIndentation,
 } from "./common_ui_elements";
+import { createLayerListInput } from "../../../fretboard/features/layer_list_ui";
 
 /**
  * Builds and returns the HTMLElement for a single interval configuration row.

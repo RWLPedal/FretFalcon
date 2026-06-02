@@ -9,7 +9,8 @@ import {
 import { buildGroupRowElement } from "./interval/group_row_ui";
 import { buildIntervalRowElement } from "./interval/interval_row_ui";
 import { SelectionManager } from "./selection_manager";
-import { applyIndentation, extractLayerListValues } from "./interval/common_ui_elements";
+import { applyIndentation } from "./interval/common_ui_elements";
+import { extractLayerListValues } from "../../fretboard/features/layer_list_ui";
 import { UiComponentType } from "../../feature";
 import { getFeatureTypeDescriptor } from "../../feature_registry";
 import { instrumentCategory } from "../../fretboard/fretboard_category";

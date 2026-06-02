@@ -513,6 +513,66 @@
   background: rgba(192, 57, 43, 0.10);
 }
 
+/* Layer List — Preset strip */
+.layer-preset-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.layer-preset-label {
+  font-size: 0.72rem;
+  color: var(--clr-text-subtle, #aaa);
+  margin-right: 2px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.layer-preset-btn {
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  height: auto;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.layer-preset-btn:hover {
+  background: var(--accent-dim, var(--border));
+}
+.layer-preset-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--panel-bg);
+}
+
+/* Layer List — Customize toggle */
+.layer-customize-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.71rem;
+  color: var(--clr-text-subtle, #aaa);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+  margin-bottom: 4px;
+  transition: color 0.12s;
+}
+.layer-customize-toggle:hover {
+  color: var(--text);
+}
+
+.layer-customize-section {
+  width: 100%;
+}
+
 /* ─── Drag and Drop ──────────────────────────────────────────────────────── */
 .config-entry-row.dragging {
   opacity: 0.4;
