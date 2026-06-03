@@ -1,4 +1,7 @@
-﻿import { FloatingViewManager } from '../panels/panel_manager';
+﻿export const SIDEBAR_CONTAINER_CLASS = 'side-bar-container';
+export const SIDEBAR_LAYOUT_PICKER_CLASS = 'sidebar-layout-picker';
+
+import { FloatingViewManager } from '../panels/panel_manager';
 import { VolumeControl } from '../views/volume_control';
 import { AppSettings } from '../settings';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
@@ -18,7 +21,8 @@ export class SidebarView {
         private floatingViewManager?: FloatingViewManager,
         private appSettings?: AppSettings,
         private onThemeChange?: (theme: Theme) => void,
-        private onImportCustomTunings?: (ct: AppSettings['customTunings']) => void
+        private onImportCustomTunings?: (ct: AppSettings['customTunings']) => void,
+        private onHelpClick?: () => void
     ) {
         this.container = container;
         this.render();
@@ -48,6 +52,9 @@ export class SidebarView {
             <div class="sidebar-header">
                 <span class="material-icons sidebar-app-icon">music_note</span>
                 <span class="sidebar-app-name">PracTempo</span>
+                <button id="help-tour-btn" class="sidebar-help-btn" title="Take the tour">
+                    <span class="material-icons">help_outline</span>
+                </button>
             </div>
             <nav class="sidebar-nav">
         `;
@@ -187,6 +194,11 @@ export class SidebarView {
         const volSlot = document.getElementById('sidebar-volume-ctrl');
         if (volSlot) {
             volSlot.appendChild(new VolumeControl().el);
+        }
+
+        const helpBtn = document.getElementById('help-tour-btn');
+        if (helpBtn && this.onHelpClick) {
+            helpBtn.addEventListener('click', this.onHelpClick);
         }
 
         if (this.floatingViewManager) {

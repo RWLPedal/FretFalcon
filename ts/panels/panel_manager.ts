@@ -161,6 +161,10 @@ export class FloatingViewManager {
     this.linkManager = lm;
   }
 
+  public getLinkManager(): LinkManager | null {
+    return this.linkManager;
+  }
+
   public getWrapperElement(instanceId: string): HTMLElement | null {
     return this.activeViews.get(instanceId)?.element ?? null;
   }
@@ -209,27 +213,27 @@ export class FloatingViewManager {
       size?: { width: number; height: number };
       title?: string;
     },
-  ): void {
-    if (!this.viewAreaElement) return;
+  ): string | null {
+    if (!this.viewAreaElement) return null;
 
     const descriptor = getFloatingViewDescriptor(viewId);
     if (!descriptor) {
       console.error(
         `Cannot spawn view: Descriptor not found for viewId "${viewId}"`,
       );
-      return;
+      return null;
     }
 
     // Singleton: focus the existing instance instead of opening a second one.
     if (descriptor.singleton) {
-      for (const [, wrapper] of this.activeViews) {
+      for (const [id, wrapper] of this.activeViews) {
         const wState = wrapper['state'] as FloatingViewInstanceState;
         if (wState.viewId === viewId) {
           this.currentMaxZIndex++;
           wState.zIndex = this.currentMaxZIndex;
           wrapper.element.style.zIndex = String(this.currentMaxZIndex);
           wrapper.element.scrollIntoView({ block: 'nearest' });
-          return;
+          return id;
         }
       }
     }
@@ -307,8 +311,10 @@ export class FloatingViewManager {
       this.viewAreaElement.appendChild(wrapper.element);
       this.linkManager?.onWindowSpawned(instanceId, wrapper.element);
       this.saveState();
+      return instanceId;
     } catch (e) {
       console.error(`Error creating view instance for ${viewId}:`, e);
+      return null;
     }
   }
 
@@ -319,6 +325,11 @@ export class FloatingViewManager {
       this.activeViews.delete(instanceId);
       this.saveState();
     }
+  }
+
+  public closeAllViews(): void {
+    const ids = [...this.activeViews.keys()];
+    ids.forEach(id => this.destroyView(id));
   }
 
   public updateAllViews(state: any): void {

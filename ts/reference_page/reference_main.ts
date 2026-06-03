@@ -10,6 +10,7 @@ import '../panels/drive_slots'; // registers all drive sources/targets as a side
 import { GLOBAL_KEY_VIEW_ID } from '../views/global_key_view';
 import { registerBuiltins } from '../app_bootstrap';
 import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
+import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 import { MobileController } from '../mobile/mobile_controller';
 
@@ -57,7 +58,8 @@ class ReferencePage {
                 this.floatingViewManager,
                 this.settings,
                 (theme) => this.handleThemeChange(theme),
-                (ct) => this.saveSettings({ ...this.settings, customTunings: ct })
+                (ct) => this.saveSettings({ ...this.settings, customTunings: ct }),
+                () => (window as any).Onb?.replay()
             );
         }
 
@@ -66,6 +68,8 @@ class ReferencePage {
 
         this.applySettings();
         this.floatingViewManager.restoreViewsFromState();
+
+        initOnboarding(this.floatingViewManager);
 
         const mobileRoot = document.getElementById('mobile-layout');
         if (mobileRoot) {

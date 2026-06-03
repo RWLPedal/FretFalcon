@@ -4,6 +4,10 @@
 import { HandleSide, LinkRecord } from './link_types';
 import { LinkArrow, ArrowMeta } from './link_arrow';
 
+export const LINK_OVERLAY_SVG_ID = 'link-overlay-svg';
+export const LINK_HANDLE_VISIBLE_CLASS = 'link-handle--visible';
+export const LINK_ARROW_GROUP_CLASS = 'link-arrow-group';
+
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const HANDLE_RADIUS = 6;
 

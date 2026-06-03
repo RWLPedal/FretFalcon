@@ -264,6 +264,15 @@ export class LinkManager {
     return [...this.links];
   }
 
+  public createLink(
+    sourceId: string,
+    sourceHandle: HandleSide,
+    targetId: string,
+    targetHandle: HandleSide
+  ): void {
+    this.addLink(sourceId, sourceHandle, targetId, targetHandle);
+  }
+
   // ─── Link management ───────────────────────────────────────────────────────
 
   private addLink(

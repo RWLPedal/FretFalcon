@@ -7,6 +7,10 @@ import { FloatingViewInstanceState } from "./panel_types";
  *  to keep a single source of truth. */
 export const GRID_UNIT = 12;
 
+export const FLOATING_VIEW_WRAPPER_CLASS = 'floating-view-wrapper';
+export const FLOATING_VIEW_TITLEBAR_CLASS = 'floating-view-titlebar';
+export const FLOATING_VIEW_RESIZE_HANDLE_CLASS = 'floating-view-resize-handle';
+
 let moduleGridSize: number | null = null;
 
 export function setFloatingViewGridSize(size: number | null): void {
@@ -239,6 +243,11 @@ export class FloatingViewWrapper {
     this.contentElement = document.createElement("div");
     this.contentElement.classList.add("floating-view-content");
     this.element.appendChild(this.contentElement);
+
+    // --- Resize Handle (visual affordance + tour spotlight target) ---
+    const resizeHandle = document.createElement("div");
+    resizeHandle.classList.add(FLOATING_VIEW_RESIZE_HANDLE_CLASS);
+    this.element.appendChild(resizeHandle);
 
     // Listen for dynamic title updates - must be registered before render so
     // events fired synchronously during render (e.g. on saved-state restore) are caught.

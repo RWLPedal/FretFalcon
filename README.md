@@ -51,6 +51,8 @@ Guitars (6-, 7-, 8-string, tenor), basses, ukuleles, mandolins, mandolas, charan
 
 ## Key Features
 
+![](https://img.shields.io/badge/30%2B_scales-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_diagrams-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_progressions-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Triads-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Backing_track-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/CAGED_system-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Circle_of_Fifths-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Capo_calculator-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Multi--layer_overlay-5c6ac4?style=flat-square)
+
 ![Backing track showing fretboard and chord diagrams](images/screenshot-backing.png)
 
 
@@ -59,8 +61,6 @@ Guitars (6-, 7-, 8-string, tenor), basses, ukuleles, mandolins, mandolas, charan
 Build a full practice schedule with named timed intervals. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, saving and loading schedules, and keyboard shortcuts. PracTempo notifies you when each interval ends, and advances automatically.
 
 ### Fretboard & Theory Reference
-
-![](https://img.shields.io/badge/30%2B_scales-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_diagrams-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_progressions-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Triads-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/CAGED_system-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Circle_of_Fifths-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Capo_calculator-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Multi--layer_overlay-5c6ac4?style=flat-square)
 
 - **Fretboard diagrams** - Visualize scales and chord tones on an interactive neck. Overlay multiple layers on the same fretboard to visualize voice leading.
 - **Scale library** - 30+ types including major, minor, pentatonic, blues, and all seven modes.
