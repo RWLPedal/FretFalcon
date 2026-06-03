@@ -78,6 +78,16 @@ To build for single-file deployment:
 node build.js
 ```
 
+## Testing
+
+From the project root:
+
+```bash
+npm install       # first time only
+npm test          # run all tests once
+npm run test:watch  # re-run on file changes
+```
+
 ## Dependencies
 
 - **Node.js / npm** — runtime and package management
