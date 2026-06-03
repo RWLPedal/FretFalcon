@@ -31,6 +31,8 @@
   - [Schedule Views](#schedule-views)
     - [Schedule Editor](#schedule-editor)
     - [Any](#any)
+  - [Testing](#testing)
+  - [Dependencies](#dependencies)
 
 ---
 
@@ -341,3 +343,19 @@ The **Any** panel is a dynamic display that renders whichever feature is configu
 **When linked** via a Feature signal from another source (advanced use), Any will render whatever feature that source emits.
 
 Any is the glue that connects the schedule system to the visual aid system: build a schedule of practice items, open one Any panel, and it mirrors your session step by step.
+
+## Testing
+
+From the project root:
+
+```bash
+npm install       # first time only
+npm test          # run all tests once
+npm run test:watch  # re-run on file changes
+```
+
+## Dependencies
+
+- **Node.js / npm** — runtime and package management
+- **TypeScript** — language and type checking
+- **Webpack / tsify** — bundling

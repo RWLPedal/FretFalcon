@@ -1,99 +1,125 @@
 # PracTempo
 
-PracTempo is a practice timer application designed for musicians, offering scheduled intervals combined with context-specific visual aids and information. It helps structure practice sessions effectively, initially focusing on tools for guitarists. *Think of a highly customizable Pomodoro timer, which can display context and instructions about each task.*
+**A practice timer that shows you what to play.**
 
-Users define a practice schedule, and PracTempo tracks it with a timer and notifications. For each interval, PracTempo displays relevant visual aids like scale diagrams, chord shapes, or other contextual information.
+Sick of flipping between generic scale diagrams, messy chord charts, and external metronomes? *PracTempo* is a free web app that puts every theory reference and practice tool exactly where you need it. Built for absolutely anyone on a fretted instrument (including left-handed players, players of custom tunings, and niche instruments like the charango and mandola), it lets you drag, drop, and link interactive fretboards, chord diagrams, triad hints, backing tracks, metronomes, chord progressions, and more. All your essential tools are visible in a single easy-to-read page, so your hands stay on the strings instead of your mouse. As a bonus, you can build timed practice intervals to automatically switch your references as you progress through your session. Desktop recommended, mobile supported.
 
-## Try it out
+[![Try the live demo](https://img.shields.io/badge/Try_the_live_demo-green?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTggNXYxNGwxMS03eiIvPjwvc3ZnPg==&logoColor=white)](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html)
 
-If you want to see what all the fuss is about, you can try out PracTempo [here](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html). Most powerful on desktop, but works on mobile too.
+![Main workspace with Scale, chord diagrams and progression](images/screenshot-main.png)
+
+---
+
+## Who is this for?
+
+<table>
+<tr>
+<td valign="top" width="50%">
+
+**Fretted musicians with a practice routine**
+
+Stop noodling and start progressing. Build a custom schedule for your practice session, that keeps track of time and displays appropriate references and practice aids as you progress through the lesson. No more flipping through tabs or fumbling with different pages.
+
+</td>
+<td valign="top" width="50%">
+
+**Theory learners**
+
+Sick of searching for decent image references of scales, chords, shape references, etc - all with their own semantics, poorly sized, or filled with ads? Look no further. Browse 30+ scales with chord tones, chord diagrams, triads, CAGED shapes, and the Circle of Fifths. Bring up any combination as floating panels side-by-side, so you can cross-reference while you play.
+
+</td>
+</tr>
+<tr>
+<td valign="top" width="50%">
+
+**Left-handed players**
+
+Built by a lefty. First-class left-handed support throughout: chord diagrams and fretboards work equally well in left-handed and right-handed modes. Clear indications of low and high strings leave nothing ambiguous. No more rotating shapes in your head.
+
+</td>
+<td valign="top" width="50%">
+
+**Players of underrepresented instruments**
+
+Guitars (6-, 7-, 8-string, tenor), basses, ukuleles, mandolins, mandolas, charangos, bouzoukis and mandolas are all supported with instrument-appropriate diagrams. Supports custom tuning.
+
+</td>
+</tr>
+</table>
+
+---
 
 ## Key Features
 
-- **Multiple instruments:** Supports guitar (6, 7, or 8 strings), ukulele, mandolins and mandolas.
-- **Left-handed support:** Native support for left-handed chord diagrams and scales. No more mentally rotating shapes in your head.
-- **Scheduled Practice:** Define custom practice routines with timed intervals and completion notifications. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, and keyboard shortcuts.
-- **Reference Page:** Browse scales, chords, and other references outside of a practice session.
-- **Contextual Hints:** Receive task-specific visualizations tailored to each practice item.
-- **Floating Panels:** A modular system of draggable, resizable panels for practice aids (metronome, backing track, drone, chord progressions, etc.), with layout saved automatically.
-- **Custom programming:** Configure attributes of panels to flow from one to another - use a backing track to highlight scale and chord tone changes, or use scales to power a chord progression diagram.
-- **Themes:** Choose from multiple distinct visual themes.
-- **Extensible:** Plugin-style feature registry makes it straightforward to add new instruments or practice tools.
+![Backing track showing fretboard and chord diagrams](images/screenshot-backing.png)
 
-## Fretboard-Specific Features
 
-PracTempo includes a growing set of tools for fretted instrument players:
+### Structured Practice Sessions
 
-- **Fretboard Display:** Visualize scales and notes directly on an interactive fretboard diagram. Multiple scale or chord-tone layers can be overlaid on a single fretboard for side-by-side comparison.
-- **Scale Library:** 30+ scale types, including major, minor, pentatonic, blues, and all seven modes.
-- **Chord Diagrams:** Display standard chord shapes, with support for open and barre chords.
-- **Chord Progressions:** Multi-chord progression visualization with configurable progressions.
-- **Triads:** Display triad shapes across the neck, with multi-triad comparison.
-- **CAGED System:** Visualize CAGED-position chord shapes.
-- **Circle of Fifths:** Interactive circle of fifths diagram with major and relative-minor rings, highlighting diatonic chords and scale degrees for the selected key.
-- **Capo Support:** Capo position selector to translate open chord shapes for guitarists.
-- **Color Legend:** Color-coded scale degrees for quick visual reference.
+Build a full practice schedule with named timed intervals. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, saving and loading schedules, and keyboard shortcuts. PracTempo notifies you when each interval ends, and advances automatically.
 
-## Audio Features
+### Fretboard & Theory Reference
 
-- **Metronome:** Visual and audio metronome, available as a standalone floating panel.
-- **Drone:** Continuous pitch generator for tuning and ear training.
-- **Backing Track:** Drum machine with configurable patterns, a bass line track, built-in chord progression playback, and swing control. Links to the signal system so harmony evolves with your practice item.
-- **Strum Patterns:** Strum pattern player with presets.
+![](https://img.shields.io/badge/30%2B_scales-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_diagrams-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Chord_progressions-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Triads-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/CAGED_system-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Circle_of_Fifths-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Capo_calculator-5c6ac4?style=flat-square) ![](https://img.shields.io/badge/Multi--layer_overlay-5c6ac4?style=flat-square)
 
-## Building
+- **Fretboard diagrams** - Visualize scales and chord tones on an interactive neck. Overlay multiple layers on the same fretboard to visualize voice leading.
+- **Scale library** - 30+ types including major, minor, pentatonic, blues, and all seven modes.
+- **Chord diagrams** - Open and closed chords with configurable root and voicing.
+- **Chord progressions** - Easily visualize a full sequence of chords in your chosen key.
+- **Triads** - Major, minor, diminished and augmented triad shapes across the neck. Triad wizard to find clean triad progressions for voice leading on the same fretboard.
+- **CAGED system** - All five CAGED-position shapes, color-coded by position.
+- **Circle of Fifths** - Interactive diagram with diatonic chord highlighting and relative minor ring.
+- **Capo calculator** - Translate open chord shapes to any capo position.
 
-PracTempo is developed using TypeScript and bundled with Webpack.
+### Audio Tools
 
-**Prerequisites:**
+- **Metronome** - Visual and audio, available as a floating panel at any time.
+- **Backing track** - Fully synthesized backing tracks. Includes drum machine with configurable patterns, bass line, built-in chord progressions, and swing control. 10+ preset patterns, 7 drum sounds, and 7 custom voices.
+- **Drone** - Continuous pitch generator for tuning and ear training.
+- **Strum patterns** - Customize your strumming pattern, with presets.
 
-- Node.js and npm
+### Linked Panels
 
-**Build Steps:**
+Panels don't exist in isolation. Hook up panels to make configuration easy. A backing track can drive visualization changes for chord diagrams or chord tones over a scale. The Circle of Fifths can change your backing track. Use your custom strum pattern to control chords in the backing track. Build the signal flow that fits how you think.
 
-1. Navigate to the `ts` subdirectory:
-   ```bash
-   cd ts
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Build the project (outputs bundled JavaScript to `../js/`):
-   ```bash
-   npm run build
-   ```
-4. Start the local development server:
-   ```bash
-   npm run start
-   ```
-   This compiles TypeScript (entry point: `reference_main.ts`) and serves the application locally.
-5. The server will be running at `localhost:4000`.
+### Customizable Workspace
 
-###
+* **Everything is a panel** - Every tool is a draggable, resizable floating panel. Arrange them however you like - layouts save automatically, or you can download the one you created. Or, use a predefined layout for common tasks.
+* **Tidy up** - Position panels freely, or neatly align with snap-to-grid positioning. 
+*  **Themes** - Supports five distinct visual themes: warm bauhaus, mossy nature journal, faded tape deck, glassy modern, and synthwave.
+*  **Multi-platform** - Works on desktop or mobile (some features limited).
+*  **Zen** - Hide superfluous UI elements with zen mode.
 
-To build for single-file deployment:
+---
+
+## Technical Philosophy
+
+* PracTempo is built to be a single downloadable, transportable html file.
+* It has an intentionally simple dependency stack: no UI framework, no predefined CSS libraries. The stack is TypeScript, Webpack, and vanilla DOM - no React, no Vue, no runtime dependencies beyond what the browser already provides. This keeps the built output a single self-contained HTML file that can be opened locally, hosted on a static server, or previewed directly from GitHub without a build step.
+* Each panel is a self-registering module. Adding a new tool means implementing a small interface and registering it; the workspace, panel linking system, and layout persistence handle the rest automatically. The goal is a codebase where any panel can be understood in isolation, and where the overall architecture stays legible as the feature set grows.
+
+## Getting Started
+
+No installation required - [try the live demo](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html) directly in your browser.
+
+Worried the link might go down? You can simply download the `dist/index.html` to your hard drive, and open it in your browser.
+
+If you'd like to host or do local development:
+
+```bash
+cd ts
+npm install
+npm run start   # serves at localhost:4000
+```
+
+To build the single deployable file (`dist/index.html`):
 
 ```bash
 node build.js
 ```
 
-## Testing
+**Build dependencies:** Node.js and npm. 
 
-From the project root:
+## Learn more
 
-```bash
-npm install       # first time only
-npm test          # run all tests once
-npm run test:watch  # re-run on file changes
-```
-
-## Dependencies
-
-- **Node.js / npm** — runtime and package management
-- **TypeScript** — language and type checking
-- **Webpack / tsify** — bundling
-
----
-
-*(Developer Note: For a detailed list of planned features and tasks, please refer to `TODO.md`.)*
+See [GUIDE.md](GUIDE.md) for a full feature walkthrough. See [TODO.md](TODO.md) for planned features.
