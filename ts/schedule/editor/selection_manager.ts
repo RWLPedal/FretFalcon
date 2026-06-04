@@ -60,18 +60,12 @@ export class SelectionManager {
     this.configEntriesContainerEl.addEventListener("click", (e) => {
       const targetElement = e.target as HTMLElement;
 
-      // --- Ignore clicks on interactive elements/buttons (except drag handle) ---
-      if (
-        targetElement.closest(
-          "input, select, a, .dropdown, .remove-row-btn, .copy-row-btn, .add-variadic-btn"
-        )
-      ) {
-        // Allow clicks directly on the drag handle for potential future use or dnd start
-        if (!targetElement.closest(".drag-handle-cell")) {
-          return;
-        }
+      // Ignore clicks on interactive elements that shouldn't trigger selection
+      if (targetElement.closest(
+        "button, input, select, a, .dropdown, .add-variadic-btn, .group-color-popover"
+      )) {
+        return;
       }
-      // --- Ignore clicks on the ellipsis button itself ---
       if (targetElement.closest(".config-ellipsis-button")) {
         return;
       }

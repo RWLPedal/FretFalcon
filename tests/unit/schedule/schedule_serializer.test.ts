@@ -6,7 +6,7 @@ import type { GroupDataJSON, IntervalDataJSON } from '../../../ts/schedule/edito
 // Tests for parseScheduleJSON belong in Phase 2 (dom/) because that function
 // depends on instrumentCategory, which has feature-class imports.
 
-const groupRow: GroupDataJSON = { rowType: 'group', level: 1, name: 'Warm Up' }
+const groupRow: GroupDataJSON = { rowType: 'group', name: 'Warm Up' }
 
 const intervalRow: IntervalDataJSON = {
   rowType: 'interval',
@@ -65,7 +65,6 @@ describe('generateScheduleJSON', () => {
     const parsed = JSON.parse(generateScheduleJSON('Test', [groupRow]))
     const item = parsed.items[0]
     expect(item.rowType).toBe('group')
-    expect(item.level).toBe(1)
     expect(item.name).toBe('Warm Up')
   })
 

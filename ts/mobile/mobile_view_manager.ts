@@ -1,6 +1,6 @@
 import { View } from '../view';
 import { AppSettings } from '../settings';
-import { getFloatingViewDescriptor } from '../panels/panel_registry';
+import { getFloatingViewDescriptor, getViewIcon } from '../panels/panel_registry';
 import { NavButton } from '../reference_page/nav_sections';
 import { MobileLinkManager } from './mobile_link_manager';
 
@@ -117,7 +117,7 @@ export class MobileViewManager {
             featureTypeName: btn.featureTypeName,
             displayName: btn.label,
             headerTitle: btn.label,
-            icon: btn.icon,
+            icon: getViewIcon(btn.viewId),
             viewInstance,
             slotEl,
             contentEl,

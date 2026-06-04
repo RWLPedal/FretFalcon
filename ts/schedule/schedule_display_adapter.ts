@@ -1,19 +1,17 @@
 import { Feature } from '../feature';
 import { Interval } from './schedule';
 import { IDisplayController, Status } from '../display_controller';
-import { TimerView } from '../views/timer_view';
 import { SchedulePlaybackView } from '../views/schedule_playback_view';
 import { SignalKind, SignalState, FeatureSignal } from '../panels/link_types';
 
 /**
  * An IDisplayController implementation for the Schedule floating view.
  * Instead of rendering features into a static #diagram element, it:
- *   - Updates an embedded TimerView and SchedulePlaybackView
+ *   - Updates an embedded SchedulePlaybackView (timer display, task name, session bar, etc.)
  *   - Dispatches 'schedule-feature-changed' DOM events so the LinkManager
  *     can route FeatureSignals to connected AnyFloatingView instances
  */
 export class ScheduleDisplayAdapter implements IDisplayController {
-  private timerView: TimerView | null = null;
   private playbackView: SchedulePlaybackView | null = null;
   private signalSourceEl: HTMLElement | null = null;
   private currentCategoryName: string = '';
@@ -22,7 +20,6 @@ export class ScheduleDisplayAdapter implements IDisplayController {
   private onPauseCb: (() => void) | null = null;
   private onFlashCb: (() => void) | null = null;
 
-  setTimerView(view: TimerView): void { this.timerView = view; }
   setPlaybackView(view: SchedulePlaybackView): void { this.playbackView = view; }
   setSignalSourceElement(el: HTMLElement): void { this.signalSourceEl = el; }
 
@@ -33,19 +30,19 @@ export class ScheduleDisplayAdapter implements IDisplayController {
   // ─── IDisplayController ────────────────────────────────────────────────────
 
   setTask(taskName: string, _color: string): void {
-    this.timerView?.setTitle(taskName || null);
+    this.playbackView?.setCurrentTask(taskName || '');
   }
 
   setTime(seconds: number): void {
-    this.timerView?.setDisplayTime(seconds);
+    this.playbackView?.setCurrentTime(seconds);
   }
 
   setTimerDuration(seconds: number): void {
-    this.timerView?.setDuration(seconds);
+    this.playbackView?.setIntervalDuration(seconds);
   }
 
   setStatus(status: Status): void {
-    this.timerView?.setRunning(status === Status.Play);
+    this.playbackView?.setPauseState(status === Status.Play);
   }
 
   flashOverlay(): void {
@@ -54,10 +51,12 @@ export class ScheduleDisplayAdapter implements IDisplayController {
 
   setStart(): void {
     this.onStartCb?.();
+    this.playbackView?.setPauseState(false);
   }
 
   setPause(): void {
     this.onPauseCb?.();
+    this.playbackView?.setPauseState(true);
   }
 
   setTotalTime(elapsed: number, total: number): void {
@@ -72,7 +71,20 @@ export class ScheduleDisplayAdapter implements IDisplayController {
     this.currentCategoryName = categoryName;
   }
 
+  setGroupContext(name: string, color: string): void {
+    this.playbackView?.setGroupContext(name, color);
+  }
+
+  setSessionSegments(segments: { fraction: number; color: string }[]): void {
+    this.playbackView?.setSessionSegments(segments);
+  }
+
+  setIntervalCounter(current: number, total: number): void {
+    this.playbackView?.setIntervalCounter(current, total);
+  }
+
   renderFeature(feature: Feature): void {
+    this.playbackView?.setCurrentFeature(feature.typeName);
     const signal: FeatureSignal = {
       kind: SignalKind.Feature,
       categoryName: this.currentCategoryName,
@@ -83,6 +95,7 @@ export class ScheduleDisplayAdapter implements IDisplayController {
   }
 
   clearFeature(): void {
+    this.playbackView?.setCurrentFeature(null);
     const signal: FeatureSignal = {
       kind: SignalKind.Feature,
       categoryName: this.currentCategoryName,

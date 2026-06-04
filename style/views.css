@@ -228,29 +228,65 @@
 .schedule-playback-view {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   padding: 4px 0;
 }
-.playback-total-section {
+
+/* Schedule title + subtitle */
+.playback-head {
+  padding: 6px 10px 0;
+}
+.playback-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.playback-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Current interval: large time + task name + interval bar */
+.playback-current-section {
+  padding: 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.playback-time-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 12px;
+  min-width: 0;
 }
-.playback-section-label {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--clr-text-subtle);
-  white-space: nowrap;
-  margin: 0;
-}
-.playback-total-timer {
-  font-size: 1em;
+.playback-time-display {
+  font-family: "DM Mono", "SF Mono", "Fira Code", "Consolas", monospace;
+  font-size: 2.6rem;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  color: var(--clr-text-subtle);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--text-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
+.playback-task-name {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+/* Upcoming list */
 .playback-upcoming-section {
   padding: 0 8px;
 }
@@ -274,6 +310,14 @@
   border-radius: 5px;
   background: var(--input-bg);
   gap: 8px;
+}
+.playback-upcoming-icon {
+  font-size: 14px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  line-height: 1;
+  width: 16px;
+  text-align: center;
 }
 .playback-upcoming-name {
   flex: 1;
@@ -1205,15 +1249,6 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   padding: 6px 8px;
 }
 
-/* Compact timer ring — 220 px is too tall for a panel */
-.schedule-floating-view .timer-ring-container {
-  width: 160px;
-  height: 160px;
-}
-.schedule-floating-view .timer-display {
-  font-size: 1.8em;
-}
-
 /* Remove the redundant inner box the editor adds when embedded in a panel */
 .schedule-floating-view #schedule-editor-container {
   border: none;
@@ -1252,16 +1287,6 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  container-type: inline-size;
-  container-name: sfv-play;
-}
-
-.sfv-play-controls {
-  display: flex;
-  gap: 6px;
-  padding: 2px 8px 4px;
-  align-items: center;
-  flex-shrink: 0;
 }
 
 /* Play-mode control buttons — all derive from theme tokens */
@@ -1307,48 +1332,189 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   background: color-mix(in srgb, var(--clr-danger) 12%, transparent);
 }
 
-/* Right panel: groups total + upcoming as one area in the side-by-side grid */
-.playback-right-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-  overflow: hidden;
+/* ─── Play mode — group/session/controls/upcoming styles ────────────────── */
+
+/* Group section: colored wrapper for the header row + time/task row */
+.playback-group-section {
+  /* no decoration when no group is active */
+}
+.playback-group-section--active {
+  background: color-mix(in srgb, var(--current-group-color, transparent) 10%, var(--panel-bg));
+  border-top: 2px solid color-mix(in srgb, var(--current-group-color, var(--border)) 55%, var(--border));
+  border-bottom: 1px solid color-mix(in srgb, var(--current-group-color, var(--border)) 25%, var(--border));
+  padding-bottom: 10px;
+  transition: background 0.3s, border-color 0.3s;
 }
 
-/* Schedule name shown in play mode */
-.playback-schedule-title {
+/* Group header row */
+.playback-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 10px 4px;
+}
+.playback-group-name {
   font-size: 0.78rem;
   font-weight: 600;
+  color: color-mix(in srgb, var(--current-group-color, var(--accent)) 70%, var(--text-primary));
+  letter-spacing: 0.02em;
+}
+.playback-now-playing-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  padding: 2px 8px 0;
 }
 
-/* Side-by-side layout when the panel is wide enough */
-@container sfv-play (min-width: 550px) {
-  .schedule-playback-view {
-    display: grid;
-    grid-template-columns: 185px 1fr;
-    grid-template-areas:
-      "timer  right"
-      "controls right";
-    grid-template-rows: auto 1fr;
-    gap: 0 12px;
-    align-items: start;
-  }
-  .playback-timer-slot {
-    grid-area: timer;
-  }
-  .sfv-play-controls {
-    grid-area: controls;
-    padding-top: 6px;
-  }
-  .playback-right-panel {
-    grid-area: right;
-  }
+/* Feature badge — top-right of group header */
+.playback-feature-badge {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 8px 2px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.playback-feature-badge .material-icons {
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Session bar */
+.playback-session-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+.playback-session-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+.playback-session-bar-wrapper {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--input-bg);
+}
+.playback-session-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: var(--accent);
+  opacity: 0.5;
+  z-index: 1;
+  transition: width 1s linear;
+}
+.playback-session-segments {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+.session-segment {
+  height: 100%;
+  opacity: 0.2;
+  border-right: 1px solid var(--panel-bg);
+}
+.session-segment:last-child { border-right: none; }
+.playback-total-timer {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Controls row */
+.playback-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+.playback-ctrl-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.12s, border-color 0.12s;
+}
+.playback-ctrl-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+.playback-edit-btn {
+  font-size: 0.75rem;
+  padding: 3px 8px;
+  margin-right: auto;
+}
+.playback-pause-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.12s, transform 0.1s;
+}
+.playback-pause-btn:hover {
+  opacity: 0.88;
+  transform: scale(1.06);
+}
+.playback-pause-btn .material-icons {
+  font-size: 22px;
+}
+.playback-interval-counter {
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+/* Upcoming list — NEXT badge */
+.upcoming-next-badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+/* UP NEXT label */
+.playback-section-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
 }
 
 /* Border flash on interval transition */
@@ -1394,6 +1560,20 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* A single full fretboard renders as a direct-child <canvas> here. This container
+   is a flex column, whose default align-items:stretch would stretch the canvas to
+   the full width — and because a canvas preserves its intrinsic aspect ratio, that
+   blows its height up far past the box. Keep it at its intrinsic size, centered,
+   and clamped to the box so it scales down (preserving aspect) instead of
+   overflowing. Multi-diagram features (triads/chords) nest their canvases inside
+   wrapper divs, so the direct-child selector intentionally leaves them alone. */
+.any-view-feature-container > canvas {
+  align-self: center;
+  flex: 0 0 auto;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 /* ─── StrumView ──────────────────────────────────────────────────────────────── */

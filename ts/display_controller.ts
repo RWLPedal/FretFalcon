@@ -24,6 +24,12 @@ export interface IDisplayController {
   setCurrentCategoryName(categoryName: string): void;
   /** Optional: emit a next-state FeatureSignal for the upcoming interval. */
   renderNextFeature?(feature: Feature | null): void;
+  /** Optional: show the current group name and color in the play view. */
+  setGroupContext?(name: string, color: string): void;
+  /** Optional: set the segmented session bar (one entry per group). */
+  setSessionSegments?(segments: { fraction: number; color: string }[]): void;
+  /** Optional: show the interval counter (e.g. "3 / 8"). */
+  setIntervalCounter?(current: number, total: number): void;
 }
 
 export class DisplayController implements IDisplayController {
@@ -143,4 +149,16 @@ export class DisplayController implements IDisplayController {
   }
 
   setCurrentCategoryName(_categoryName: string): void {}
+
+  setGroupContext(name: string, color: string): void {
+    this.playbackView?.setGroupContext(name, color);
+  }
+
+  setSessionSegments(segments: { fraction: number; color: string }[]): void {
+    this.playbackView?.setSessionSegments(segments);
+  }
+
+  setIntervalCounter(current: number, total: number): void {
+    this.playbackView?.setIntervalCounter(current, total);
+  }
 }

@@ -1,6 +1,7 @@
 import { MobileViewManager } from './mobile_view_manager';
 import { NAV_SECTIONS, Visibility, NavButton } from '../reference_page/nav_sections';
 import { AppSettings } from '../settings';
+import { getViewIcon } from '../panels/panel_registry';
 
 export class MobileHamburger {
     private overlayEl!: HTMLElement;
@@ -89,7 +90,7 @@ export class MobileHamburger {
         const item = document.createElement('button');
         item.className = 'mobile-menu-item' + (isOpen ? ' is-active' : '');
         item.innerHTML = `
-            <span class="material-icons">${btn.icon}</span>
+            <span class="material-icons">${getViewIcon(btn.viewId)}</span>
             <span>${btn.label}</span>
             ${isOpen ? '<span class="mobile-menu-badge">OPEN</span>' : ''}
         `;

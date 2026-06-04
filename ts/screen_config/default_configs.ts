@@ -296,7 +296,7 @@ const _MINOR_WORKOUT_SCHEDULE = JSON.stringify(
   {
     name: "A Minor Workout",
     items: [
-      { rowType: "group", level: 1, name: "Warmup" },
+      { rowType: "group", level: 1, name: "Warmup", color: "--note-second" },
       {
         rowType: "interval",
         duration: "3:00",
@@ -306,7 +306,7 @@ const _MINOR_WORKOUT_SCHEDULE = JSON.stringify(
         featureArgsList: ["None"],
         intervalSettings: {},
       },
-      { rowType: "group", level: 1, name: "Scales" },
+      { rowType: "group", level: 1, name: "Scales", color: "--note-fifth" },
       {
         rowType: "interval",
         duration: "4:00",
@@ -343,7 +343,7 @@ const _MINOR_WORKOUT_SCHEDULE = JSON.stringify(
         featureArgsList: ["Harmonic Minor", "A"],
         intervalSettings: {},
       },
-      { rowType: "group", level: 1, name: "Triads" },
+      { rowType: "group", level: 1, name: "Triads", color: "--note-seventh" },
       {
         rowType: "interval",
         duration: "5:00",
@@ -411,7 +411,7 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-2": {
       instanceId: "fv-2",
       viewId: "any_floating_view",
-      gridPosition: { col: 53, row: 1 },
+      gridPosition: { col: 62, row: 1 },
       gridSize: { cols: 38, rows: 42 },
       zIndex: 101,
       viewState: {},
@@ -419,8 +419,8 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-3": {
       instanceId: "fv-3",
       viewId: "instrument_floating_metronome",
-      gridPosition: { col: 53, row: 46 },
-      gridSize: { cols: 13, rows: 13 },
+      gridPosition: { col: 62, row: 46 },
+      gridSize: { cols: 20, rows: 13 },
       zIndex: 102,
       viewState: {},
     },

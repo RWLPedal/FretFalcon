@@ -1,10 +1,8 @@
-// ts/schedule/editor/interval/interval_row_ui.ts
 import {
   FeatureTypeDescriptor,
   ConfigurationSchemaArg,
   ArgType,
   UiComponentType,
-  // FeatureCategoryName removed
 } from "../../../feature";
 import {
   getAvailableFeatureTypes,
@@ -12,13 +10,9 @@ import {
   getFeatureTypeDescriptor,
 } from "../../../feature_registry";
 import { instrumentCategory } from "../../../fretboard/fretboard_category";
-// Import generic settings types
 import { IntervalSettings, IntervalRowData } from "./types";
-
-// Import UI helpers
 import {
   createCell,
-  createCellWithInput,
   createTextInput,
   createNumberInput,
   createDropdownInput,
@@ -27,394 +21,320 @@ import {
   createEllipsisDropdown,
   populateEllipsisDropdownContent,
   createVariadicInputElement,
-  createDragHandleCell,
-  createCopyButtonCell,
-  createRemoveButtonElement,
-  applyIndentation,
 } from "./common_ui_elements";
-import { createLayerListInput } from "../../../fretboard/features/layer_list_ui";
+import { createLayerListInput, extractLayerListValues } from "../../../fretboard/features/layer_list_ui";
+import { getViewIconByFeatureType } from "../../../panels/panel_registry";
+
+// ─── Sidebar row builder ──────────────────────────────────────────────────────
 
 /**
- * Builds and returns the HTMLElement for a single interval configuration row.
- * Expects initialData.intervalSettings to be an instance implementing IntervalSettings.
- * Requires the categoryName (string) to determine available features and settings.
+ * Builds the lightweight sidebar row for an interval.
+ * All data is stored in data-* attributes; no form elements are embedded.
  */
-export function buildIntervalRowElement(
-  initialData: IntervalRowData,
-  categoryName: string,
-  instrument?: string,
-  tuningName?: string
-): HTMLElement {
-  const entryDiv = document.createElement("div");
-  entryDiv.classList.add("config-entry-row", "schedule-row");
-  entryDiv.dataset.rowType = "interval";
-  entryDiv.dataset.categoryName = categoryName; // **** Store category name ****
-  entryDiv.draggable = false; // Dragging starts from handle
+export function buildSidebarIntervalRow(data: IntervalRowData): HTMLElement {
+  const rowDiv = document.createElement('div');
+  rowDiv.classList.add('sidebar-interval-row', 'schedule-row');
+  rowDiv.dataset.rowType = 'interval';
+  rowDiv.dataset.task = data.task;
+  rowDiv.dataset.duration = data.duration;
+  rowDiv.dataset.categoryName = data.categoryName;
+  rowDiv.dataset.featureType = data.featureTypeName;
+  rowDiv.dataset.featureArgsJson = JSON.stringify(data.featureArgsList ?? []);
 
-  // --- Get or Create IntervalSettings Instance ---
-  let settingsInstance: IntervalSettings;
-  if (
-    initialData.intervalSettings &&
-    typeof initialData.intervalSettings.toJSON === "function"
-  ) {
-    settingsInstance = initialData.intervalSettings;
-  } else {
-    const settingsFactory = instrumentCategory.getIntervalSettingsFactory();
-    if (settingsFactory) {
-      settingsInstance = settingsFactory();
-    } else {
-      console.error(
-        `No IntervalSettings factory registered for category: ${categoryName}. Using plain object fallback.`
-      );
-      // Provide a minimal fallback that adheres to the interface
-      settingsInstance = { toJSON: () => ({}) };
-    }
-  }
-  // Store the resolved instance on the element
-  (entryDiv as any)._intervalSettings = settingsInstance;
+  const settingsJson = data.intervalSettings?.toJSON?.();
+  rowDiv.dataset.intervalSettingsJson = settingsJson ? JSON.stringify(settingsJson) : '';
+  // Keep live settings instance on element for inspector to read/write
+  (rowDiv as any)._intervalSettings = data.intervalSettings;
 
-  // --- Create Row Structure and Cells ---
-  entryDiv.style.display = "flex";
-  entryDiv.style.alignItems = "center";
-  entryDiv.style.gap = "5px";
-  entryDiv.style.padding = "2px 0";
-  entryDiv.style.position = "relative";
+  // Drag handle
+  const handle = document.createElement('span');
+  handle.classList.add('drag-handle');
+  handle.draggable = true;
+  handle.textContent = '⠿';
+  handle.title = 'Drag to reorder';
+  rowDiv.appendChild(handle);
 
-  const handleDiv = createDragHandleCell();
-  entryDiv.appendChild(handleDiv);
+  // Duration badge
+  const durationBadge = document.createElement('span');
+  durationBadge.classList.add('interval-duration-badge');
+  durationBadge.textContent = data.duration || '0:00';
+  rowDiv.appendChild(durationBadge);
 
-  const contentWrapper = document.createElement("div");
-  contentWrapper.style.display = "grid";
-  contentWrapper.style.flexGrow = "1";
-  contentWrapper.style.gridTemplateColumns = "50px 80px 155px minmax(60px, 1fr)";
-  contentWrapper.style.gap = "4px";
-  contentWrapper.style.alignItems = "center";
+  // Feature icon (Material Icons)
+  const icon = document.createElement('span');
+  icon.classList.add('interval-feature-icon', 'material-icons');
+  icon.textContent = getViewIconByFeatureType(data.featureTypeName) ?? 'radio_button_unchecked';
+  rowDiv.appendChild(icon);
 
-  const durationDiv = createCellWithInput(
-    "text",
-    initialData.duration,
-    "Time",
-    ["config-duration"]
-  );
-  const taskDiv = createCellWithInput("text", initialData.task, "Task Name", [
-    "config-task",
-  ]);
-  // Pass category name string to dropdown builder
-  const featureTypeDiv = createFeatureTypeDropdownCell(
-    initialData.featureTypeName,
-    categoryName,
-    instrument,
-    tuningName
-  );
-  const featureArgsDiv = createCell(
-    "feature-args-cell",
-    "config-feature-args-container"
-  );
-  featureArgsDiv.style.alignSelf = "start"; // Align args container top
+  // Text column: task name + subtext
+  const textCol = document.createElement('span');
+  textCol.classList.add('interval-text-col');
 
-  contentWrapper.appendChild(durationDiv);
-  contentWrapper.appendChild(taskDiv);
-  contentWrapper.appendChild(featureTypeDiv);
-  contentWrapper.appendChild(featureArgsDiv);
-  entryDiv.appendChild(contentWrapper);
+  const taskName = document.createElement('span');
+  taskName.classList.add('interval-task-name');
+  taskName.textContent = data.task || '';
+  taskName.title = data.task;
+  textCol.appendChild(taskName);
 
-  // Actions Cell
-  const actionsDiv = document.createElement("div");
-  actionsDiv.classList.add("config-cell", "action-cell");
-  actionsDiv.style.alignItems = "center";
-  actionsDiv.style.gap = "3px";
-  actionsDiv.appendChild(createCopyButtonCell());
-  actionsDiv.appendChild(createRemoveButtonElement(entryDiv));
-  entryDiv.appendChild(actionsDiv);
+  const subtext = document.createElement('span');
+  subtext.classList.add('interval-subtext');
+  subtext.textContent = getIntervalSubtext(data.featureTypeName, data.featureArgsList);
+  textCol.appendChild(subtext);
 
-  // --- Event Listener & Initial Population ---
-  const featureTypeSelect = featureTypeDiv.querySelector(
-    "select"
-  ) as HTMLSelectElement;
-  featureTypeSelect.addEventListener("change", () => {
-    // Pass category name string and settings instance
-    updateArgsSection(
-      featureTypeSelect,
-      featureArgsDiv,
-      settingsInstance,
-      categoryName, // Pass name string
-      [] // Clear initial args on type change
-    );
+  rowDiv.appendChild(textCol);
+
+  // Delete button
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.classList.add('row-delete-btn');
+  deleteBtn.textContent = '×';
+  deleteBtn.title = 'Remove interval';
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    rowDiv.remove();
   });
+  rowDiv.appendChild(deleteBtn);
 
-  // Initial Population: Pass category name string, settings instance, and initial args
-  updateArgsSection(
-    featureTypeSelect,
-    featureArgsDiv,
-    settingsInstance,
-    categoryName, // Pass name string
-    initialData.featureArgsList // Use the list from the loaded data
-  );
-
-  applyIndentation(entryDiv, 0); // Apply initial indentation
-  return entryDiv;
+  return rowDiv;
 }
 
-/** Creates the specific feature type dropdown cell for a given category name */
-function createFeatureTypeDropdownCell(
+/** Updates the visible sidebar text and data-* attrs after inspector edit. */
+export function syncSidebarRow(
+  rowEl: HTMLElement,
+  task: string,
+  duration: string,
+  featureTypeName: string,
+  featureArgsList: string[],
+  settingsJson: string
+): void {
+  rowEl.dataset.task = task;
+  rowEl.dataset.duration = duration;
+  rowEl.dataset.featureType = featureTypeName;
+  rowEl.dataset.featureArgsJson = JSON.stringify(featureArgsList);
+  rowEl.dataset.intervalSettingsJson = settingsJson;
+
+  const taskEl = rowEl.querySelector<HTMLElement>('.interval-task-name');
+  if (taskEl) { taskEl.textContent = task || ''; taskEl.title = task; }
+
+  const subtextEl = rowEl.querySelector<HTMLElement>('.interval-subtext');
+  if (subtextEl) subtextEl.textContent = getIntervalSubtext(featureTypeName, featureArgsList);
+
+  const durEl = rowEl.querySelector<HTMLElement>('.interval-duration-badge');
+  if (durEl) durEl.textContent = duration || '0:00';
+
+  const iconEl = rowEl.querySelector<HTMLElement>('.interval-feature-icon');
+  if (iconEl) iconEl.textContent = getViewIconByFeatureType(featureTypeName) ?? 'radio_button_unchecked';
+}
+
+// ─── Subtext helper ───────────────────────────────────────────────────────────
+
+// Reverse map from featureTypeName → sidebar label (for fallback subtext)
+const _FEATURE_TYPE_LABEL: Record<string, string> = {
+  'Notes': 'Fretboard Notes', 'Scale': 'Scales', 'Chord': 'Chords',
+  'Triad Shapes': 'Triads', 'Arpeggio': 'Arpeggio', 'Nearby Triads': 'Nearby Triads',
+  'Chord Progression': 'Progression', 'CAGED': 'CAGED',
+  'MultiLayerFretboard': 'MultiFret', 'Metronome': 'Metronome',
+};
+
+/**
+ * Returns a compact subtext string for the interval sidebar row.
+ * Joins non-empty, non-"None" args with " · ".
+ * Falls back to the feature type label if all args are empty/None.
+ */
+export function getIntervalSubtext(featureTypeName: string, featureArgsList: string[] | string): string {
+  const args: string[] = typeof featureArgsList === 'string'
+    ? JSON.parse(featureArgsList || '[]')
+    : featureArgsList ?? [];
+
+  const significant = args.filter(a => a && a !== 'None');
+  const typeLabel = featureTypeName ? (_FEATURE_TYPE_LABEL[featureTypeName] ?? featureTypeName) : '';
+
+  const parts = typeLabel ? [...significant, typeLabel] : significant;
+  return parts.join(' · ');
+}
+
+// ─── Feature type dropdown (used by inspector) ────────────────────────────────
+
+export function createFeatureTypeDropdown(
   selectedTypeName: string,
   categoryName: string,
   instrument?: string,
   tuningName?: string
-): HTMLDivElement {
-  const cellDiv = createCell("feature-type-cell");
-  const selectWrapper = document.createElement("div");
-  selectWrapper.classList.add("select", "is-small", "is-fullwidth");
-  const select = document.createElement("select");
-  select.classList.add("config-feature-type");
+): HTMLSelectElement {
+  const select = document.createElement('select');
+  select.classList.add('config-feature-type');
 
-  select.appendChild(new Option("None", ""));
+  select.appendChild(new Option('None', ''));
 
   const availableTypes: FeatureTypeDescriptor[] = instrument
     ? getAvailableFeatureTypesForInstrument(categoryName, instrument, tuningName)
     : getAvailableFeatureTypes(categoryName);
-  const category = instrumentCategory;
 
   if (availableTypes.length === 0) {
-    console.warn(
-      `No feature types found registered for category: ${categoryName}`
-    );
     select.disabled = true;
-    select.appendChild(
-      new Option(
-        `No ${category?.getDisplayName() ?? categoryName} features`,
-        ""
-      )
-    );
+    select.appendChild(new Option(`No features available`, ''));
   } else {
-    availableTypes.forEach((featureType) => {
-      const option = new Option(featureType.displayName, featureType.typeName);
-      if (featureType.typeName === selectedTypeName) {
-        option.selected = true;
-      }
+    availableTypes.forEach((ft) => {
+      const option = new Option(ft.displayName, ft.typeName);
+      if (ft.typeName === selectedTypeName) option.selected = true;
       select.appendChild(option);
     });
   }
 
-  selectWrapper.appendChild(select);
-  cellDiv.appendChild(selectWrapper);
-  return cellDiv;
+  return select;
 }
 
-/** Updates the content of the feature arguments container based on selected feature */
-function updateArgsSection(
+// ─── Args section (used by inspector) ────────────────────────────────────────
+
+export function updateArgsSection(
   featureTypeSelect: HTMLSelectElement,
   argsContainer: HTMLElement,
-  currentSettingsInstance: IntervalSettings, // Expect generic instance
-  categoryName: string, // **** CHANGED: Expect string name ****
-  initialArgs?: string[] // **** Expect the loaded featureArgsList here ****
+  currentSettingsInstance: IntervalSettings,
+  categoryName: string,
+  initialArgs?: string[]
 ): void {
   const selectedTypeName = featureTypeSelect.value;
-  argsContainer.innerHTML = ""; // Clear previous content
+  argsContainer.innerHTML = '';
 
   if (selectedTypeName) {
-    // Use the category name string to get the descriptor
-    const descriptor = getFeatureTypeDescriptor(categoryName, selectedTypeName); // Use name string
+    const descriptor = getFeatureTypeDescriptor(categoryName, selectedTypeName);
     if (descriptor) {
       const schema = descriptor.getConfigurationSchema();
 
-      if (
-        typeof schema === "object" &&
-        "args" in schema &&
-        Array.isArray(schema.args)
-      ) {
-        // Pass the loaded initialArgs to populateArgsFromSchema
-        populateArgsFromSchema(
-          argsContainer,
-          schema.args,
-          initialArgs || [], // Pass the loaded arguments here
-          currentSettingsInstance
-        );
-      } else if (typeof schema === "string") {
-        // Handle schema as a simple description string
-        const infoSpan = document.createElement("span");
-        infoSpan.classList.add("has-text-grey-light", "is-italic", "is-size-7");
-        infoSpan.textContent = schema;
-        argsContainer.appendChild(infoSpan);
+      if (typeof schema === 'object' && 'args' in schema && Array.isArray(schema.args)) {
+        populateArgsFromSchema(argsContainer, schema.args, initialArgs || [], currentSettingsInstance);
+      } else if (typeof schema === 'string') {
+        const info = document.createElement('span');
+        info.classList.add('args-info');
+        info.textContent = schema;
+        argsContainer.appendChild(info);
       } else {
-        // Handle case with no configurable arguments (or unexpected schema type)
-        const infoSpan = document.createElement("span");
-        infoSpan.classList.add("has-text-grey-light", "is-italic", "is-size-7");
-        infoSpan.textContent = "No configurable arguments";
-        argsContainer.appendChild(infoSpan);
+        const info = document.createElement('span');
+        info.classList.add('args-info');
+        info.textContent = 'No configurable arguments';
+        argsContainer.appendChild(info);
       }
     } else {
-      console.error(
-        `Error: Feature descriptor for "${selectedTypeName}" in category "${categoryName}" not found.`
-      );
-      const errorSpan = document.createElement("span");
-      errorSpan.classList.add("has-text-danger", "is-size-7");
-      errorSpan.textContent = `Error: Feature descriptor not found.`;
-      argsContainer.appendChild(errorSpan);
+      const err = document.createElement('span');
+      err.classList.add('args-error');
+      err.textContent = `Error: feature "${selectedTypeName}" not found.`;
+      argsContainer.appendChild(err);
     }
   } else {
-    // No feature selected
-    argsContainer.innerHTML =
-      '<span class="has-text-grey-light is-italic is-size-7">No feature selected</span>';
+    argsContainer.innerHTML = '<span class="args-empty">No feature selected</span>';
   }
 }
 
-/** Populates the arguments container based on a schema object. */
-function populateArgsFromSchema(
+export function populateArgsFromSchema(
   container: HTMLElement,
   schemaArgs: ConfigurationSchemaArg[],
-  currentValues: string[], // These are the initial values from featureArgsList
-  currentSettingsInstance: IntervalSettings // Expect generic instance
+  currentValues: string[],
+  currentSettingsInstance: IntervalSettings
 ): void {
-  let valueIndex = 0; // Tracks the current position in the currentValues array
-  container.innerHTML = ""; // Clear container
-  const argsInnerContainer = document.createElement("div");
-  argsInnerContainer.classList.add("feature-args-inner-container");
-  argsInnerContainer.style.display = "flex";
-  argsInnerContainer.style.flexWrap = "wrap";
-  argsInnerContainer.style.gap = "4px 8px"; // Gap between arg groups
+  let valueIndex = 0;
+  container.innerHTML = '';
+  const argsInnerContainer = document.createElement('div');
+  argsInnerContainer.classList.add('feature-args-inner-container');
 
-  // Track enum-controller values so key-aware toggle buttons know the initial key type.
   const controllerValues = new Map<string, string>();
 
   schemaArgs.forEach((arg) => {
-    const argWrapper = document.createElement("div");
-    argWrapper.classList.add("feature-arg-wrapper");
+    const argWrapper = document.createElement('div');
+    argWrapper.classList.add('feature-arg-wrapper');
     argWrapper.dataset.argName = arg.name;
 
-    // --- Create Label ---
-    const label = document.createElement("label");
-    label.classList.add("label", "is-small");
+    const label = document.createElement('label');
+    label.classList.add('label', 'is-small');
     const labelText = arg.name
-      .replace(/([A-Z])/g, " $1")
+      .replace(/([A-Z])/g, ' $1')
       .replace(/^./, (str) => str.toUpperCase())
       .trim();
-    label.title = (arg.description || "") + (arg.required ? " (Required)" : "");
+    label.title = (arg.description || '') + (arg.required ? ' (Required)' : '');
     argWrapper.appendChild(label);
 
-    // --- Create Inputs Container ---
-    const inputsContainer = document.createElement("div");
-    inputsContainer.classList.add("feature-arg-inputs-container");
+    const inputsContainer = document.createElement('div');
+    inputsContainer.classList.add('feature-arg-inputs-container');
     inputsContainer.dataset.argType = arg.type;
-    if (arg.uiComponentType)
-      inputsContainer.dataset.uiComponentType = arg.uiComponentType;
+    if (arg.uiComponentType) inputsContainer.dataset.uiComponentType = arg.uiComponentType;
     argWrapper.appendChild(inputsContainer);
 
     const uiType = arg.uiComponentType;
-    const isVariadic = arg.isVariadic; // Check schema flag directly
+    const isVariadic = arg.isVariadic;
 
-    // --- Determine which type of input to create and consume values ---
     if (uiType === UiComponentType.Checkbox) {
-      // --- Checkbox: UI-only, does NOT consume a value from currentValues ---
       label.textContent = labelText;
-      const cb = document.createElement("input");
-      cb.type = "checkbox";
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
       cb.name = arg.name;
-      cb.classList.add("config-feature-checkbox");
+      cb.classList.add('config-feature-checkbox');
       if (arg.controlsArgName) cb.dataset.controlsArgName = arg.controlsArgName;
-      const toggleLabel = document.createElement("label");
-      toggleLabel.classList.add("toggle-switch", "toggle-switch--sm");
-      const slider = document.createElement("span");
-      slider.classList.add("toggle-switch__slider");
+      const toggleLabel = document.createElement('label');
+      toggleLabel.classList.add('toggle-switch', 'toggle-switch--sm');
+      const slider = document.createElement('span');
+      slider.classList.add('toggle-switch__slider');
       toggleLabel.append(cb, slider);
       inputsContainer.appendChild(toggleLabel);
-      // valueIndex intentionally NOT incremented
     } else if (uiType === UiComponentType.LayerList) {
-      // --- Layer List (MultiLayerFretboard) ---
       label.textContent = labelText;
       const variadicValues = currentValues.slice(valueIndex);
       createLayerListInput(inputsContainer, arg, variadicValues);
-      valueIndex = currentValues.length; // consumes all remaining values
-    } else if (
-      uiType === UiComponentType.ToggleButtonSelector ||
-      (isVariadic && uiType !== UiComponentType.Ellipsis)
-    ) {
-      // --- Handle Variadic Types (Toggle Buttons or Generic Variadic) ---
+      valueIndex = currentValues.length;
+    } else if (uiType === UiComponentType.ToggleButtonSelector || (isVariadic && uiType !== UiComponentType.Ellipsis)) {
       label.textContent = labelText;
-      const variadicValues = currentValues.slice(valueIndex); // Consume remaining values
+      const variadicValues = currentValues.slice(valueIndex);
       if (uiType === UiComponentType.ToggleButtonSelector) {
-        // Determine initial key type from any enum controller for this arg
         const keyControllerName = schemaArgs.find(
           a => a.controlsArgName === arg.name && a.type === ArgType.Enum
         )?.name;
         const initKeyType = keyControllerName
-          ? (controllerValues.get(keyControllerName) ?? "Major")
-          : "Major";
+          ? (controllerValues.get(keyControllerName) ?? 'Major')
+          : 'Major';
         createToggleButtonInput(inputsContainer, arg, variadicValues, initKeyType, false);
       } else {
         createVariadicInputElement(arg, inputsContainer, variadicValues);
       }
-      valueIndex = currentValues.length; // Mark all remaining values as consumed
+      valueIndex = currentValues.length;
     } else if (uiType === UiComponentType.Ellipsis) {
-      // --- Handle Ellipsis (Nested Settings) ---
       label.textContent = labelText;
       if (arg.nestedSchema) {
-        inputsContainer.appendChild(
-          createEllipsisDropdown(arg, currentSettingsInstance)
-        );
+        inputsContainer.appendChild(createEllipsisDropdown(arg, currentSettingsInstance));
       } else {
-        console.warn(
-          `Ellipsis UI specified for arg "${arg.name}" but no nestedSchema provided.`
-        );
-        const errorSpan = document.createElement("span");
-        errorSpan.textContent = "[Config Error]";
-        errorSpan.classList.add("has-text-danger", "is-size-7");
-        inputsContainer.appendChild(errorSpan);
+        const err = document.createElement('span');
+        err.textContent = '[Config Error]';
+        err.classList.add('args-error');
+        inputsContainer.appendChild(err);
       }
-      // Ellipsis does NOT consume values from currentValues array
     } else {
-      // --- Handle Standard Single-Value Input ---
       label.textContent = labelText;
-      const currentValue =
-        valueIndex < currentValues.length ? currentValues[valueIndex] : "";
+      const currentValue = valueIndex < currentValues.length ? currentValues[valueIndex] : '';
       switch (arg.type) {
         case ArgType.Enum:
-          inputsContainer.appendChild(
-            createDropdownInput(arg.name, arg.enum || [], currentValue)
-          );
-          // Record for key-aware wiring
+          inputsContainer.appendChild(createDropdownInput(arg.name, arg.enum || [], currentValue));
           if (arg.controlsArgName) {
-            controllerValues.set(arg.name, currentValue || arg.enum?.[0] || "");
+            controllerValues.set(arg.name, currentValue || arg.enum?.[0] || '');
           }
           break;
         case ArgType.Number:
-          inputsContainer.appendChild(
-            createNumberInput(arg.name, currentValue)
-          );
+          inputsContainer.appendChild(createNumberInput(arg.name, currentValue));
           break;
         case ArgType.Boolean:
-          inputsContainer.appendChild(
-            createDropdownInput(
-              arg.name,
-              ["true", "false"],
-              currentValue || "false"
-            )
-          );
+          inputsContainer.appendChild(createDropdownInput(arg.name, ['true', 'false'], currentValue || 'false'));
           break;
-        default: // ArgType.String or unspecified defaults to text
-          inputsContainer.appendChild(
-            createTextInput(arg.name, currentValue, arg.example)
-          );
+        default:
+          inputsContainer.appendChild(createTextInput(arg.name, currentValue, arg.example));
           break;
       }
-      // Increment valueIndex ONLY after consuming a value for a standard argument
       valueIndex++;
     }
 
     argsInnerContainer.appendChild(argWrapper);
   });
-  container.appendChild(argsInnerContainer);
 
-  // --- Post-build: wire controlsArgName relationships ---
+  container.appendChild(argsInnerContainer);
   wireControllerArgs(argsInnerContainer, schemaArgs);
 }
 
-/**
- * Wires dynamic UI interactions declared via `controlsArgName` in the schema.
- * - Checkbox → toggles `.is-advanced-btn` visibility in the controlled arg.
- * - Enum dropdown → rebuilds the controlled toggle-button selector with the right key type.
- */
-function wireControllerArgs(
+export function wireControllerArgs(
   argsInnerContainer: HTMLElement,
   schemaArgs: ConfigurationSchemaArg[]
 ): void {
@@ -432,33 +352,88 @@ function wireControllerArgs(
     if (!controllerInputs || !controlledInputs || !controlledArg) return;
 
     if (arg.uiComponentType === UiComponentType.Checkbox) {
-      // Checkbox shows/hides advanced buttons and deactivates hidden ones on hide
       const cb = controllerInputs.querySelector<HTMLInputElement>("input[type='checkbox']");
       if (!cb) return;
-      cb.addEventListener("change", () => {
-        const advBtns = controlledInputs.querySelectorAll<HTMLElement>(".is-advanced-btn");
+      cb.addEventListener('change', () => {
+        const advBtns = controlledInputs.querySelectorAll<HTMLElement>('.is-advanced-btn');
         advBtns.forEach(btn => {
-          btn.style.display = cb.checked ? "" : "none";
-          if (!cb.checked) btn.classList.remove("is-active", "is-info");
+          btn.style.display = cb.checked ? '' : 'none';
+          if (!cb.checked) btn.classList.remove('is-active', 'is-info');
         });
       });
     } else if (arg.type === ArgType.Enum) {
-      // Key dropdown rebuilds the toggle buttons preserving selection, respecting advanced state
-      const select = controllerInputs.querySelector<HTMLSelectElement>("select");
+      const select = controllerInputs.querySelector<HTMLSelectElement>('select');
       if (!select) return;
-      select.addEventListener("change", () => {
+      select.addEventListener('change', () => {
         const currentSelection = Array.from(
-          controlledInputs.querySelectorAll<HTMLButtonElement>(".numeral-toggle-btn.is-active")
-        ).map(btn => btn.dataset.value ?? "").filter(v => v);
+          controlledInputs.querySelectorAll<HTMLButtonElement>('.numeral-toggle-btn.is-active')
+        ).map(btn => btn.dataset.value ?? '').filter(v => v);
 
-        // Find the advanced checkbox that also controls the same arg
         const advCb = argsInnerContainer.querySelector<HTMLInputElement>(
           `input.config-feature-checkbox[data-controls-arg-name="${arg.controlsArgName}"]`
         );
         const showAdvanced = advCb?.checked ?? false;
-
         rebuildToggleButtons(controlledInputs, controlledArg, currentSelection, select.value, showAdvanced);
       });
     }
   });
+}
+
+/** Extracts the current feature args list from the args container DOM. */
+export function extractArgsFromContainer(
+  argsContainer: HTMLElement,
+  featureTypeName: string,
+  categoryName: string
+): string[] {
+  const featureArgsList: string[] = [];
+  if (!featureTypeName) return featureArgsList;
+
+  const descriptor = getFeatureTypeDescriptor(categoryName, featureTypeName);
+  const schema = descriptor?.getConfigurationSchema();
+
+  if (typeof schema !== 'object' || !('args' in schema) || !Array.isArray(schema.args)) {
+    return featureArgsList;
+  }
+
+  const schemaArgs = schema.args;
+  let schemaArgIndex = 0;
+
+  const argsInnerContainer = argsContainer.querySelector<HTMLElement>('.feature-args-inner-container');
+  if (!argsInnerContainer) return featureArgsList;
+
+  const argWrappers = argsInnerContainer.querySelectorAll<HTMLElement>(':scope > .feature-arg-wrapper');
+
+  argWrappers.forEach((wrapper) => {
+    const currentSchemaArg = schemaArgs[schemaArgIndex];
+    if (!currentSchemaArg) return;
+
+    const inputsContainer = wrapper.querySelector<HTMLElement>('.feature-arg-inputs-container');
+    if (!inputsContainer) return;
+
+    const uiType = inputsContainer.dataset.uiComponentType;
+    const isVariadic = currentSchemaArg.isVariadic;
+
+    if (uiType === UiComponentType.LayerList) {
+      featureArgsList.push(...extractLayerListValues(inputsContainer));
+      schemaArgIndex = schemaArgs.length;
+    } else if (uiType === UiComponentType.ToggleButtonSelector) {
+      const activeButtons = inputsContainer.querySelectorAll<HTMLButtonElement>('.numeral-toggle-btn.is-active');
+      featureArgsList.push(...Array.from(activeButtons).map(btn => btn.dataset.value || '').filter(v => v));
+      if (isVariadic) schemaArgIndex = schemaArgs.length;
+    } else if (uiType === UiComponentType.Checkbox) {
+      schemaArgIndex++;
+    } else if (uiType === UiComponentType.Ellipsis) {
+      schemaArgIndex++;
+    } else if (isVariadic) {
+      const varInputs = inputsContainer.querySelectorAll<HTMLInputElement | HTMLSelectElement>('.config-feature-arg, .select > select');
+      varInputs.forEach(input => { const v = input.value?.trim(); if (v) featureArgsList.push(v); });
+      schemaArgIndex = schemaArgs.length;
+    } else {
+      const inputEl = inputsContainer.querySelector<HTMLInputElement | HTMLSelectElement>('.config-feature-arg, .select > select');
+      featureArgsList.push(inputEl?.value?.trim() ?? '');
+      schemaArgIndex++;
+    }
+  });
+
+  return featureArgsList;
 }

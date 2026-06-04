@@ -1,6 +1,7 @@
 import { MobileViewManager } from './mobile_view_manager';
 import { NAV_SECTIONS, Visibility, NavButton } from '../reference_page/nav_sections';
 import { AppSettings } from '../settings';
+import { getViewIcon } from '../panels/panel_registry';
 
 export class MobileAddPanel {
     private panelEl!: HTMLElement;
@@ -87,7 +88,7 @@ export class MobileAddPanel {
 
         const iconBox = document.createElement('div');
         iconBox.className = 'mobile-add-card-icon';
-        iconBox.innerHTML = `<span class="material-icons">${btn.icon}</span>`;
+        iconBox.innerHTML = `<span class="material-icons">${getViewIcon(btn.viewId)}</span>`;
 
         const info = document.createElement('div');
         info.className = 'mobile-add-card-info';

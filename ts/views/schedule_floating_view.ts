@@ -4,7 +4,6 @@ import { AudioController } from '../audio_controller';
 import { Schedule } from '../schedule/schedule';
 import { ScheduleEditor } from '../schedule/editor/schedule_editor';
 import { ScheduleDisplayAdapter } from '../schedule/schedule_display_adapter';
-import { TimerView } from './timer_view';
 import { SchedulePlaybackView } from './schedule_playback_view';
 
 type SFVMode = 'edit' | 'play';
@@ -26,14 +25,11 @@ export class ScheduleFloatingView extends BaseView {
   private adapter: ScheduleDisplayAdapter;
   private editor: ScheduleEditor | null = null;
   private currentSchedule: Schedule | null = null;
-  private timerView: TimerView | null = null;
   private playbackView: SchedulePlaybackView | null = null;
   private initialState: any;
 
   private editSection: HTMLElement | null = null;
   private playSection: HTMLElement | null = null;
-  private skipBtn: HTMLButtonElement | null = null;
-  private switchToEditBtn: HTMLButtonElement | null = null;
 
   constructor(initialState: any, appSettings: AppSettings) {
     super();
@@ -85,6 +81,7 @@ export class ScheduleFloatingView extends BaseView {
         if (schedule) {
           this.currentSchedule = schedule;
           this.currentSchedule.prepare();
+          this._updateScheduleInfo(schedule);
         }
       });
     }
@@ -118,42 +115,17 @@ export class ScheduleFloatingView extends BaseView {
     if (!this.playSection) return;
     this.playSection.innerHTML = '';
 
-    // Playback view (timer slot + total progress + upcoming list)
     const playbackContainer = document.createElement('div');
     this.playSection.appendChild(playbackContainer);
     this.playbackView = new SchedulePlaybackView(playbackContainer);
     this.adapter.setPlaybackView(this.playbackView);
 
-    // Timer view — schedule-driven mode (callbacks delegate to schedule)
-    this.timerView = new TimerView(
-      300,
-      () => this._handleStartPause(),
-      () => this._handleReset(),
-      (seconds) => this.currentSchedule?.setCurrentIntervalTime(seconds)
-    );
-    this.timerView.render(this.playbackView.getTimerContainer());
-    this.adapter.setTimerView(this.timerView);
-
-    // Secondary controls (skip + back-to-edit) sit between timer and upcoming list
-    const controls = document.createElement('div');
-    controls.classList.add('sfv-play-controls');
-
-    this.skipBtn = document.createElement('button');
-    this.skipBtn.classList.add('sfv-btn');
-    this.skipBtn.innerHTML = '<span class="material-icons">skip_next</span>';
-    this.skipBtn.title = 'Skip to next interval';
-    this.skipBtn.addEventListener('click', () => this._handleSkip());
-    controls.appendChild(this.skipBtn);
-
-    this.switchToEditBtn = document.createElement('button');
-    this.switchToEditBtn.classList.add('sfv-btn');
-    this.switchToEditBtn.innerHTML = '<span class="material-icons">edit</span>';
-    this.switchToEditBtn.title = 'Edit schedule';
-    this.switchToEditBtn.addEventListener('click', () => this._switchToEdit());
-    controls.appendChild(this.switchToEditBtn);
-
-    // Insert controls between timer slot and total-progress section
-    this.playbackView.getTimerContainer().after(controls);
+    // Wire all control buttons
+    this.playbackView.pauseBtn.addEventListener('click', () => this._handleStartPause());
+    this.playbackView.prevBtn.addEventListener('click', () => this.currentSchedule?.prev());
+    this.playbackView.nextBtn.addEventListener('click', () => this._handleSkip());
+    this.playbackView.restartBtn.addEventListener('click', () => this._handleReset());
+    this.playbackView.editBtn.addEventListener('click', () => this._switchToEdit());
   }
 
   // ─── Mode switching ────────────────────────────────────────────────────────
@@ -169,9 +141,21 @@ export class ScheduleFloatingView extends BaseView {
 
   private _switchToPlay(): void {
     this.mode = 'play';
-    this.playbackView?.setScheduleName(this._getScheduleName());
+    if (this.currentSchedule) {
+      this._updateScheduleInfo(this.currentSchedule);
+    }
     this._applyModeUI();
     this._saveViewState();
+  }
+
+  private _updateScheduleInfo(schedule: Schedule): void {
+    const name = this._getScheduleName();
+    this.playbackView?.setScheduleInfo(
+      name,
+      schedule.totalDuration,
+      schedule.intervals.length,
+      schedule.groups.length,
+    );
   }
 
   private _getScheduleName(): string {
@@ -201,6 +185,7 @@ export class ScheduleFloatingView extends BaseView {
       if (!schedule) return;
       this.currentSchedule = schedule;
       this.currentSchedule.prepare();
+      this._updateScheduleInfo(schedule);
     }
     if (this.currentSchedule.isFinished()) {
       this._handleReset();
@@ -224,6 +209,7 @@ export class ScheduleFloatingView extends BaseView {
     if (!schedule) return;
     this.currentSchedule = schedule;
     this.currentSchedule.prepare();
+    this._updateScheduleInfo(schedule);
   }
 
   private _buildSchedule(): Schedule | null {
@@ -284,7 +270,6 @@ export class ScheduleFloatingView extends BaseView {
 
   destroy(): void {
     this.currentSchedule?.pause();
-    this.timerView?.destroy();
     super.destroy();
   }
 }

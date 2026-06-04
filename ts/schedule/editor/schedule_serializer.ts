@@ -65,13 +65,10 @@ export function parseScheduleJSON(jsonString: string): {
 
   items.forEach((item: any, index: number) => {
     if (isGroupDataJSON(item)) {
-      const level =
-        typeof item.level === "number" && item.level >= 1 ? item.level : 1;
       const groupName =
-        typeof item.name === "string"
-          ? item.name.trim()
-          : `Group Level ${level}`;
-      rowDataArray.push({ rowType: "group", level: level, name: groupName });
+        typeof item.name === "string" ? item.name.trim() : "Group";
+      const color = typeof item.color === "string" ? item.color : undefined;
+      rowDataArray.push({ rowType: "group", name: groupName, color });
     } else if (isIntervalDataJSON(item)) {
       // isIntervalDataJSON now checks for categoryName
       const duration =

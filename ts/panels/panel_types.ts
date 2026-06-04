@@ -19,6 +19,8 @@ export interface FloatingViewDescriptor {
   singleton?: boolean;
   /** When true, a config-toggle button (⚙) is shown in the title bar. */
   supportsConfigToggle?: boolean;
+  /** Material Icons name for this view (e.g. 'alarm', 'music_note'). */
+  icon?: string;
   // Factory function to create an instance of the view's logic
   createView: (initialState?: any, appSettings?: AppSettings) => View;
 }

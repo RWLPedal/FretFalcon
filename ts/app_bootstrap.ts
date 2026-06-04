@@ -34,6 +34,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "floating_timer",
     displayName: "Timer",
+    icon: "alarm",
     defaultWidth: 300,
     defaultHeight: 150,
     minWidth: 195,
@@ -45,6 +46,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "drone_view",
     displayName: "Drone",
+    icon: "graphic_eq",
     defaultWidth: 320,
     defaultHeight: 80,
     minHeight: 80,
@@ -55,8 +57,11 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "schedule_floating_view",
     displayName: "Schedule",
-    defaultWidth: 960,
+    icon: "event_note",
+    defaultWidth: 900,
     defaultHeight: 800,
+    minWidth: 600,
+    minHeight: 600,
     showInMenu: false,
     createView: (initialState?: any, appSettings?: AppSettings) =>
       new ScheduleFloatingView(initialState, appSettings!),
@@ -65,6 +70,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "any_floating_view",
     displayName: "Any",
+    icon: "smart_display",
     defaultWidth: 420,
     defaultHeight: 550,
     showInMenu: false,
@@ -75,6 +81,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "any_feature",
     displayName: "Any Feature",
+    icon: "smart_display",
     defaultWidth: 420,
     defaultHeight: 550,
     showInMenu: false,
@@ -93,6 +100,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "drum_machine",
     displayName: "Backing Track",
+    icon: "queue_music",
     defaultWidth: 575,
     defaultHeight: 300,
     minWidth: 575,
@@ -103,6 +111,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "capo_view",
     displayName: "Capo",
+    icon: "adjust",
     defaultWidth: 240,
     defaultHeight: 350,
     createView: (_initialState?: any, appSettings?: AppSettings) =>
@@ -112,6 +121,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_color_legend",
     displayName: "Color Legend",
+    icon: "palette",
     refreshOnInstrumentChange: true,
     defaultWidth: 180,
     createView: (_initialState?: any, appSettings?: AppSettings) => {
@@ -132,6 +142,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "configurable_instrument_feature",
     displayName: "Configurable Feature",
+    icon: "tune",
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
     defaultHeight: 550,
@@ -150,6 +161,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_notes",
     displayName: "Notes",
+    icon: "music_note",
     featureTypeName: NotesFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -172,6 +184,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_scale",
     displayName: "Scale",
+    icon: "show_chart",
     featureTypeName: ScaleFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -194,6 +207,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_chord",
     displayName: "Chord",
+    icon: "grid_on",
     featureTypeName: ChordFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -216,6 +230,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_triad",
     displayName: "Triad Shapes",
+    icon: "change_history",
     featureTypeName: TriadFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -238,6 +253,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_nearby_triads",
     displayName: "Nearby Triads",
+    icon: "swap_horiz",
     featureTypeName: NearbyTriadsFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -260,6 +276,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_arpeggio",
     displayName: "Arpeggio",
+    icon: "linear_scale",
     featureTypeName: ArpeggioFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -282,6 +299,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_caged",
     displayName: "CAGED",
+    icon: "grid_view",
     featureTypeName: CagedFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -304,6 +322,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_multifret",
     displayName: "MultiFret",
+    icon: "layers",
     featureTypeName: MultiLayerFretboardFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
@@ -326,6 +345,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_notes_reference",
     displayName: "Fretboard Notes",
+    icon: "music_note",
     refreshOnInstrumentChange: true,
     defaultWidth: 340,
     defaultHeight: 550,
@@ -359,6 +379,8 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_chord_progression",
     displayName: "Chord Progression",
+    icon: "arrow_forward",
+    featureTypeName: ChordProgressionFeature.typeName,
     refreshOnInstrumentChange: true,
     defaultWidth: 420,
     defaultHeight: 600,
@@ -381,6 +403,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "instrument_floating_metronome",
     displayName: "Metronome",
+    icon: "timer",
     refreshOnInstrumentChange: true,
     defaultWidth: 280,
     defaultHeight: 120,
@@ -398,6 +421,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "circle_of_fifths",
     displayName: "Circle of Fifths",
+    icon: "donut_large",
     defaultWidth: 360,
     minWidth: 290,
     minHeight: 430,
@@ -407,6 +431,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: GLOBAL_KEY_VIEW_ID,
     displayName: "Global Key",
+    icon: "cell_tower",
     defaultWidth: 300,
     defaultHeight: 55,
     minWidth: 240,
@@ -418,6 +443,7 @@ export function registerBuiltins(): void {
   registerFloatingView({
     viewId: "strum_view",
     displayName: "Strum",
+    icon: "music_note",
     defaultWidth: 520,
     defaultHeight: 160,
     createView: (initialState?: any) => {

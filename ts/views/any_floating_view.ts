@@ -6,6 +6,7 @@ import { getFeatureTypeDescriptor } from '../feature_registry';
 import { instrumentCategory } from '../fretboard/fretboard_category';
 import { DriveSignal, SignalKind, FeatureSignal } from '../panels/link_types';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
+import { setPendingRenderConstraints } from '../fretboard/fretboard_base';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
 const PLACEHOLDER_REST = '(Rest)';
@@ -65,10 +66,11 @@ export class AnyFloatingView extends BaseView {
   }
 
   /** Choose orientation based on the container's aspect ratio. Falls back to
-   *  the global setting if the container has not been laid out yet (0×0). */
-  private _autoOrientation(): "vertical" | "horizontal" {
-    const w = this.featureContainer?.clientWidth ?? 0;
-    const h = this.featureContainer?.clientHeight ?? 0;
+   *  the global setting if the container has not been laid out yet (0×0).
+   *  IMPORTANT: only call this after the placeholder is hidden, otherwise the
+   *  featureContainer shares flex space with the placeholder (both flex:1) and
+   *  reports roughly half its true height — which flips the orientation. */
+  private _autoOrientation(w: number, h: number): "vertical" | "horizontal" {
     if (w === 0 && h === 0) return this.appSettings.instrumentSettings?.orientation ?? "vertical";
     return w >= h ? "horizontal" : "vertical";
   }
@@ -91,13 +93,37 @@ export class AnyFloatingView extends BaseView {
     try {
       const intervalSettings = instrumentCategory.getIntervalSettingsFactory()();
 
-      const maxCanvasHeight = this.featureContainer?.clientHeight || (this.container?.clientHeight ?? 600);
+      // Hide the placeholder BEFORE measuring. While it is visible it shares flex
+      // space with the featureContainer (both flex:1), so the featureContainer
+      // reports ~half its true height — which would flip the orientation and make
+      // single fretboards size to width instead of the constraining dimension.
+      this._hidePlaceholder();
+
+      // Now the featureContainer fills the full content box; measure both axes
+      // from it so orientation and the height budget are mutually consistent.
+      const availW = this.featureContainer?.clientWidth || this.container?.clientWidth || 0;
+      const availH = this.featureContainer?.clientHeight || this.container?.clientHeight || 0;
+      if (availW > 0) setPendingRenderConstraints({ maxWidth: availW });
+      const maxCanvasHeight = availH > 0 ? availH : undefined;
+
+      const orientation = this._autoOrientation(availW, availH);
+      console.log('[AnyFloatingView] sizing', {
+        containerW: this.container?.clientWidth,
+        containerH: this.container?.clientHeight,
+        featureContainerW: this.featureContainer?.clientWidth,
+        featureContainerH: this.featureContainer?.clientHeight,
+        availW,
+        availH,
+        maxCanvasHeight,
+        orientation,
+        feature: signal.featureTypeName,
+      });
 
       const settingsForFeature: AppSettings = {
         ...this.appSettings,
         instrumentSettings: {
           ...this.appSettings.instrumentSettings,
-          orientation: this._autoOrientation(),
+          orientation,
         } as InstrumentSettings,
       };
 
@@ -110,7 +136,7 @@ export class AnyFloatingView extends BaseView {
         signal.categoryName
       );
 
-      this._hidePlaceholder();
+      // Placeholder already hidden above (before measuring).
       if (this.featureContainer) {
         this.currentFeature.render(this.featureContainer);
         this.currentFeature.views?.forEach(v => v.render(this.featureContainer!));

@@ -270,7 +270,7 @@ export class InstrumentCategory implements Category {
         featureArgsList: [],
         intervalSettings: defaultIntervalSettings, // Assign instance
       },
-      { rowType: "group", level: 1, name: "Scale Practice" },
+      { rowType: "group", name: "Scale Practice" },
       {
         rowType: "interval",
         duration: "3:00",

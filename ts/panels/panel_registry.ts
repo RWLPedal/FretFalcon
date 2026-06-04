@@ -27,3 +27,14 @@ export function getFloatingViewDescriptor(
 export function getAvailableFloatingViews(): FloatingViewDescriptor[] {
   return Array.from(registry.values());
 }
+
+export function getViewIcon(viewId: string): string {
+  return registry.get(viewId)?.icon ?? 'widgets';
+}
+
+export function getViewIconByFeatureType(featureTypeName: string): string | undefined {
+  for (const d of registry.values()) {
+    if (d.featureTypeName === featureTypeName) return d.icon;
+  }
+  return undefined;
+}

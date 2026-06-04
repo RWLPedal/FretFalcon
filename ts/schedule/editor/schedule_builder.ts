@@ -1,4 +1,4 @@
-import { Schedule, Interval } from "../schedule";
+import { Schedule, Interval, GroupInfo } from "../schedule";
 import { IDisplayController } from "../../display_controller";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
@@ -57,7 +57,29 @@ export class ScheduleBuilder {
       );
     let hasErrors = false;
     let totalDurationSeconds = 0;
-    const MAX_TOTAL_DURATION_SECONDS = 3 * 60 * 60; // 3 hours
+    const MAX_TOTAL_DURATION_SECONDS = 3 * 60 * 60;
+
+    // Pre-build group info from row order
+    const groups: GroupInfo[] = [];
+    let currentGroup: GroupInfo | null = null;
+    let intervalIndex = 0;
+    rows.forEach((rowElement) => {
+      const rowData = this.rowManager.getRowData(rowElement);
+      if (!rowData) return;
+      if (rowData.rowType === 'group') {
+        if (currentGroup) {
+          currentGroup.endIndex = intervalIndex - 1;
+          if (currentGroup.startIndex <= currentGroup.endIndex) groups.push(currentGroup);
+        }
+        currentGroup = { name: rowData.name, color: rowData.color ?? '', startIndex: intervalIndex, endIndex: intervalIndex };
+      } else if (rowData.rowType === 'interval') {
+        intervalIndex++;
+      }
+    });
+    if (currentGroup) {
+      currentGroup.endIndex = intervalIndex - 1;
+      if (currentGroup.startIndex <= currentGroup.endIndex) groups.push(currentGroup);
+    }
 
     rows.forEach((rowElement, index) => {
       if (hasErrors) return; // Stop processing if an error occurred
@@ -159,11 +181,11 @@ export class ScheduleBuilder {
     });
 
     if (hasErrors) {
-      console.error(
-        "[ScheduleBuilder] Schedule building failed due to errors."
-      );
-      return null; // Return null if any errors occurred
+      console.error("[ScheduleBuilder] Schedule building failed due to errors.");
+      return null;
     }
+
+    schedule.setGroups(groups);
 
     if (schedule.intervals.length === 0) {
       console.warn(

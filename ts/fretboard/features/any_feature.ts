@@ -9,6 +9,8 @@ import { IntervalSettings } from '../../schedule/editor/interval/types';
 import { instrumentCategory } from '../fretboard_category';
 import { getFeatureTypeDescriptor } from '../../feature_registry';
 import { DriveSignal, FeatureSignal, SignalKind, SignalState } from '../../panels/link_types';
+import { InstrumentSettings } from '../fretboard_settings';
+import { setPendingRenderConstraints, peekPendingCanvasWidth } from '../fretboard_base';
 
 const PLACEHOLDER_UNLINKED = 'Connect a source to display features here';
 const PLACEHOLDER_REST = '(Rest)';
@@ -38,6 +40,9 @@ export class AnyFeature implements Feature {
   private currentFeature: Feature | null = null;
   private featureContainerEl: HTMLElement | null = null;
   private placeholderEl: HTMLElement | null = null;
+  private _renderContainer: HTMLElement | null = null;
+  private _storedAvailWidth: number | undefined;
+  private _storedAvailHeight: number | undefined;
   private readonly _unlisten: Array<() => void> = [];
 
   static getConfigurationSchema(): ConfigurationSchema {
@@ -61,13 +66,18 @@ export class AnyFeature implements Feature {
     audioController: AudioController | undefined,
     settings: AppSettings,
     _intervalSettings: IntervalSettings,
-    _maxCanvasHeight: number | undefined,
+    maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
-    return new AnyFeature(config, settings, audioController);
+    return new AnyFeature(config, settings, audioController, maxCanvasHeight);
   }
 
-  constructor(config: ReadonlyArray<string>, appSettings: AppSettings, audioController?: AudioController) {
+  constructor(
+    config: ReadonlyArray<string>,
+    appSettings: AppSettings,
+    audioController?: AudioController,
+    maxCanvasHeight?: number
+  ) {
     this.config = config;
     this.appSettings = appSettings;
     this.mode = config[0] === SignalState.Next ? SignalState.Next : SignalState.Current;
@@ -77,9 +87,16 @@ export class AnyFeature implements Feature {
       document.querySelector('#metronome-sound') as HTMLAudioElement | null,
       document.querySelector('#metronome-accent-sound') as HTMLAudioElement | null,
     );
+    // Capture the sizing constraints that ConfigurableFeatureView set for us.
+    // peekPendingCanvasWidth() reads the module-level constraint set just before createFeature().
+    // maxCanvasHeight comes directly from ConfigurableFeatureView.createAndRenderFeature().
+    // Both are refreshed every time ConfigurableFeatureView recreates us (e.g. on resize).
+    this._storedAvailWidth = peekPendingCanvasWidth();
+    this._storedAvailHeight = maxCanvasHeight;
   }
 
   render(container: HTMLElement): void {
+    this._renderContainer = container;
     container.innerHTML = '';
 
     this.placeholderEl = document.createElement('div');
@@ -115,6 +132,24 @@ export class AnyFeature implements Feature {
     this._unlisten.push(() => container.removeEventListener('link-status-changed', linkStatusListener));
   }
 
+  /**
+   * Returns the available pixel size for sub-features.
+   * Primary source: values captured at construction time from ConfigurableFeatureView
+   * (refreshed on every resize). DOM fallback for the width only (block elements
+   * naturally fill their parent's width so clientWidth is reliable).
+   */
+  private _getAvailableSize(): { width: number; height: number } {
+    const width = this._storedAvailWidth ?? this.featureContainerEl?.clientWidth ?? 0;
+    const height = this._storedAvailHeight ?? 0;
+    return { width, height };
+  }
+
+  private _autoOrientation(): 'vertical' | 'horizontal' {
+    const { width: w, height: h } = this._getAvailableSize();
+    if (w === 0 && h === 0) return this.appSettings.instrumentSettings?.orientation ?? 'vertical';
+    return w >= h ? 'horizontal' : 'vertical';
+  }
+
   private _handleFeatureSignal(signal: FeatureSignal): void {
     this._clearFeature();
     if (!signal.featureTypeName) {
@@ -129,11 +164,31 @@ export class AnyFeature implements Feature {
     }
     try {
       const intervalSettings = instrumentCategory.getIntervalSettingsFactory()();
-      const maxCanvasHeight = this.featureContainerEl?.clientHeight || 600;
+      const { width: availW, height: availH } = this._getAvailableSize();
+      const orientation = this._autoOrientation();
+      console.log('[AnyFeature] sizing', {
+        storedW: this._storedAvailWidth,
+        storedH: this._storedAvailHeight,
+        featureElW: this.featureContainerEl?.clientWidth,
+        featureElH: this.featureContainerEl?.clientHeight,
+        availW,
+        availH,
+        orientation,
+        feature: signal.featureTypeName,
+      });
+      if (availW > 0) setPendingRenderConstraints({ maxWidth: availW });
+      const maxCanvasHeight = availH > 0 ? availH : undefined;
+      const settingsForFeature: AppSettings = {
+        ...this.appSettings,
+        instrumentSettings: {
+          ...this.appSettings.instrumentSettings,
+          orientation,
+        } as InstrumentSettings,
+      };
       this.currentFeature = descriptor.createFeature(
         signal.config,
         this.audioController,
-        this.appSettings,
+        settingsForFeature,
         intervalSettings,
         maxCanvasHeight,
         signal.categoryName

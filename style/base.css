@@ -82,6 +82,31 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── Global scrollbar ───────────────────────────────────────────────────── */
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, #ccc) transparent;
+}
+/* WebKit / Blink */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border, #ccc);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted, #888);
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* ── Flash Overlay ──────────────────────────────────────────────────────── */
 .hidden  { display: none;  opacity: 0; }
 .visible { display: block; opacity: 0.8; }

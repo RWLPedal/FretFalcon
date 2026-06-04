@@ -37,22 +37,6 @@
 .settings-modal-body {
   background: var(--settings-bg, var(--bg));
   padding: 20px 24px 16px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
-}
-
-.settings-modal-body::-webkit-scrollbar {
-  width: 5px;
-}
-.settings-modal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-.settings-modal-body::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
-}
-.settings-modal-body::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
 }
 
 /* ─── Modal footer ─────────────────────────────────────────────────────── */

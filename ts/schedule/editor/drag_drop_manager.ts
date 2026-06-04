@@ -42,7 +42,7 @@ export class DragDropManager {
 
   private _handleDragStart(e: DragEvent): void {
     const originalTarget = e.target as HTMLElement;
-    const dragHandle = originalTarget.closest('.drag-handle-cell');
+    const dragHandle = originalTarget.closest('.drag-handle');
 
     // Check if the drag started on the handle
     if (!dragHandle) {
@@ -120,7 +120,7 @@ export class DragDropManager {
         this.containerEl.insertBefore(el, currentTarget);
       }
     });
-    this.rowManager.updateAllRowIndentation();
+    this.rowManager.refreshAllGroupStats();
   }
 
   private _handleDragLeave(e: DragEvent): void {

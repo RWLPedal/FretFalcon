@@ -9,6 +9,7 @@ import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 import { NAV_SECTIONS } from './nav_sections';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
+import { getViewIcon } from '../panels/panel_registry';
 
 export class SidebarView {
     private container: HTMLElement;
@@ -71,7 +72,7 @@ export class SidebarView {
                     <button id="${btn.id}" class="sidebar-nav-btn"
                         data-view-id="${btn.viewId}"
                         data-feature-type-name="${btn.featureTypeName ?? ''}">
-                        <span class="material-icons">${btn.icon}</span>
+                        <span class="material-icons">${getViewIcon(btn.viewId)}</span>
                         <span>${btn.label}</span>
                     </button>
                 `;

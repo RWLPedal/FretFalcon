@@ -1,215 +1,320 @@
-// ts/schedule/editor/editor_ui_manager.ts
+import { parseScheduleJSON } from "./schedule_serializer";
 
 export class EditorUIManager {
   public containerEl: HTMLElement;
-  public textEditorWrapperEl!: HTMLElement;
-  public textEl!: HTMLTextAreaElement;
-  public configEditorWrapperEl!: HTMLElement;
-  public configEntriesContainerEl!: HTMLElement;
-  public editorControlsContainerEl!: HTMLElement;
-  public modeToggleEl!: HTMLButtonElement;
-  public newScheduleButtonEl!: HTMLButtonElement;
-  public addConfigEntryButtonEl!: HTMLButtonElement;
-  public addGroupButtonEl!: HTMLButtonElement;
-  public copyButtonEl!: HTMLButtonElement;
-  public pasteButtonEl!: HTMLButtonElement;
+
+  // Visual mode elements
+  public editorBodyEl!: HTMLElement;
+  public sidebarListEl!: HTMLElement;
+  public sidebarFooterEl!: HTMLElement;
+  public inspectorEl!: HTMLElement;
+  public addGroupBtnEl!: HTMLButtonElement;
+  public addIntervalBtnEl!: HTMLButtonElement;
   public setScheduleButtonEl!: HTMLButtonElement;
+  public saveScheduleBtnEl!: HTMLButtonElement;
+  public loadScheduleBtnEl!: HTMLButtonElement;
+
+  // Code mode elements
+  public codeModeEl!: HTMLElement;
+  public textEl!: HTMLTextAreaElement;
+  public codeStatusEl!: HTMLElement;
+  public applyChangesBtn!: HTMLButtonElement;
+  public switchToVisualBtn!: HTMLButtonElement;
+
+  // Header elements
+  public scheduleNameDisplayEl!: HTMLElement;
+  public scheduleStatsEl!: HTMLElement;
+  public modeToggleEl!: HTMLButtonElement;
+
+  // For ErrorDisplay compatibility (referenced in schedule_editor.ts)
+  public editorControlsContainerEl!: HTMLElement;
+  public configEntriesContainerEl: HTMLElement;
+
+  private _debounceTimer: number | null = null;
 
   constructor(containerEl: HTMLElement) {
-    if (!containerEl)
-      throw new Error("EditorUIManager: Container element is required.");
+    if (!containerEl) throw new Error('EditorUIManager: Container element is required.');
     this.containerEl = containerEl;
     this._renderBaseHTML();
+    this.configEntriesContainerEl = this.sidebarListEl;
+    this.editorControlsContainerEl = this.sidebarFooterEl;
   }
 
   private _renderBaseHTML(): void {
-    this.containerEl.innerHTML = ""; // Clear container
+    this.containerEl.innerHTML = '';
+    this.containerEl.classList.add('editor-root');
 
-    // --- Schedule Name Bar (editable on double-click, no separate edit button) ---
-    const nameBar = document.createElement("div");
-    nameBar.classList.add("schedule-name-bar");
-    nameBar.style.cssText = "display:flex;align-items:center;gap:8px;margin-bottom:8px;";
+    // ── Header ────────────────────────────────────────────────────────────────
+    const header = document.createElement('div');
+    header.classList.add('editor-header');
 
-    const nameDisplay = document.createElement("p");
-    nameDisplay.id = "schedule-name-display";
-    nameDisplay.classList.add("schedule-name-display");
-    nameDisplay.title = "Double-click to edit schedule name";
-    nameDisplay.style.cssText = "flex:1;margin:0;font-weight:500;cursor:pointer;border-bottom:1px dashed transparent;";
-    nameDisplay.contentEditable = "false";
-    nameDisplay.addEventListener("dblclick", () => {
-      nameDisplay.contentEditable = "true";
-      nameDisplay.focus();
-      nameDisplay.style.borderBottomColor = "var(--accent)";
+    // Left: name + stats
+    const headerLeft = document.createElement('div');
+    headerLeft.classList.add('editor-header-left');
+
+    this.scheduleNameDisplayEl = document.createElement('span');
+    this.scheduleNameDisplayEl.id = 'schedule-name-display';
+    this.scheduleNameDisplayEl.classList.add('schedule-name-display');
+    this.scheduleNameDisplayEl.title = 'Double-click to rename';
+    this.scheduleNameDisplayEl.contentEditable = 'false';
+    this.scheduleNameDisplayEl.addEventListener('dblclick', () => {
+      this.scheduleNameDisplayEl.contentEditable = 'true';
+      this.scheduleNameDisplayEl.classList.add('is-editing');
+      this.scheduleNameDisplayEl.focus();
       const range = document.createRange();
-      range.selectNodeContents(nameDisplay);
+      range.selectNodeContents(this.scheduleNameDisplayEl);
       const sel = window.getSelection();
-      if (sel) {
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
+      if (sel) { sel.removeAllRanges(); sel.addRange(range); }
     });
-    nameDisplay.addEventListener("blur", () => {
-      nameDisplay.contentEditable = "false";
-      nameDisplay.style.borderBottomColor = "transparent";
+    this.scheduleNameDisplayEl.addEventListener('blur', () => {
+      this.scheduleNameDisplayEl.contentEditable = 'false';
+      this.scheduleNameDisplayEl.classList.remove('is-editing');
     });
-    nameDisplay.addEventListener("keydown", (e: KeyboardEvent) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        nameDisplay.blur();
-      }
+    this.scheduleNameDisplayEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); this.scheduleNameDisplayEl.blur(); }
     });
+    headerLeft.appendChild(this.scheduleNameDisplayEl);
 
-    nameBar.appendChild(nameDisplay);
-    this.containerEl.appendChild(nameBar);
+    this.scheduleStatsEl = document.createElement('span');
+    this.scheduleStatsEl.classList.add('schedule-stats');
+    headerLeft.appendChild(this.scheduleStatsEl);
 
-    // --- Text Editor ---
-    this.textEditorWrapperEl = document.createElement("div");
-    this.textEditorWrapperEl.id = "text-editor-wrapper";
-    this.textEditorWrapperEl.style.padding = "10px";
-    this.textEditorWrapperEl.style.border = "1px solid #ccc";
-    this.textEditorWrapperEl.style.marginBottom = "10px";
+    header.appendChild(headerLeft);
 
-    this.textEl = document.createElement("textarea");
-    this.textEl.id = "schedule-text-editor";
-    this.textEl.classList.add("textarea");
-    this.textEl.rows = 15;
-    this.textEl.placeholder =
-      "Enter schedule text here (e.g., 5:00, Warmup, Notes)";
-    this.textEditorWrapperEl.appendChild(this.textEl);
-    this.containerEl.appendChild(this.textEditorWrapperEl);
+    const headerActions = document.createElement('div');
+    headerActions.classList.add('editor-header-actions');
 
-    // --- Config Editor ---
-    this.configEditorWrapperEl = document.createElement("div");
-    this.configEditorWrapperEl.id = "config-editor-wrapper";
-    this.containerEl.appendChild(this.configEditorWrapperEl);
+    this.loadScheduleBtnEl = this._createBtn('Load', 'Load a saved schedule from file', ['btn-outline']);
+    this.saveScheduleBtnEl = this._createBtn('Save', 'Save schedule to file', ['btn-outline']);
+    this.modeToggleEl = this._createBtn('</> Code', 'Switch to code editor', ['btn-outline']);
 
-    this.configEntriesContainerEl = document.createElement("div");
-    this.configEntriesContainerEl.id = "config-entries-container";
-    this.configEntriesContainerEl.setAttribute("tabindex", "-1");
-    this.configEntriesContainerEl.style.outline = "none";
-    this.configEditorWrapperEl.appendChild(this.configEntriesContainerEl);
+    headerActions.appendChild(this.loadScheduleBtnEl);
+    headerActions.appendChild(this.saveScheduleBtnEl);
+    headerActions.appendChild(this.modeToggleEl);
 
-    // --- Editor Controls ---
-    this.editorControlsContainerEl = document.createElement("div");
-    this.editorControlsContainerEl.id = "editor-controls";
-    this.editorControlsContainerEl.style.display = "flex";
-    this.editorControlsContainerEl.style.flexWrap = "wrap";
-    this.editorControlsContainerEl.style.gap = "10px";
-    this.editorControlsContainerEl.style.marginTop = "10px";
-    this.containerEl.appendChild(this.editorControlsContainerEl);
+    header.appendChild(headerActions);
+    this.containerEl.appendChild(header);
 
-    // --- Create Buttons with Icons ---
-    // Order: New, + Interval, + Group, Copy, Paste, Text Editor, Apply (→ Apply & Play)
-    this.newScheduleButtonEl = this._createButton(
-      "new-schedule",
-      '<span class="material-icons">refresh</span>',
-      ["is-outlined", "is-danger"],
-      "Clear editor and start a new schedule"
+    // ── Visual editor body (sidebar | resize handle | inspector) ──────────────
+    this.editorBodyEl = document.createElement('div');
+    this.editorBodyEl.classList.add('editor-body');
+
+    // Restore persisted sidebar width
+    const savedWidth = _loadSidebarWidth();
+    this.editorBodyEl.style.setProperty('--sidebar-width', `${savedWidth}px`);
+
+    const sidebar = document.createElement('div');
+    sidebar.classList.add('editor-sidebar');
+
+    this.sidebarListEl = document.createElement('div');
+    this.sidebarListEl.id = 'config-entries-container';
+    this.sidebarListEl.classList.add('editor-sidebar-list');
+    this.sidebarListEl.setAttribute('tabindex', '-1');
+    sidebar.appendChild(this.sidebarListEl);
+
+    // Sidebar footer: reserved for ErrorDisplay insertion point
+    this.sidebarFooterEl = document.createElement('div');
+    this.sidebarFooterEl.classList.add('editor-sidebar-footer');
+    sidebar.appendChild(this.sidebarFooterEl);
+    this.editorBodyEl.appendChild(sidebar);
+
+    // Resize handle
+    const resizeHandle = document.createElement('div');
+    resizeHandle.classList.add('editor-resize-handle');
+    resizeHandle.setAttribute('aria-hidden', 'true');
+    this.editorBodyEl.appendChild(resizeHandle);
+    _attachResizeDrag(resizeHandle, this.editorBodyEl);
+
+    this.inspectorEl = document.createElement('div');
+    this.inspectorEl.classList.add('editor-inspector');
+    this.editorBodyEl.appendChild(this.inspectorEl);
+
+    this.containerEl.appendChild(this.editorBodyEl);
+
+    // ── Code mode ──────────────────────────────────────────────────────────────
+    this.codeModeEl = document.createElement('div');
+    this.codeModeEl.classList.add('editor-code-mode');
+    this.codeModeEl.style.display = 'none';
+
+    const codeHeader = document.createElement('div');
+    codeHeader.classList.add('code-mode-header');
+    const codeTitle = document.createElement('span');
+    codeTitle.classList.add('code-mode-title');
+    codeTitle.textContent = '</> CODE';
+    const codeSubtitle = document.createElement('span');
+    codeSubtitle.classList.add('code-mode-subtitle');
+    codeSubtitle.textContent = 'Advanced — edit the schedule as raw JSON';
+    this.switchToVisualBtn = this._createBtn('‹ Visual editor', 'Switch back to visual editor', ['btn-outline', 'btn-sm']);
+    codeHeader.appendChild(codeTitle);
+    codeHeader.appendChild(codeSubtitle);
+    codeHeader.appendChild(this.switchToVisualBtn);
+    this.codeModeEl.appendChild(codeHeader);
+
+    this.textEl = document.createElement('textarea');
+    this.textEl.id = 'schedule-text-editor';
+    this.textEl.classList.add('editor-textarea');
+    this.textEl.placeholder = 'Schedule JSON';
+    this.textEl.spellcheck = false;
+    this.codeModeEl.appendChild(this.textEl);
+
+    const codeFooter = document.createElement('div');
+    codeFooter.classList.add('code-mode-footer');
+    this.codeStatusEl = document.createElement('span');
+    this.codeStatusEl.classList.add('code-status');
+    this.codeStatusEl.textContent = '';
+    this.applyChangesBtn = this._createBtn('Apply changes', '', ['btn-primary']);
+    codeFooter.appendChild(this.codeStatusEl);
+    codeFooter.appendChild(this.applyChangesBtn);
+    this.codeModeEl.appendChild(codeFooter);
+
+    this.containerEl.appendChild(this.codeModeEl);
+
+    // ── Footer (+ Group, + Interval, Apply) ───────────────────────────────────
+    const footer = document.createElement('div');
+    footer.classList.add('editor-footer');
+
+    this.addGroupBtnEl = this._createBtn('+ Group', 'Add a new group', ['btn-ghost']);
+    this.addIntervalBtnEl = this._createBtn('+ Interval', 'Add an interval to the last group', ['btn-ghost']);
+    this.setScheduleButtonEl = this._createBtn(
+      '▶ Apply',
+      'Build and start this schedule',
+      ['btn-primary', 'btn-apply']
     );
-    this.addConfigEntryButtonEl = this._createButton(
-      "add-config-entry",
-      '<span class="material-icons">add</span>',
-      ["is-outlined"],
-      "Add Interval"
-    );
-    this.addGroupButtonEl = this._createButton(
-      "add-group-entry",
-      '<span class="material-icons">playlist_add</span>',
-      ["is-outlined"],
-      "Add Group Header"
-    );
-    this.copyButtonEl = this._createButton(
-      "copy-schedule-rows",
-      '<span class="material-icons">content_copy</span>',
-      ["is-outlined"],
-      "Copy Selected Rows (Ctrl+C)"
-    );
-    this.pasteButtonEl = this._createButton(
-      "paste-schedule-rows",
-      '<span class="material-icons">content_paste</span>',
-      ["is-outlined"],
-      "Paste Copied Rows (Ctrl+V)"
-    );
-    this.modeToggleEl = this._createButton(
-      "mode-toggle",
-      '<span class="material-icons">code</span> <span>Text Editor</span>',
-      ["is-outlined"],
-      "Switch to Text Editor"
-    );
-    this.setScheduleButtonEl = this._createButton(
-      "set-schedule-control",
-      '<span class="material-icons">check_circle</span> <span>Apply & Play</span>',
-      ["is-primary"]
-    );
-    this.setScheduleButtonEl.style.marginLeft = "auto";
 
-    // --- Append Buttons in Specified Order ---
-    this.editorControlsContainerEl.append(
-      this.newScheduleButtonEl,
-      this.addConfigEntryButtonEl,
-      this.addGroupButtonEl,
-      this.copyButtonEl,
-      this.pasteButtonEl,
-      this.modeToggleEl,
-      this.setScheduleButtonEl
-    );
+    footer.appendChild(this.addGroupBtnEl);
+    footer.appendChild(this.addIntervalBtnEl);
+    footer.appendChild(this.setScheduleButtonEl);
+    this.containerEl.appendChild(footer);
 
-    this.updateCopyPasteButtonState(false, false);
+    // Wire live JSON parse status
+    this.textEl.addEventListener('input', () => this._onTextInput());
   }
 
-  private _createButton(
-    id: string,
-    innerHTML: string,
-    extraClasses: string[] = [],
-    title: string = ""
-  ): HTMLButtonElement {
-    const button = document.createElement("button");
-    button.id = id;
-    button.classList.add("button", "is-small", ...extraClasses);
-    button.innerHTML = innerHTML;
-    if (title) button.title = title;
-    return button;
+  private _onTextInput(): void {
+    if (this._debounceTimer !== null) clearTimeout(this._debounceTimer);
+    this._debounceTimer = window.setTimeout(() => {
+      try {
+        const doc = parseScheduleJSON(this.textEl.value);
+        const count = doc.items.filter(i => i.rowType === 'interval').length;
+        this.codeStatusEl.textContent = `Parsed live · ${count} interval${count !== 1 ? 's' : ''}`;
+        this.codeStatusEl.classList.remove('code-status-error');
+      } catch {
+        this.codeStatusEl.textContent = 'Parse error';
+        this.codeStatusEl.classList.add('code-status-error');
+      }
+    }, 400);
   }
 
   public setModeUI(isTextMode: boolean): void {
-    this.textEditorWrapperEl.style.display = isTextMode ? "block" : "none";
-    this.configEditorWrapperEl.style.display = isTextMode ? "none" : "block";
-    // Update mode toggle button text/icon based on current mode
-    this.modeToggleEl.innerHTML = isTextMode
-      ? '<span class="material-icons">tune</span> <span>Config Editor</span>'
-      : '<span class="material-icons">code</span> <span>Text Editor</span>';
-    this.modeToggleEl.title = isTextMode
-      ? "Switch to Config Editor"
-      : "Switch to Text Editor";
-    // Toggle visibility of config-only buttons
-    const configOnly = [this.newScheduleButtonEl, this.addConfigEntryButtonEl, this.addGroupButtonEl, this.copyButtonEl, this.pasteButtonEl];
-    const display = isTextMode ? "none" : "inline-flex";
-    configOnly.forEach(btn => btn.style.display = display);
+    this.editorBodyEl.style.display = isTextMode ? 'none' : '';
+    this.codeModeEl.style.display = isTextMode ? '' : 'none';
+    this.modeToggleEl.textContent = isTextMode ? '≡ Visual' : '</> Code';
+    this.modeToggleEl.title = isTextMode ? 'Switch to visual editor' : 'Switch to code editor';
   }
 
   public setApplyButtonLabel(label: string): void {
-    this.setScheduleButtonEl.innerHTML = `<span class="material-icons">check_circle</span> <span>${label}</span>`;
+    this.setScheduleButtonEl.textContent = `▶ ${label}`;
   }
 
-  public updateCopyPasteButtonState(canCopy: boolean, canPaste: boolean): void {
-    this.copyButtonEl.toggleAttribute("disabled", !canCopy);
-    this.pasteButtonEl.toggleAttribute("disabled", !canPaste);
+  /** Recomputes and displays total duration, interval count, and group count. */
+  public updateScheduleStats(): void {
+    const rows = this.sidebarListEl.querySelectorAll<HTMLElement>('.schedule-row');
+    let intervalCount = 0;
+    let groupCount = 0;
+    let totalSeconds = 0;
+
+    rows.forEach(row => {
+      if (row.dataset.rowType === 'interval') {
+        intervalCount++;
+        totalSeconds += _parseDurationSeconds(row.dataset.duration ?? '');
+      } else if (row.dataset.rowType === 'group') {
+        groupCount++;
+      }
+    });
+
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    const durStr = `${mins}:${String(secs).padStart(2, '0')}`;
+    const iLabel = intervalCount === 1 ? 'interval' : 'intervals';
+    const gLabel = groupCount === 1 ? 'group' : 'groups';
+    this.scheduleStatsEl.textContent =
+      intervalCount === 0 ? '' : `${durStr} · ${intervalCount} ${iLabel} · ${groupCount} ${gLabel}`;
+  }
+
+  public updateCopyPasteButtonState(_canCopy: boolean, _canPaste: boolean): void {
+    // Copy/paste via keyboard shortcuts only in new design
   }
 
   public populateConfigUI(
     buildRowCallback: (rowData: any) => HTMLElement | null,
     rowDataArray: any[]
   ): void {
-    while (this.configEntriesContainerEl.firstChild) {
-      this.configEntriesContainerEl.removeChild(
-        this.configEntriesContainerEl.firstChild
-      );
-    }
+    this.sidebarListEl.innerHTML = '';
     rowDataArray.forEach((rowData) => {
-      const rowElement = buildRowCallback(rowData);
-      if (rowElement) {
-        this.configEntriesContainerEl.appendChild(rowElement);
-      }
+      const el = buildRowCallback(rowData);
+      if (el) this.sidebarListEl.appendChild(el);
     });
   }
+
+  private _createBtn(text: string, title: string, classes: string[] = []): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = text;
+    if (title) btn.title = title;
+    btn.classList.add('editor-btn', ...classes);
+    return btn;
+  }
+}
+
+// ─── Module helpers ───────────────────────────────────────────────────────────
+
+function _parseDurationSeconds(duration: string): number {
+  const parts = duration.split(':');
+  if (parts.length === 2) return parseInt(parts[0] ?? '0', 10) * 60 + parseInt(parts[1] ?? '0', 10);
+  return parseInt(duration, 10) || 0;
+}
+
+// ─── Resize drag helpers ──────────────────────────────────────────────────────
+
+const SIDEBAR_WIDTH_KEY = 'editor-sidebar-width';
+const SIDEBAR_MIN = 150;
+const SIDEBAR_MAX = 520;
+const SIDEBAR_DEFAULT = 280;
+
+function _loadSidebarWidth(): number {
+  const raw = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+  const parsed = raw ? parseInt(raw, 10) : NaN;
+  return isNaN(parsed) ? SIDEBAR_DEFAULT : Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, parsed));
+}
+
+function _saveSidebarWidth(px: number): void {
+  localStorage.setItem(SIDEBAR_WIDTH_KEY, String(px));
+}
+
+function _attachResizeDrag(handle: HTMLElement, body: HTMLElement): void {
+  handle.addEventListener('mousedown', (startEvent: MouseEvent) => {
+    startEvent.preventDefault();
+
+    const startX = startEvent.clientX;
+    const startWidth = _loadSidebarWidth();
+
+    const onMove = (e: MouseEvent) => {
+      const delta = e.clientX - startX;
+      const newWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + delta));
+      body.style.setProperty('--sidebar-width', `${newWidth}px`);
+    };
+
+    const onUp = (e: MouseEvent) => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.classList.remove('is-resizing-editor');
+      const delta = e.clientX - startX;
+      const finalWidth = Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, startWidth + delta));
+      _saveSidebarWidth(finalWidth);
+    };
+
+    document.body.classList.add('is-resizing-editor');
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }

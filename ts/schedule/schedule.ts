@@ -2,6 +2,13 @@ import { Feature } from "../feature";
 import { AudioController } from "../audio_controller";
 import { IDisplayController, Status } from "../display_controller";
 
+export interface GroupInfo {
+  name: string;
+  color: string;
+  startIndex: number;
+  endIndex: number; // inclusive
+}
+
 // Colors for tasks in intervals.
 const intervalColors = [
   '#e7cba9',
@@ -14,6 +21,7 @@ const intervalColors = [
 // An instance of a schedule.
 export class Schedule {
   intervals: Array<Interval>;
+  groups: GroupInfo[] = [];
   currentIntervalIndex: number;
   accumulatedSeconds: number;
   totalDuration: number;
@@ -21,6 +29,7 @@ export class Schedule {
   audio: AudioController;
   color_index: number;
   name: string = '';
+  private _intervalStartAccumulated: number = 0;
 
   constructor(display: IDisplayController,
     audio: AudioController) {
@@ -42,6 +51,19 @@ export class Schedule {
     this.color_index = (this.color_index + 1) % intervalColors.length;
     this.totalDuration += interval.getTotalDuration();
     this.intervals.push(interval);
+  }
+
+  setGroups(groups: GroupInfo[]): void {
+    this.groups = groups;
+  }
+
+  getCurrentGroupInfo(): GroupInfo | null {
+    for (const g of this.groups) {
+      if (this.currentIntervalIndex >= g.startIndex && this.currentIntervalIndex <= g.endIndex) {
+        return g;
+      }
+    }
+    return null;
   }
 
   isFinished(): boolean {
@@ -76,26 +98,88 @@ export class Schedule {
   }
 
   onIntervalEnd(): void {
-    const endedInterval = this.getCurrentInterval(); // Get interval that just finished
+    const endedInterval = this.getCurrentInterval();
 
-    // Stop the feature and its views for the interval that just ended
     endedInterval?.stopFeatureAndViews();
-    endedInterval?.destroyFeatureAndViews(); // Clean up ended interval views/feature
+    endedInterval?.destroyFeatureAndViews();
 
     this.currentIntervalIndex += 1;
     this.audio.playIntervalEnd();
     this.display.flashOverlay();
 
     if (!this.isFinished()) {
+      this._intervalStartAccumulated = this.accumulatedSeconds;
       const nextInterval = this.getCurrentInterval();
-      this.setDisplayTask(nextInterval); // Prepare display for the next interval
+      this.setDisplayTask(nextInterval);
       this.display.setTimerDuration(nextInterval.getTotalDuration());
       this.updateUpcoming();
-      nextInterval.start(); // Start the next interval timer AND its features/views
+      this._emitGroupContext();
+      this._emitIntervalCounter();
+      nextInterval.start();
     } else {
       this.setDisplayFinished();
-      // No need to stop/destroy here, already done for the last interval
     }
+  }
+
+  /** Jump to previous interval (or restart current if >3s in). */
+  prev(): void {
+    const elapsed = this.accumulatedSeconds - this._intervalStartAccumulated;
+    const current = this.getCurrentInterval();
+    if (!current) return;
+
+    if (elapsed > 3 || this.currentIntervalIndex === 0) {
+      // Restart current interval
+      current.pause();
+      current.timer.reset();
+      this._intervalStartAccumulated = this.accumulatedSeconds;
+      this.display.setPause();
+      this.display.setStatus(Status.Play);
+      this.display.setTimerDuration(current.getTotalDuration());
+      this.display.setTime(current.getCurrentTimeRemaining());
+      current.start();
+    } else {
+      // Go to previous interval
+      current.stopFeatureAndViews();
+      current.destroyFeatureAndViews();
+      this.currentIntervalIndex -= 1;
+      const prev = this.getCurrentInterval()!;
+      // Reset the previous interval's timer so it starts fresh
+      prev.timer.reset();
+      this._intervalStartAccumulated = this.accumulatedSeconds;
+      this.setDisplayTask(prev);
+      this.display.setTimerDuration(prev.getTotalDuration());
+      this.display.setTime(prev.getCurrentTimeRemaining());
+      this.updateUpcoming();
+      this._emitGroupContext();
+      this._emitIntervalCounter();
+      this.display.setPause();
+      this.display.setStatus(Status.Play);
+      prev.start();
+    }
+  }
+
+  private _emitGroupContext(): void {
+    const group = this.getCurrentGroupInfo();
+    if (group) {
+      this.display.setGroupContext?.(group.name, group.color);
+    } else {
+      this.display.setGroupContext?.('', '');
+    }
+  }
+
+  private _emitIntervalCounter(): void {
+    this.display.setIntervalCounter?.(this.currentIntervalIndex + 1, this.intervals.length);
+  }
+
+  private _emitSessionSegments(): void {
+    if (this.groups.length === 0 || this.totalDuration === 0) return;
+    const segments = this.groups.map(g => {
+      const groupDuration = this.intervals
+        .slice(g.startIndex, g.endIndex + 1)
+        .reduce((sum, iv) => sum + iv.getTotalDuration(), 0);
+      return { fraction: groupDuration / this.totalDuration, color: g.color };
+    });
+    this.display.setSessionSegments?.(segments);
   }
 
   setTotalTime(): void {
@@ -105,8 +189,7 @@ export class Schedule {
 
   setDisplayTask(interval: Interval): void {
     const suffix = interval.isIntroActive() ? " (Warmup)" : "";
-    const title = this.name ? `${this.name}: ${interval.task}${suffix}` : interval.task + suffix;
-    this.display.setTask(title, interval.color);
+    this.display.setTask(interval.task + suffix, interval.color);
     this.display.setCurrentCategoryName(interval.categoryName);
 
     if (interval.feature) {
@@ -155,9 +238,14 @@ export class Schedule {
       return; // Avoid double start
     }
 
-    this.display.setPause(); // Set button to PAUSE state
+    this._intervalStartAccumulated = this.accumulatedSeconds;
+
+    this.display.setPause();
     this.display.setStatus(Status.Play);
-    interval.start(); // This now also starts feature/views
+    this._emitGroupContext();
+    this._emitIntervalCounter();
+    this._emitSessionSegments();
+    interval.start();
   }
 
   // Prepare display for the first interval (or current if paused)
@@ -172,6 +260,9 @@ export class Schedule {
     this.setDisplayTask(interval); // Renders feature/views via DisplayController
     this.setTotalTime();
     this.updateUpcoming();
+    this._emitGroupContext();
+    this._emitIntervalCounter();
+    this._emitSessionSegments();
     this.display.setStart(); // Ensure button shows START initially or after pause
     this.display.setStatus(Status.Pause); // Show pause icon initially
   }
@@ -237,6 +328,8 @@ export class Schedule {
         const nextInterval = this.getCurrentInterval();
         this.setDisplayTask(nextInterval); // Set display for the new interval
         this.updateUpcoming();
+        this._emitGroupContext();
+        this._emitIntervalCounter();
 
         // Start the next interval and update UI controls
         nextInterval.start();
@@ -338,12 +431,23 @@ class IntervalTimer {
   updateCallback!: Function;
   finishedCallback!: Function;
   private countdownTimerId: number | null = null;
+  private readonly initialTime: number;
+  private readonly initialIntroTime: number;
 
   constructor(time: number,
     introductionTime: number) {
+    this.initialTime = time;
+    this.initialIntroTime = introductionTime;
     this.timeRemaining = time;
     this.introTimeRemaining = introductionTime;
     this.isIntroFinished = introductionTime == 0 ? true : false;
+  }
+
+  reset(): void {
+    this.pause();
+    this.timeRemaining = this.initialTime;
+    this.introTimeRemaining = this.initialIntroTime;
+    this.isIntroFinished = this.initialIntroTime === 0;
   }
 
   isRunning(): boolean {

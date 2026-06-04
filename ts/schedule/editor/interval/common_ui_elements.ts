@@ -374,21 +374,6 @@ export function createDragHandleCell(): HTMLDivElement {
   return cellDiv;
 }
 
-export function createCopyButtonCell(): HTMLButtonElement {
-  const copyButton = document.createElement("button");
-  copyButton.type = "button";
-  copyButton.classList.add(
-    "button",
-    "is-small",
-    "is-info", // Or another suitable color
-    "is-outlined",
-    "copy-row-btn" // Specific class for targeting
-  );
-  // Use a copy icon (e.g., Unicode or an icon font)
-  copyButton.innerHTML = "&#x2398;"; // Example: Document icon (can change)
-  copyButton.title = "Copy Row";
-  return copyButton;
-}
 
 export function createRemoveButtonElement(rowElement: HTMLElement): HTMLButtonElement {
   const removeButton = document.createElement("button");
@@ -411,17 +396,6 @@ export function createRemoveButtonElement(rowElement: HTMLElement): HTMLButtonEl
   return removeButton;
 }
 
-/** Applies indentation style based on level */
-export function applyIndentation(element: HTMLElement, level: number): void {
-  const indentSize = 15; // Pixels per level
-  // Group levels start at 1, but visual indent starts from level 0 (no indent)
-  // Indent level 1 group like a level 0 item, level 2 like level 1 item, etc.
-  // Interval rows under a level N group get indent level N.
-  const effectiveLevel = Math.max(0, level); // Ensure non-negative level
-  element.style.marginLeft = `${effectiveLevel * indentSize}px`;
-  // Maybe add padding instead of margin if it interacts better with borders/backgrounds
-  // element.style.paddingLeft = `${effectiveLevel * indentSize}px`;
-}
 
 /** Clears all child elements from a given HTML element */
 export function clearAllChildren(element: HTMLElement): void {
