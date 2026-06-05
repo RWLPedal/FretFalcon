@@ -431,26 +431,24 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       if (!voicing) continue;
       const color = resolvedColors[si % resolvedColors.length];
 
-      for (let a = 0; a < 3; a++) {
-        for (let b = a + 1; b < 3; b++) {
-          const from = fb.getNoteCoordinates(voicing.stringGroup[a], voicing.frets[a]);
-          const to   = fb.getNoteCoordinates(voicing.stringGroup[b], voicing.frets[b]);
-          const dx = to.x - from.x;
-          const dy = to.y - from.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < r * 2) continue;
-          const nx = dx / dist;
-          const ny = dy / dist;
-          lines.push({
-            startX: from.x + r * nx,
-            startY: from.y + r * ny,
-            endX:   to.x   - r * nx,
-            endY:   to.y   - r * ny,
-            color,
-            strokeWidth: 1,
-            opacity:     0.3,
-          });
-        }
+      for (let a = 0; a < 2; a++) {
+        const from = fb.getNoteCoordinates(voicing.stringGroup[a], voicing.frets[a]);
+        const to   = fb.getNoteCoordinates(voicing.stringGroup[a + 1], voicing.frets[a + 1]);
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < r * 2) continue;
+        const nx = dx / dist;
+        const ny = dy / dist;
+        lines.push({
+          startX: from.x + r * nx,
+          startY: from.y + r * ny,
+          endX:   to.x   - r * nx,
+          endY:   to.y   - r * ny,
+          color,
+          strokeWidth: 1,
+          opacity:     0.3,
+        });
       }
     }
 
