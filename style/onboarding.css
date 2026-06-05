@@ -5,11 +5,12 @@
 /* ─── Resize handle (visual affordance on each floating panel) ─────────────── */
 .floating-view-resize-handle {
   position: absolute;
-  bottom: 3px;
-  right: 3px;
+  bottom: 0;
+  right: 0;
   width: 12px;
   height: 12px;
-  pointer-events: none;
+  cursor: se-resize;
+  z-index: 10;
   opacity: 0.35;
   background:
     linear-gradient(

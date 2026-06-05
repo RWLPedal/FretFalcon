@@ -19,6 +19,7 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 *   Support display of lick/TAB notation snippets within a practice interval.
 *   Clean up and better define functionality that shows important notes over chord changes.
 *   Expand scale library (e.g., bebop scales, whole-tone, diminished).
+*   Add common offset patterns
 
 ## Audio
 
@@ -27,5 +28,4 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 ## Infrastructure & Development
 
 *   Add tests (unit, integration).
-*   Support mobile/responsive design (including rotation).
 *   Support multiple languages (internationalization/i18n).

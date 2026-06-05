@@ -465,12 +465,24 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
   min-height: 50px;
   pointer-events: auto;
   overflow: hidden;
-  resize: both;
   width: 250px;
 }
 .floating-view-wrapper.is-dragging { opacity: 0.85; }
-.floating-view-wrapper.is-panel-collapsed { min-height: 0; resize: none; }
+.floating-view-wrapper.is-panel-collapsed { min-height: 0; }
 .floating-view-wrapper.is-panel-collapsed .floating-view-content { display: none; }
+
+/* ─── Corner resize handles ─── */
+.floating-view-resize-tl,
+.floating-view-resize-tr,
+.floating-view-resize-bl {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  z-index: 10;
+}
+.floating-view-resize-tl { top: 0; left: 0; cursor: nwse-resize; }
+.floating-view-resize-tr { top: 0; right: 0; cursor: nesw-resize; }
+.floating-view-resize-bl { bottom: 0; left: 0; cursor: nesw-resize; }
 
 .floating-view-titlebar {
   background-color: transparent;

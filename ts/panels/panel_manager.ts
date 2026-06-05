@@ -309,6 +309,7 @@ export class FloatingViewManager {
 
       this.activeViews.set(instanceId, wrapper);
       this.viewAreaElement.appendChild(wrapper.element);
+      wrapper.notifyDefaultDimensions();
       this.linkManager?.onWindowSpawned(instanceId, wrapper.element);
       this.saveState();
       return instanceId;

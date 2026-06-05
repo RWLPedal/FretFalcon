@@ -75,6 +75,103 @@ function stopDrag() {
 }
 // --- End Dragging Logic ---
 
+// --- Corner Resize Logic ---
+interface _ResizeState {
+  element: HTMLElement;
+  corner: 'tl' | 'tr' | 'bl' | 'br';
+  startMouseX: number;
+  startMouseY: number;
+  startWidth: number;
+  startHeight: number;
+  startLeft: number;
+  startTop: number;
+  minWidth: number;
+  minHeight: number;
+  onDone: (left: number, top: number) => void;
+}
+
+let _resizeState: _ResizeState | null = null;
+
+function startCornerResize(
+  e: MouseEvent,
+  element: HTMLElement,
+  corner: 'tl' | 'tr' | 'bl' | 'br',
+  onDone: (left: number, top: number) => void
+): void {
+  e.preventDefault();
+  e.stopPropagation();
+  if (element.classList.contains('is-panel-collapsed')) return;
+  const style = getComputedStyle(element);
+  _resizeState = {
+    element, corner,
+    startMouseX: e.clientX,
+    startMouseY: e.clientY,
+    startWidth: element.offsetWidth,
+    startHeight: element.offsetHeight,
+    startLeft: parseFloat(element.style.left || '0'),
+    startTop: parseFloat(element.style.top || '0'),
+    minWidth: parseFloat(style.minWidth) || 150,
+    minHeight: parseFloat(style.minHeight) || 50,
+    onDone,
+  };
+  document.body.style.userSelect = 'none';
+  document.addEventListener('mousemove', _doCornerResize);
+  document.addEventListener('mouseup', _stopCornerResize);
+}
+
+function _doCornerResize(e: MouseEvent): void {
+  if (!_resizeState) return;
+  const { element, corner, startMouseX, startMouseY, startWidth, startHeight,
+          startLeft, startTop, minWidth, minHeight } = _resizeState;
+  const dx = e.clientX - startMouseX;
+  const dy = e.clientY - startMouseY;
+
+  let newWidth = startWidth;
+  let newHeight = startHeight;
+  let newLeft = startLeft;
+  let newTop = startTop;
+
+  if (corner === 'br') {
+    newWidth = Math.max(minWidth, startWidth + dx);
+    newHeight = Math.max(minHeight, startHeight + dy);
+  } else if (corner === 'bl') {
+    newWidth = Math.max(minWidth, startWidth - dx);
+    newHeight = Math.max(minHeight, startHeight + dy);
+    newLeft = startLeft + (startWidth - newWidth);
+  } else if (corner === 'tr') {
+    newWidth = Math.max(minWidth, startWidth + dx);
+    newHeight = Math.max(minHeight, startHeight - dy);
+    newTop = startTop + (startHeight - newHeight);
+  } else {
+    newWidth = Math.max(minWidth, startWidth - dx);
+    newHeight = Math.max(minHeight, startHeight - dy);
+    newLeft = startLeft + (startWidth - newWidth);
+    newTop = startTop + (startHeight - newHeight);
+  }
+
+  element.style.width = `${newWidth}px`;
+  element.style.height = `${newHeight}px`;
+  element.style.left = `${newLeft}px`;
+  element.style.top = `${newTop}px`;
+}
+
+function _stopCornerResize(): void {
+  document.removeEventListener('mousemove', _doCornerResize);
+  document.removeEventListener('mouseup', _stopCornerResize);
+  document.body.style.userSelect = '';
+  if (!_resizeState) return;
+  const { element, onDone } = _resizeState;
+  if (moduleGridSize) {
+    element.style.width  = `${snapToGrid(parseFloat(element.style.width))}px`;
+    element.style.height = `${snapToGrid(parseFloat(element.style.height))}px`;
+    element.style.left   = `${snapToGrid(parseFloat(element.style.left))}px`;
+    element.style.top    = `${snapToGrid(parseFloat(element.style.top))}px`;
+  }
+  onDone(parseFloat(element.style.left), parseFloat(element.style.top));
+  _resizeState = null;
+}
+// --- End Corner Resize Logic ---
+
 export class FloatingViewWrapper {
   public element: HTMLElement;
   private contentElement: HTMLElement;
@@ -101,6 +198,8 @@ export class FloatingViewWrapper {
   /** Minimum wrapper width (px) — the descriptor's defaultWidth. Used as a floor
    *  when resizing after rotation so the config UI is never clipped. */
   private readonly defaultWidth: number;
+  /** Default wrapper height (px) from the descriptor, or 0 if unset. */
+  private readonly _defaultHeight: number;
 
   constructor(
     state: FloatingViewInstanceState,
@@ -126,6 +225,7 @@ export class FloatingViewWrapper {
     this.onZoomCallback = onZoom ?? null;
     this.onConfigToggleCallback = onConfigToggle ?? null;
     this.defaultWidth = defaultWidth ?? 0;
+    this._defaultHeight = defaultHeight ?? 0;
 
     this.element = document.createElement("div");
     this.element.classList.add("floating-view-wrapper");
@@ -141,6 +241,7 @@ export class FloatingViewWrapper {
       this.element.style.height = `${state.size.height}px`;
     } else if (defaultWidth || defaultHeight) {
       if (defaultWidth) this.element.style.width = `${defaultWidth}px`;
+      if (defaultHeight) this.element.style.height = `${defaultHeight}px`;
     }
 
     // Make wrapper focusable and handle z-index bring-to-front
@@ -244,10 +345,24 @@ export class FloatingViewWrapper {
     this.contentElement.classList.add("floating-view-content");
     this.element.appendChild(this.contentElement);
 
-    // --- Resize Handle (visual affordance + tour spotlight target) ---
-    const resizeHandle = document.createElement("div");
-    resizeHandle.classList.add(FLOATING_VIEW_RESIZE_HANDLE_CLASS);
-    this.element.appendChild(resizeHandle);
+    // --- Resize Handles (all 4 corners; visual affordance only on bottom-right) ---
+    const _cornerDefs: Array<{ cls: string; corner: 'tl' | 'tr' | 'bl' | 'br' }> = [
+      { cls: 'floating-view-resize-tl', corner: 'tl' },
+      { cls: 'floating-view-resize-tr', corner: 'tr' },
+      { cls: 'floating-view-resize-bl', corner: 'bl' },
+      { cls: FLOATING_VIEW_RESIZE_HANDLE_CLASS, corner: 'br' },
+    ];
+    for (const { cls, corner } of _cornerDefs) {
+      const handle = document.createElement('div');
+      handle.classList.add(cls);
+      handle.addEventListener('mousedown', (e) => {
+        startCornerResize(e, this.element, corner, (left, top) => {
+          this.state.position = { x: left, y: top };
+          this.onStateChangeCallback(this.state);
+        });
+      });
+      this.element.appendChild(handle);
+    }
 
     // Listen for dynamic title updates - must be registered before render so
     // events fired synchronously during render (e.g. on saved-state restore) are caught.
@@ -413,6 +528,26 @@ export class FloatingViewWrapper {
     this.state.position = { x, y };
     this.element.style.left = `${x}px`;
     this.element.style.top = `${y}px`;
+  }
+
+  /**
+   * Fire wrapper-user-resized with the default dimensions. Must be called after the
+   * element is appended to the DOM. This lets features with height-dependent layouts
+   * (e.g. NearbyTriads reference mode) re-render at the correct size before the
+   * auto-size RAF reads their canvas dimensions.
+   */
+  public notifyDefaultDimensions(): void {
+    if (this.state.size || !this._defaultHeight) return;
+    const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
+    const titleBarH = titleBarEl?.offsetHeight ?? 30;
+    const w = this.contentElement.clientWidth;
+    const h = this._defaultHeight - titleBarH;
+    if (w > 0 && h > 0) {
+      this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
+        bubbles: false,
+        detail: { width: w, height: h },
+      }));
+    }
   }
 
   /** Returns the current pixel size of the wrapper element. */
