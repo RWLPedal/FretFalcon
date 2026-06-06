@@ -143,3 +143,31 @@ describe('built-in scale definitions', () => {
     }
   })
 })
+
+// ─── Double Harmonic Major ────────────────────────────────────────────────────
+
+describe('Double Harmonic Major', () => {
+  it('has correct intervals', () => {
+    expect(scales.DOUBLE_HARMONIC_MAJOR.degrees).toEqual([0, 1, 4, 5, 7, 8, 11])
+  })
+
+  // Hungarian Minor is mode 4 of Double Harmonic Major.
+  it('mode 4 equals Hungarian Minor', () => {
+    const src = scales.DOUBLE_HARMONIC_MAJOR.degrees
+    const mode4Root = src[3] // semitone 5
+    const mode4 = [...src.slice(3), ...src.slice(0, 3)].map(d => (d - mode4Root + 12) % 12).sort((a, b) => a - b)
+    expect(mode4).toEqual(scales.HUNGARIAN_MINOR.degrees)
+  })
+})
+
+// ─── Harmonic Minor ───────────────────────────────────────────────────────────
+
+describe('Harmonic Minor', () => {
+  // Phrygian Dominant is mode 5 of Harmonic Minor.
+  it('mode 5 equals Phrygian Dominant', () => {
+    const src = scales.HARMONIC_MINOR.degrees
+    const mode5Root = src[4] // semitone 7
+    const mode5 = [...src.slice(4), ...src.slice(0, 4)].map(d => (d - mode5Root + 12) % 12).sort((a, b) => a - b)
+    expect(mode5).toEqual(scales.PHRYGIAN_DOMINANT.degrees)
+  })
+})

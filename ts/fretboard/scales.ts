@@ -162,6 +162,7 @@ export const scales = {
   ALTERED: new Scale("Altered", [0, 1, 3, 4, 6, 8, 10]),
   BEBOP_DOMINANT: new Scale("Bebop Dominant", [0, 2, 4, 5, 7, 9, 10, 11]),
   HUNGARIAN_MINOR: new Scale("Hungarian Minor", [0, 2, 3, 6, 7, 8, 11]),
+  DOUBLE_HARMONIC_MAJOR: new Scale("Double Harmonic Major", [0, 1, 4, 5, 7, 8, 11]),
 };
 
 // Derived from scales — display name → internal key. Stays in sync automatically.
