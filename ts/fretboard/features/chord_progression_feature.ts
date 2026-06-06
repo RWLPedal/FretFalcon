@@ -102,7 +102,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
         );
         if (easiest) {
           const title = `${chordDetails.chordName} [${easiest.shapeName}] (${numeral})`;
-          this.chordSlots.push({ signalKey, view: new ChordDiagramView(easiest.chord, title, this.fretboardConfig), unresolvable: null });
+          this.chordSlots.push({ signalKey, view: new ChordDiagramView(easiest, title, this.fretboardConfig), unresolvable: null });
         } else {
           console.warn(`[${this.typeName}] No shape for ${chordDetails.chordName} (${numeral}) in ${rootNote} ${mode}`);
           this.chordSlots.push({ signalKey, view: null, unresolvable: new UnresolvableChordView(chordDetails.chordName, numeral) });

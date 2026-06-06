@@ -2,242 +2,364 @@
 import { InstrumentName, Tuning } from "./fretboard";
 import { getKeyIndex } from "./fretboard_utils";
 import type { NoteName } from "./music_types";
-
-export interface MoveableChordTemplate {
-  shapeName: string;
-  chordType: ChordType;
-  /** String index that holds the root note (0 = low E for guitar standard). */
-  rootStringIndex: number;
-  /** Per-string fret offset relative to root fret. -1 = muted. */
-  stringOffsets: number[];
-  fingers: number[];
-  barres: Array<{ relativeFret: number; stringStart: number; stringEnd: number }>;
-}
+import { NoteName as N } from "./music_types";
 
 /**
  * Moveable barre chord templates for 6-string guitar, defined at fret 0.
  * Transpose all non-muted offsets by the root fret to get actual fret numbers.
  * E-Shape: root on string 0 (low E). A-Shape: root on string 1 (A string).
  */
-export const guitar_moveable_chord_library: MoveableChordTemplate[] = [
+export const guitar_moveable_chord_library: Chord[] = [
   // --- E-Shape ---
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.MAJOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 2, 2, 1, 0, 0],
-    fingers:       [1, 3, 4, 2, 1, 1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
-  },
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.MINOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 2, 2, 0, 0, 0],
-    fingers:       [1, 3, 4, 1, 1, 1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
-  },
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.DOM7,
-    rootStringIndex: 0,
-    stringOffsets: [0, 2, 0, 1, 0, 0],
-    fingers:       [1, 3, 1, 2, 1, 1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
-  },
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.MIN7,
-    rootStringIndex: 0,
-    stringOffsets: [0, 2, 0, 0, 0, 0],
-    fingers:       [1, 3, 1, 1, 1, 1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
-  },
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.MAJ7,
-    rootStringIndex: 0,
-    // Emaj7 shape: A at +2, D at +1, G at +1, B and e at root (barre)
-    stringOffsets: [0, 2, 1, 1, 0, 0],
-    fingers:       [1, 4, 2, 3, 1, 1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 5 }],
-  },
-
-  {
-    shapeName: "E-Shape",
-    chordType: ChordType.DIM,
-    rootStringIndex: 0,
-    // Finger 1 covers E and G strings at root fret; 2 and 3 step up on A and D.
-    stringOffsets: [0, 1, 2, 0, -1, -1],
-    fingers:       [1, 2, 3, 1, -1, -1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3 }],
-  },
+  Chord.template(
+    "E-Shape",
+    [0, 2, 2, 1, 0, 0],
+    [1, 3, 4, 2, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.MAJOR,
+    0,
+    N.E,
+  ),
+  Chord.template(
+    "E-Shape",
+    [0, 2, 2, 0, 0, 0],
+    [1, 3, 4, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.MINOR,
+    0,
+    N.E,
+  ),
+  Chord.template(
+    "E-Shape",
+    [0, 2, 0, 1, 0, 0],
+    [1, 3, 1, 2, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.DOM7,
+    0,
+    N.E,
+  ),
+  Chord.template(
+    "E-Shape",
+    [0, 2, 0, 0, 0, 0],
+    [1, 3, 1, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.MIN7,
+    0,
+    N.E,
+  ),
+  // Emaj7 shape: A at +2, D at +1, G at +1, B and e at root (barre)
+  Chord.template(
+    "E-Shape",
+    [0, 2, 1, 1, 0, 0],
+    [1, 4, 2, 3, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.MAJ7,
+    0,
+    N.E,
+  ),
+  // Finger 1 covers E and G strings at root fret; 2 and 3 step up on A and D.
+  Chord.template(
+    "E-Shape",
+    [0, 1, 2, 0, -1, -1],
+    [1, 2, 3, 1, -1, -1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.DIM,
+    0,
+    N.E,
+  ),
 
   // --- A-Shape ---
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.MAJOR,
-    rootStringIndex: 1,
-    stringOffsets: [-1, 0, 2, 2, 2, 0],
-    fingers:       [-1, 1, 3, 3, 3, 1],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
-  },
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.MINOR,
-    rootStringIndex: 1,
-    stringOffsets: [-1, 0, 2, 2, 1, 0],
-    fingers:       [-1, 1, 3, 4, 2, 1],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
-  },
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.DOM7,
-    rootStringIndex: 1,
-    // A7 shape: D at +2, G at root (barre), B at +2, e at root (barre)
-    stringOffsets: [-1, 0, 2, 0, 2, 0],
-    fingers:       [-1, 1, 2, 1, 3, 1],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
-  },
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.MIN7,
-    rootStringIndex: 1,
-    // Am7 shape: D at +2, G at root, B at +1, e at root (barre)
-    stringOffsets: [-1, 0, 2, 0, 1, 0],
-    fingers:       [-1, 1, 3, 1, 2, 1],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
-  },
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.MAJ7,
-    rootStringIndex: 1,
-    // Amaj7 shape: D at +2, G at +1, B at +2, e at root (barre)
-    stringOffsets: [-1, 0, 2, 1, 2, 0],
-    fingers:       [-1, 1, 3, 2, 4, 1],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 5 }],
-  },
-  {
-    shapeName: "A-Shape",
-    chordType: ChordType.DIM,
-    rootStringIndex: 1,
-    // No barre: D at +1, G at +2, B at +1 (D and B share fret but aren't adjacent).
-    stringOffsets: [-1, 0, 1, 2, 1, -1],
-    fingers:       [-1, 1, 2, 4, 3, -1],
-    barres: [],
-  },
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 2, 2, 0],
+    [-1, 1, 3, 3, 3, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.MAJOR,
+    1,
+    N.A,
+  ),
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 2, 1, 0],
+    [-1, 1, 3, 4, 2, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.MINOR,
+    1,
+    N.A,
+  ),
+  // A7 shape: D at +2, G at root (barre), B at +2, e at root (barre)
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 0, 2, 0],
+    [-1, 1, 2, 1, 3, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.DOM7,
+    1,
+    N.A,
+  ),
+  // Am7 shape: D at +2, G at root, B at +1, e at root (barre)
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 0, 1, 0],
+    [-1, 1, 3, 1, 2, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.MIN7,
+    1,
+    N.A,
+  ),
+  // Amaj7 shape: D at +2, G at +1, B at +2, e at root (barre)
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 1, 2, 0],
+    [-1, 1, 3, 2, 4, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.MAJ7,
+    1,
+    N.A,
+  ),
+  // No barre: D at +1, G at +2, B at +1 (D and B share fret but aren't adjacent).
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 1, 2, 1, -1],
+    [-1, 1, 2, 4, 3, -1],
+    [],
+    ChordType.DIM,
+    1,
+    N.A,
+  ),
 ];
 
-export const mandolin_moveable_chord_library: MoveableChordTemplate[] = [
- {
-    shapeName: "A-Style",
-    chordType: ChordType.MAJOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 2, 3],
-    fingers:       [1, 1, 3, 4],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3}],
-  },
- {
-    shapeName: "A-Style",
-    chordType: ChordType.MINOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 1, 3],
-    fingers:       [1, 1, 2, 4],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3}],
-  },
- {
-    shapeName: "A-Style",
-    chordType: ChordType.DOM7,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 2, 1],
-    fingers:       [1, 1, 3, 2],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3}],
-  },
- {
-    shapeName: "A-Style",
-    chordType: ChordType.MIN7,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 1, 1],
-    fingers:       [1, 1, 2, 3],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3}],
-  },
- {
-    shapeName: "A-Style",
-    chordType: ChordType.MAJ7,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 2, 2],
-    fingers:       [1, 1, 3, 4],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 3}],
-  },
+export const mandolin_moveable_chord_library: Chord[] = [
+  Chord.template(
+    "A-Style",
+    [0, 0, 2, 3],
+    [1, 1, 3, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJOR,
+    0,
+    N.G,
+  ),
+  Chord.template(
+    "A-Style",
+    [0, 0, 1, 3],
+    [1, 1, 2, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MINOR,
+    0,
+    N.G,
+  ),
+  Chord.template(
+    "A-Style",
+    [0, 0, 2, 1],
+    [1, 1, 3, 2],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.DOM7,
+    0,
+    N.G,
+  ),
+  Chord.template(
+    "A-Style",
+    [0, 0, 1, 1],
+    [1, 1, 2, 3],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MIN7,
+    0,
+    N.G,
+  ),
+  Chord.template(
+    "A-Style",
+    [0, 0, 2, 2],
+    [1, 1, 3, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJ7,
+    0,
+    N.G,
+  ),
 
-{
-    shapeName: "E-Style",
-    chordType: ChordType.MAJOR,
-    rootStringIndex: 1,
-    stringOffsets: [2, 0, 0, 2],
-    fingers:       [3, 1, 1, 4],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 3}],
-  },
- {
-    shapeName: "E-Style",
-    chordType: ChordType.MINOR,
-    rootStringIndex: 1,
-    stringOffsets: [2, 0, 0, 1],
-    fingers:       [3, 1, 1, 2],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 3}],
-  },
- {
-    shapeName: "E-Style",
-    chordType: ChordType.DOM7,
-    rootStringIndex: 1,
-    stringOffsets: [2, 0, 3, 2],
-    fingers:       [2, 1, 4, 3],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 1}],
-  },
- {
-    shapeName: "E-Style",
-    chordType: ChordType.MIN7,
-    rootStringIndex: 1,
-    stringOffsets: [2, 0, 3, 1],
-    fingers:       [3, 1, 4, 2],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 1}],
-  },
- {
-    shapeName: "E-Style",
-    chordType: ChordType.MAJ7,
-    rootStringIndex: 1,
-    stringOffsets: [2, 0, 4, 2],
-    fingers:       [4, 1, 4, 2],
-    barres: [{ relativeFret: 0, stringStart: 1, stringEnd: 1}],
-  },
+  Chord.template(
+    "E-Style",
+    [2, 0, 0, 2],
+    [3, 1, 1, 4],
+    [{ fret: 0, stringStart: 1, stringEnd: 3 }],
+    ChordType.MAJOR,
+    1,
+    N.D,
+  ),
+  Chord.template(
+    "E-Style",
+    [2, 0, 0, 1],
+    [3, 1, 1, 2],
+    [{ fret: 0, stringStart: 1, stringEnd: 3 }],
+    ChordType.MINOR,
+    1,
+    N.D,
+  ),
+  Chord.template(
+    "E-Style",
+    [2, 0, 3, 2],
+    [2, 1, 4, 3],
+    [{ fret: 0, stringStart: 1, stringEnd: 1 }],
+    ChordType.DOM7,
+    1,
+    N.D,
+  ),
+  Chord.template(
+    "E-Style",
+    [2, 0, 3, 1],
+    [3, 1, 4, 2],
+    [{ fret: 0, stringStart: 1, stringEnd: 1 }],
+    ChordType.MIN7,
+    1,
+    N.D,
+  ),
+  Chord.template(
+    "E-Style",
+    [2, 0, 4, 2],
+    [4, 1, 4, 2],
+    [{ fret: 0, stringStart: 1, stringEnd: 1 }],
+    ChordType.MAJ7,
+    1,
+    N.D,
+  ),
 
-  
- {
-    shapeName: "Jethro",
-    chordType: ChordType.MAJOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 2, -1],
-    fingers:       [1, 1, 3, -1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 2}],
-  },
- {
-    shapeName: "Jethro",
-    chordType: ChordType.MINOR,
-    rootStringIndex: 0,
-    stringOffsets: [0, 0, 1, -1],
-    fingers:       [1, 1, 2, -1],
-    barres: [{ relativeFret: 0, stringStart: 0, stringEnd: 2}],
-  },
-
+  Chord.template(
+    "Jethro",
+    [0, 0, 2, -1],
+    [1, 1, 3, -1],
+    [{ fret: 0, stringStart: 0, stringEnd: 2 }],
+    ChordType.MAJOR,
+    0,
+    N.G,
+  ),
+  Chord.template(
+    "Jethro",
+    [0, 0, 1, -1],
+    [1, 1, 2, -1],
+    [{ fret: 0, stringStart: 0, stringEnd: 2 }],
+    ChordType.MINOR,
+    0,
+    N.G,
+  ),
 ];
-export const mandola_moveable_chord_library: MoveableChordTemplate[] = mandolin_moveable_chord_library;
 
-export const MOVEABLE_CHORD_LIBRARIES: Partial<Record<InstrumentName, MoveableChordTemplate[]>> = {
-  [InstrumentName.Guitar]:      guitar_moveable_chord_library,
-  [InstrumentName.Mandolin]:    mandolin_moveable_chord_library,
-  [InstrumentName.Mandola]:     mandola_moveable_chord_library,
+export const mandola_moveable_chord_library: Chord[] =
+  mandolin_moveable_chord_library;
+
+export const ukulele_moveable_chord_library: Chord[] = [
+  Chord.template(
+    "C-Shape",
+    [0, 0, 0, 3],
+    [1, 1, 1, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJOR,
+    1,
+    N.C,
+  ),
+  // Root is on string 2 (E string), 1 fret above the barre.
+  // strings[rootStringIndex=2] == rootFretOffset == 1.
+  Chord.template(
+    "A-Shape",
+    [2, 1, 0, 0],
+    [3, 2, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJOR,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "F-Shape",
+    [2, 0, 1, 0],
+    [3, 1, 2, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJOR,
+    2,
+    N.F,
+    1,
+  ),
+  Chord.template(
+    "C-Shape",
+    [0, 0, 0, 3],
+    [1, 1, 1, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJOR,
+    2,
+    N.C,
+    1,
+  ),
+  Chord.template(
+    "A Minor Shape",
+    [2, 0, 0, 0],
+    [3, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MINOR,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "D Minor Shape",
+    [2, 2, 1, 0],
+    [4, 3, 2, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MINOR,
+    3,
+    N.D,
+  ),
+  Chord.template(
+    "C7 Shape",
+    [0, 0, 0, 1],
+    [1, 1, 1, 2],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.DOM7,
+    1,
+    N.C,
+  ),
+  Chord.template(
+    "A7 Shape",
+    [0, 1, 0, 0],
+    [1, 2, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.DOM7,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "Am7 Shape",
+    [0, 0, 0, 0],
+    [1, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MIN7,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "Cmaj7 Shape",
+    [0, 0, 0, 2],
+    [1, 1, 1, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJ7,
+    1,
+    N.C,
+  ),
+  Chord.template(
+    "Amaj7 Shape",
+    [1, 1, 0, 0],
+    [3, 2, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MAJ7,
+    3,
+    N.A,
+  ),
+];
+
+export const MOVEABLE_CHORD_LIBRARIES: Partial<
+  Record<InstrumentName, Chord[]>
+> = {
+  [InstrumentName.Guitar]: guitar_moveable_chord_library,
+  [InstrumentName.Mandolin]: mandolin_moveable_chord_library,
+  [InstrumentName.Mandola]: mandola_moveable_chord_library,
   [InstrumentName.TenorGuitar]: mandola_moveable_chord_library, // CGDA — same shapes as Mandola
-  [InstrumentName.TenorBanjo]:  mandola_moveable_chord_library, // CGDA — same shapes as Mandola
+  [InstrumentName.TenorBanjo]: mandola_moveable_chord_library, // CGDA — same shapes as Mandola
+  [InstrumentName.Ukulele]: ukulele_moveable_chord_library,
 };
 
 /** Infers ChordType from a chord name string. */
@@ -251,14 +373,6 @@ function detectChordType(chordName: string): ChordType {
   return ChordType.MAJOR;
 }
 
-export interface MoveableChordResult {
-  chord: Chord;
-  shapeName: string;
-  title: string;
-  rootFret: number;
-  rootStringIndex: number;
-}
-
 /**
  * Returns all moveable chord shapes for the given instrument, root note, and chord type.
  * Shapes are sorted by root fret ascending.
@@ -268,8 +382,8 @@ export function getMoveableShapes(
   instrumentName: InstrumentName,
   chordName: string,
   tuning: Tuning,
-  chordType?: ChordType
-): MoveableChordResult[] {
+  chordType?: ChordType,
+): Chord[] {
   const library = MOVEABLE_CHORD_LIBRARIES[instrumentName] ?? [];
   const rootMatch = chordName.match(/^([A-G][#b]?)/);
   if (!rootMatch) return [];
@@ -279,35 +393,44 @@ export function getMoveableShapes(
   if (rootNoteIndex === -1) return [];
 
   const effectiveType = chordType ?? detectChordType(chordName);
-  const results: MoveableChordResult[] = [];
+  const results: Chord[] = [];
 
   for (const template of library) {
     if (template.chordType !== effectiveType) continue;
 
-    const openNote = tuning.notes[template.rootStringIndex];
-    const rootFret = ((rootNoteIndex - openNote) + 12) % 12;
+    const rootStringIndex = template.rootStringIndex!;
+    const openNote = tuning.notes[rootStringIndex];
+    const rootFretOffset = template.rootFretOffset ?? 0;
+    // baseFret is the barre/anchor fret; rootFretOffset frets above it is the root note.
+    const baseFret = (rootNoteIndex - openNote - rootFretOffset + 24) % 12;
 
-    const strings = template.stringOffsets.map((offset) =>
-      offset === -1 ? -1 : rootFret + offset
+    const strings = template.strings.map((offset) =>
+      offset === -1 ? -1 : baseFret + offset,
     );
-    const barreSpecs: BarreSpec[] = template.barres.map((b) => ({
-      fret: rootFret + b.relativeFret,
+    const barreSpecs: BarreSpec[] = (template.barre ?? []).map((b) => ({
+      fret: baseFret + b.fret,
       stringStart: b.stringStart,
       stringEnd: b.stringEnd,
     }));
 
     const title = `${rootNoteName} ${effectiveType as string} (${template.shapeName})`;
 
-    results.push({
-      chord: new Chord(title, strings, [...template.fingers], barreSpecs, effectiveType, rootNoteName as NoteName),
-      shapeName: template.shapeName,
+    const chord = new Chord(
       title,
-      rootFret,
-      rootStringIndex: template.rootStringIndex,
-    });
+      strings,
+      [...template.fingers],
+      barreSpecs,
+      effectiveType,
+      rootNoteName as NoteName,
+    );
+    chord.shapeName = template.shapeName;
+    chord.rootStringIndex = rootStringIndex;
+    results.push(chord);
   }
 
-  results.sort((a, b) => a.rootFret - b.rootFret);
+  results.sort(
+    (a, b) => a.strings[a.rootStringIndex!] - b.strings[b.rootStringIndex!],
+  );
   return results;
 }
 
@@ -316,17 +439,19 @@ export function getEasiestMoveableShape(
   instrumentName: InstrumentName,
   chordName: string,
   tuning: Tuning,
-  chordType?: ChordType
-): MoveableChordResult | null {
-  return getMoveableShapes(instrumentName, chordName, tuning, chordType)[0] ?? null;
+  chordType?: ChordType,
+): Chord | null {
+  return (
+    getMoveableShapes(instrumentName, chordName, tuning, chordType)[0] ?? null
+  );
 }
 
 /** @deprecated Use getMoveableShapes("Guitar", ...) */
 export function getMoveableGuitarShapes(
   chordName: string,
   tuning: Tuning,
-  chordType?: ChordType
-): MoveableChordResult[] {
+  chordType?: ChordType,
+): Chord[] {
   return getMoveableShapes(InstrumentName.Guitar, chordName, tuning, chordType);
 }
 
@@ -334,7 +459,12 @@ export function getMoveableGuitarShapes(
 export function getEasiestMoveableGuitarShape(
   chordName: string,
   tuning: Tuning,
-  chordType?: ChordType
-): MoveableChordResult | null {
-  return getEasiestMoveableShape(InstrumentName.Guitar, chordName, tuning, chordType);
+  chordType?: ChordType,
+): Chord | null {
+  return getEasiestMoveableShape(
+    InstrumentName.Guitar,
+    chordName,
+    tuning,
+    chordType,
+  );
 }

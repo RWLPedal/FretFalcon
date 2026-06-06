@@ -189,7 +189,7 @@ export class ChordFeature extends InstrumentFeature {
             tuning,
             t
           );
-          if (result) chord = result.chord;
+          if (result) chord = result;
         }
         if (chord) {
           chords.push(chord);

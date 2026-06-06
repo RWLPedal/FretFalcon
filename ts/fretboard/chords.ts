@@ -47,6 +47,12 @@ export class Chord {
   readonly chordType: ChordType;
   /** Root note name, e.g. NoteName.A, NoteName.Bb, NoteName.FSharp. */
   readonly rootKey: NoteName;
+  /** Shape name for moveable chords (e.g. "E-Shape"). Undefined for open/library chords. */
+  shapeName?: string;
+  /** String index holding the root note. Only set for moveable-shape chords. */
+  rootStringIndex?: number;
+  /** Frets above the barre fret where the root note sits. Only set for moveable-shape chords. */
+  rootFretOffset?: number;
 
   constructor(
     name: string,
@@ -68,6 +74,36 @@ export class Chord {
     this.chordType = chordType;
     this.rootKey = rootKey;
   }
+
+  /**
+   * Creates a moveable-shape template chord stored at fret 0.
+   * openRootKey is the note produced on rootStringIndex when the barre sits at the nut.
+   */
+  static template(
+    shapeName: string,
+    strings: number[],
+    fingers: number[],
+    barre: BarreSpec[],
+    chordType: ChordType,
+    rootStringIndex: number,
+    openRootKey: NoteName,
+    rootFretOffset?: number,
+  ): Chord {
+    const t = new Chord(shapeName, strings, fingers, barre, chordType, openRootKey);
+    t.shapeName = shapeName;
+    t.rootStringIndex = rootStringIndex;
+    t.rootFretOffset = rootFretOffset;
+    return t;
+  }
+}
+
+/**
+ * Returns true if two chords produce the same notes on the same strings,
+ * i.e. their strings arrays are identical. Ignores barre, fingers, and name.
+ */
+export function chordsAreEquivalent(a: Chord, b: Chord): boolean {
+  if (a.strings.length !== b.strings.length) return false;
+  return a.strings.every((fret, i) => fret === b.strings[i]);
 }
 
 /**

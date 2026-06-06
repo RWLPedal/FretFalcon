@@ -1,5 +1,5 @@
-﻿import { BaseView } from "../../base_view";
-import { Chord } from "../chords";
+import { BaseView } from "../../base_view";
+import { Chord, chordsAreEquivalent } from "../chords";
 import { FretboardConfig, InstrumentName } from "../fretboard";
 import { ChordDiagramView } from "./chord_diagram_view";
 import { getMoveableShapes } from "../moveable_shapes";
@@ -25,16 +25,17 @@ export class MoveableToggleView extends BaseView {
       (c) => new ChordDiagramView(c, c.name, fretboardConfig)
     );
 
-    const moveableResults = ([] as ReturnType<typeof getMoveableShapes>).concat(
+    const moveableResults = ([] as Chord[]).concat(
       ...Array.from(chords).map((c: Chord) =>
         getMoveableShapes(instrumentName, c.name, fretboardConfig.tuning, c.chordType)
+          .filter((shape) => !chords.some((existing) => chordsAreEquivalent(existing, shape)))
       )
     );
 
     this.moveableViews = moveableResults.map(
-      (r) => new ChordDiagramView(r.chord, r.title, fretboardConfig, {
-        stringIndex: r.rootStringIndex,
-        fret: r.rootFret,
+      (r) => new ChordDiagramView(r, r.name, fretboardConfig, {
+        stringIndex: r.rootStringIndex!,
+        fret: r.strings[r.rootStringIndex!],
       })
     );
 
