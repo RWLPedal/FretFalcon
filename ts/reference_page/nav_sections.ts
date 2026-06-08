@@ -21,7 +21,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { id: 'notes-feature',             label: 'Notes',           viewId: 'instrument_notes' },
             { id: 'scales-feature',            label: 'Scales',          viewId: 'instrument_scale' },
             { id: 'chords-feature',            label: 'Chords',          viewId: 'instrument_chord',           requiredInstruments: ['Guitar', 'Ukulele', 'Charango', 'Mandolin', 'Mandola'] },
-            { id: 'triads-feature',            label: 'Triads',          viewId: 'instrument_triad',           requiredInstruments: ['Guitar'] },
+            { id: 'triads-feature',            label: 'Triads',          viewId: 'instrument_triad',           requiredInstruments: ['Guitar', '7-String Guitar', '8-String Guitar'] },
             { id: 'arpeggio-feature',          label: 'Arpeggio',        viewId: 'instrument_arpeggio' },
             { id: 'nearby-triads-feature',     label: 'Nearby Triads',   viewId: 'instrument_nearby_triads',   requiredInstruments: ['Guitar'] },
             { id: 'chord-progression-feature', label: 'Progression',     viewId: 'instrument_chord_progression',                                        requiredInstruments: ['Guitar', 'Mandolin', 'Mandola'] },

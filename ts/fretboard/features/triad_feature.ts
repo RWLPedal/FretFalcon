@@ -11,6 +11,8 @@ import {
   FretboardConfig,
   resolveTuning,
   STANDARD_TUNING,
+  GUITAR_7_STANDARD_TUNING,
+  GUITAR_8_STANDARD_TUNING,
   InstrumentName,
 } from "../fretboard";
 import { AudioController } from "../../audio_controller";
@@ -27,14 +29,18 @@ import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planMultiFretboardGrid } from "../fretboard_layout";
 import { TriadQuality, getTriadNotesAndLinesForGroup } from "../triads";
 import { FretboardView } from "../views/fretboard_view";
-import { DEFAULT_INSTRUMENT_SETTINGS, InstrumentSettings } from "../fretboard_settings";
+import {
+  DEFAULT_INSTRUMENT_SETTINGS,
+  InstrumentSettings,
+} from "../fretboard_settings";
 
-const STRING_GROUPS: [number, number, number][] = [
-  [0, 1, 2],
-  [1, 2, 3],
-  [2, 3, 4],
-  [3, 4, 5],
-];
+/** Returns all consecutive 3-string groups for a given string count. */
+function getStringGroups(stringCount: number): [number, number, number][] {
+  return Array.from(
+    { length: stringCount - 2 },
+    (_, i) => [i, i + 1, i + 2] as [number, number, number],
+  );
+}
 
 /**
  * A dedicated View to render a single row for a given triad quality,
@@ -51,7 +57,7 @@ class TriadQualityRowView extends BaseView {
   constructor(
     quality: TriadQuality,
     rootNoteName: string,
-    fretboardConfig: FretboardConfig
+    fretboardConfig: FretboardConfig,
   ) {
     super();
     this.quality = quality;
@@ -59,7 +65,7 @@ class TriadQualityRowView extends BaseView {
     this.fretboardConfig = fretboardConfig;
     const fretCount = 15;
 
-    let orderedGroups = [...STRING_GROUPS];
+    let orderedGroups = getStringGroups(fretboardConfig.stringCount);
     if (this.fretboardConfig.handedness === "left") {
       orderedGroups.reverse();
     }
@@ -69,7 +75,7 @@ class TriadQualityRowView extends BaseView {
         quality,
         group,
         fretCount,
-        fretboardConfig
+        fretboardConfig,
       );
       const view = new FretboardView(fretboardConfig, fretCount);
       view.setNotes(triadData.notes);
@@ -86,7 +92,7 @@ class TriadQualityRowView extends BaseView {
       this.rowContainer.style.marginBottom = "10px";
 
       const header = addHeader(this.rowContainer, `${this.quality} Triads`);
-      header.classList.add('feature-subtitle');
+      header.classList.add("feature-subtitle");
       header.style.textAlign = "left";
       header.style.fontSize = "0.95rem";
 
@@ -122,7 +128,21 @@ class TriadQualityRowView extends BaseView {
 export class TriadFeature extends InstrumentFeature {
   static readonly typeName = "Triad Shapes";
   static readonly displayName = "Triad Shapes (3-String Sets)";
-  static readonly requiredInstruments = [InstrumentName.Guitar] as const;
+  static readonly requiredInstruments = [
+    InstrumentName.Guitar,
+    InstrumentName.SevenStrGuitar,
+    InstrumentName.EightStrGuitar,
+  ] as const;
+  static isCompatibleWithTuning(
+    instrument: string,
+    tuningName: string,
+  ): boolean {
+    if (instrument === InstrumentName.SevenStrGuitar)
+      return tuningName === GUITAR_7_STANDARD_TUNING.name;
+    if (instrument === InstrumentName.EightStrGuitar)
+      return tuningName === GUITAR_8_STANDARD_TUNING.name;
+    return true;
+  }
   static readonly defaultWidth = 415;
   static readonly defaultHeight = 685;
   static readonly description =
@@ -146,7 +166,7 @@ export class TriadFeature extends InstrumentFeature {
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
   ) {
     // Peek before super() consumes the pending constraint.
     const totalWidth = peekPendingCanvasWidth();
@@ -157,7 +177,11 @@ export class TriadFeature extends InstrumentFeature {
 
     // Reference config at default scale — base dimensions for the layout algorithm.
     const baseFretboardConfig = new FretboardConfig(
-      resolveTuning(guitarGlobalSettings.instrument as InstrumentName ?? InstrumentName.Guitar, guitarGlobalSettings.tuning),
+      resolveTuning(
+        (guitarGlobalSettings.instrument as InstrumentName) ??
+          InstrumentName.Guitar,
+        guitarGlobalSettings.tuning,
+      ),
       guitarGlobalSettings.handedness,
       guitarGlobalSettings.orientation,
       guitarGlobalSettings.colorScheme,
@@ -165,12 +189,17 @@ export class TriadFeature extends InstrumentFeature {
       undefined,
       undefined,
       undefined,
-      maxCanvasHeight
+      maxCanvasHeight,
     );
 
     const { config: featureFretboardConfig } = planMultiFretboardGrid(
-      baseFretboardConfig, totalWidth, maxCanvasHeight,
-      4, qualities.length, guitarGlobalSettings.zoomMultiplier ?? 1.2, 15
+      baseFretboardConfig,
+      totalWidth,
+      maxCanvasHeight,
+      baseFretboardConfig.stringCount - 2,
+      qualities.length,
+      guitarGlobalSettings.zoomMultiplier ?? 1.2,
+      15,
     );
 
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
@@ -187,9 +216,9 @@ export class TriadFeature extends InstrumentFeature {
   }
 
   private _buildRowViews(config: FretboardConfig): void {
-    this.rowViews.forEach(v => v.destroy());
+    this.rowViews.forEach((v) => v.destroy());
     this.rowViews = this._qualities.map(
-      quality => new TriadQualityRowView(quality, this._rootNoteName, config)
+      (quality) => new TriadQualityRowView(quality, this._rootNoteName, config),
     );
     this.fretboardConfig = config;
   }
@@ -199,7 +228,7 @@ export class TriadFeature extends InstrumentFeature {
     const rootNote = partialConfig[0];
     const qualities = partialConfig.slice(1);
     const base = `${rootNote} Triad Shapes`;
-    return qualities.length > 0 ? `${base} (${qualities.join(', ')})` : base;
+    return qualities.length > 0 ? `${base} (${qualities.join(", ")})` : base;
   }
 
   static getConfigurationSchema(): ConfigurationSchema {
@@ -231,7 +260,10 @@ export class TriadFeature extends InstrumentFeature {
     ];
     return {
       description: `Config: ${this.typeName},RootNote,Quality1[,Quality2,...][,InstrumentSettings]`,
-      args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      args: [
+        ...specificArgs,
+        InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG,
+      ],
     };
   }
 
@@ -241,11 +273,11 @@ export class TriadFeature extends InstrumentFeature {
     settings: AppSettings,
     intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
-    categoryName: string
+    categoryName: string,
   ): Feature {
     if (config.length < 2) {
       throw new Error(
-        `[${this.typeName}] Invalid config. Expected [RootNote, Quality1, ...].`
+        `[${this.typeName}] Invalid config. Expected [RootNote, Quality1, ...].`,
       );
     }
     const rootNoteName = config[0];
@@ -258,12 +290,13 @@ export class TriadFeature extends InstrumentFeature {
 
     if (qualities.length === 0) {
       throw new Error(
-        `[${this.typeName}] At least one triad quality must be selected.`
+        `[${this.typeName}] At least one triad quality must be selected.`,
       );
     }
 
-    const mainHeaderText = `${validRootName} Triad Shapes (${qualities.join(', ')})`;
-    const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
+    const mainHeaderText = `${validRootName} Triad Shapes (${qualities.join(", ")})`;
+    const guitarIntervalSettings =
+      intervalSettings as InstrumentIntervalSettings;
 
     return new TriadFeature(
       config,
@@ -273,7 +306,7 @@ export class TriadFeature extends InstrumentFeature {
       settings,
       guitarIntervalSettings,
       audioController,
-      maxCanvasHeight
+      maxCanvasHeight,
     );
   }
 
@@ -282,17 +315,26 @@ export class TriadFeature extends InstrumentFeature {
     if (this.rowViews.length === 0) {
       // Subtract computed padding so canvas widths match the actual flex layout space.
       const cs = getComputedStyle(container);
-      const w = (container.clientWidth || container.offsetWidth)
-        - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      const w =
+        (container.clientWidth || container.offsetWidth) -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight);
       if (w > 0) {
         // Height may be 0 when the container hasn't been laid out yet (e.g. after a
         // theme-change rebuild). Pass undefined in that case so the layout uses its
         // natural height, matching the unconstrained constructor path.
-        const h = (container.clientHeight || container.offsetHeight)
-          - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+        const h =
+          (container.clientHeight || container.offsetHeight) -
+          parseFloat(cs.paddingTop) -
+          parseFloat(cs.paddingBottom);
         const { config } = planMultiFretboardGrid(
-          this.fretboardConfig, w, h > 0 ? h : undefined,
-          4, this._qualities.length, this._zoomMultiplier, 15
+          this.fretboardConfig,
+          w,
+          h > 0 ? h : undefined,
+          this.fretboardConfig.stringCount - 2,
+          this._qualities.length,
+          this._zoomMultiplier,
+          15,
         );
         this._buildRowViews(config);
       }
@@ -300,7 +342,7 @@ export class TriadFeature extends InstrumentFeature {
 
     clearAllChildren(container);
     const mainHeader = addHeader(container, this.mainHeaderText);
-    mainHeader.classList.add('feature-main-title');
+    mainHeader.classList.add("feature-main-title");
 
     this.rowViews.forEach((view) => {
       view.render(container);

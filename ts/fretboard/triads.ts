@@ -404,6 +404,29 @@ const INVERSION_LINE_COLORS: Record<TriadInversion, string> = {
 };
 
 /**
+ * Maps an actual string group to its canonical catalog group based on the interval
+ * pattern between the strings, derived from the tuning.
+ *
+ * The catalog was authored for standard 6-string tuning:
+ *   [0,1,2] / [1,2,3] → P4+P4 (all perfect-fourths, e.g. E-A-D or A-D-G)
+ *   [2,3,4]            → P4+M3 (e.g. D-G-B)
+ *   [3,4,5]            → M3+P4 (e.g. G-B-E)
+ *
+ * The same interval patterns appear on 7/8-string guitars but at different absolute
+ * indices, so we classify by interval rather than by index.
+ */
+function catalogGroupForIntervalPattern(
+  group: [number, number, number],
+  tuningNotes: readonly number[],
+): [number, number, number] {
+  const i01 = (tuningNotes[group[1]] - tuningNotes[group[0]] + 12) % 12;
+  const i12 = (tuningNotes[group[2]] - tuningNotes[group[1]] + 12) % 12;
+  if (i01 === 4) return [3, 4, 5]; // M3+P4, like G-B-E
+  if (i12 === 4) return [2, 3, 4]; // P4+M3, like D-G-B
+  return [0, 1, 2];               // P4+P4, like E-A-D
+}
+
+/**
  * Finds all occurrences of triads for a given key and quality on a specific 3-string group.
  * Uses the TRIAD_SHAPE_CATALOG for relative shapes.
  * Returns data optimized for FretboardView rendering.
@@ -433,17 +456,21 @@ export function getTriadNotesAndLinesForGroup(
     fretCount,
   );
 
+  // Match catalog shapes by interval pattern so the same shapes work for any
+  // string group with the same tuning structure (e.g. B-E-A on a 7-string
+  // uses the same P4+P4 shapes as E-A-D on a 6-string).
+  const catalogGroup = catalogGroupForIntervalPattern(stringGroup, tuning);
   const relevantShapes = TRIAD_SHAPE_CATALOG.filter(
     (s) =>
       s.quality === quality &&
-      s.stringGroup.every((val, index) => val === stringGroup[index]),
+      s.stringGroup.every((val, index) => val === catalogGroup[index]),
   );
 
   const addedInstances = new Set<string>(); // To prevent adding exact same shape at same location
 
   for (const shape of relevantShapes) {
     const anchorStringAbsoluteIndex =
-      shape.stringGroup[shape.rootStringIndexInGroup];
+      stringGroup[shape.rootStringIndexInGroup];
     const anchorStringTuning = tuning[anchorStringAbsoluteIndex];
     const requiredNoteIndexForAnchor = (12 + rootNoteIndex) % 12; // Root note index (0-11)
 
@@ -459,7 +486,7 @@ export function getTriadNotesAndLinesForGroup(
 
         for (let i = 0; i < 3; i++) {
           // Iterate through the 3 strings in the shape's group
-          const currentStringAbsoluteIndex = shape.stringGroup[i];
+          const currentStringAbsoluteIndex = stringGroup[i];
           const currentStringTuning = tuning[currentStringAbsoluteIndex];
           // Calculate the absolute fret for the current string based on the anchor fret and the relative shape
           const absFret =
