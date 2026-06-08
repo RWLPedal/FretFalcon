@@ -20,7 +20,7 @@ import {
 
 // ─── Private layout helper ────────────────────────────────────────────────────
 
-interface GridCandidate {
+export interface GridCandidate {
   cols: number;
   rows: number;
   elementW: number;
@@ -37,7 +37,7 @@ interface GridCandidate {
  * ratio; the binding axis (width or height) determines element size. The
  * column count that produces the largest element area wins.
  */
-function findBestGridLayout(
+export function findBestGridLayout(
   maxCols: number,
   itemCount: number,
   aspectRatio: number,
