@@ -39,7 +39,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
   static readonly typeName = 'Chord Progression';
   static readonly displayName = 'Chord Progression';
   static readonly requiredInstruments = [
-    InstrumentName.Guitar, InstrumentName.Mandolin, InstrumentName.Mandola,
+    InstrumentName.Guitar, InstrumentName.Ukulele, InstrumentName.Mandolin, InstrumentName.Mandola,
     InstrumentName.TenorGuitar, InstrumentName.TenorBanjo,
   ] as const;
   static readonly description =
