@@ -445,6 +445,9 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
   height: 100%;
   pointer-events: none;
   overflow: hidden;
+  /* Creates a stacking context so panel z-indexes are contained here,
+     preventing panels from ever appearing above the settings modal (z-index 200). */
+  z-index: 1;
 }
 #floating-view-area.grid-active {
   background-image:
