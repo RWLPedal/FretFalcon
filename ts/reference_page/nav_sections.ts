@@ -27,7 +27,7 @@ export const NAV_SECTIONS: NavSection[] = [
             { id: 'chord-progression-feature', label: 'Progression',     viewId: 'instrument_chord_progression',                                        requiredInstruments: ['Guitar', 'Ukulele', 'Mandolin', 'Mandola', 'Charango'] },
             { id: 'caged-feature',             label: 'CAGED',           viewId: 'instrument_caged',           requiredInstruments: ['Guitar'] },
             { id: 'multifret-feature',         label: 'MultiFret',       viewId: 'instrument_multifret' },
-            { id: 'capo-feature',              label: 'Capo',            viewId: 'capo_view',                       requiredInstruments: ['Guitar', 'Ukulele', 'Mandolin', 'Mandola'] },
+            { id: 'capo-feature',              label: 'Capo',            viewId: 'capo_view',                       requiredInstruments: ['Guitar', 'Ukulele', 'Mandolin', 'Mandola', 'Tenor Banjo', 'Charango'] },
             { id: 'circle-of-fifths-feature',  label: 'Circle of 5ths',  viewId: 'circle_of_fifths' },
         ],
     },
