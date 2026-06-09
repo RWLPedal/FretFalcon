@@ -2,6 +2,7 @@
 import { FretboardColorScheme } from './colors';
 
 export type FretboardLabelDisplay = "interval" | "note" | "none";
+export type ChordLabelDisplay = "fingering" | "interval" | "notes";
 
 /** Defines the settings for the Instrument category. */
 export interface InstrumentSettings {

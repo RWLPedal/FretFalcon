@@ -20,6 +20,7 @@ import {
   addCanvas,
 } from "../fretboard_utils";
 import { NoteName } from "../music_types";
+import { ChordLabelDisplay } from "../fretboard_settings";
 
 /**
  * Helper to get the notes in a chord.
@@ -57,6 +58,7 @@ export class ChordDiagramView extends BaseView {
   /** When set, draws a small red dot at this string+fret position (e.g. the barre root). */
   private rootPosition: { stringIndex: number; fret: number } | null;
   private isFallback: boolean;
+  private chordLabelDisplay: ChordLabelDisplay;
 
   // Store calculated dimensions
   private requiredWidth: number = 0;
@@ -68,7 +70,8 @@ export class ChordDiagramView extends BaseView {
     title: string,
     fretboardConfig: FretboardConfig,
     rootPosition?: { stringIndex: number; fret: number },
-    isFallback?: boolean
+    isFallback?: boolean,
+    chordLabelDisplay: ChordLabelDisplay = "fingering"
   ) {
     super();
     this.chord = chord;
@@ -76,6 +79,7 @@ export class ChordDiagramView extends BaseView {
     this.fretboardConfig = fretboardConfig;
     this.rootPosition = rootPosition ?? null;
     this.isFallback = isFallback ?? false;
+    this.chordLabelDisplay = chordLabelDisplay;
 
     // Calculate dimensions needed for canvas
     this.calculateDimensions();
@@ -151,7 +155,7 @@ export class ChordDiagramView extends BaseView {
         const isOpen = fret === 0;
         let noteName = "?";
         let intervalLabel = "?";
-        let displayLabel = finger > 0 ? `${finger}` : ""; // Prioritize finger number
+        let displayLabel = "";
 
         if (!isMuted) {
           const noteOffsetFromA =
@@ -162,11 +166,16 @@ export class ChordDiagramView extends BaseView {
               (noteOffsetFromA - chordRootIndex + 12) % 12;
             intervalLabel = getIntervalLabel(noteRelativeToKey);
           }
-          // Fallback display label if no finger number
-          if (displayLabel === "") {
-            // Use interval label for root, note name otherwise
-            if (intervalLabel === "R") displayLabel = "R";
-            else displayLabel = noteName;
+          switch (this.chordLabelDisplay) {
+            case "fingering":
+              displayLabel = finger > 0 && !isOpen ? String(finger) : "";
+              break;
+            case "interval":
+              displayLabel = intervalLabel;
+              break;
+            case "notes":
+              displayLabel = noteName;
+              break;
           }
         }
 
@@ -189,7 +198,36 @@ export class ChordDiagramView extends BaseView {
     let finalNotes: NoteRenderData[];
     if (this.chord.barre) {
       for (const spec of this.chord.barre) {
-        barreData.push({ fret: spec.fret, stringStart: spec.stringStart, stringEnd: spec.stringEnd });
+        // Detect barre finger number and flag inconsistencies
+        const barreFingerNums = new Set<number>();
+        for (let si = spec.stringStart; si <= spec.stringEnd; si++) {
+          if (this.chord.strings[si] === spec.fret && this.chord.fingers[si] > 0)
+            barreFingerNums.add(this.chord.fingers[si]);
+        }
+        if (barreFingerNums.size > 1) {
+          console.warn(`[ChordDiagram] Barre at fret ${spec.fret} has inconsistent finger numbers: ${[...barreFingerNums]} in chord "${this.chord.name}"`);
+        }
+        const barreFinger = barreFingerNums.size > 0 ? Math.min(...barreFingerNums) : 1;
+
+        // Build per-string labels for ringing barre strings
+        const centerSi = Math.floor((spec.stringStart + spec.stringEnd) / 2);
+        const labels: (string | null)[] = [];
+        for (let si = spec.stringStart; si <= spec.stringEnd; si++) {
+          const isRinging = this.chord.strings[si] === spec.fret;
+          if (!isRinging) { labels.push(null); continue; }
+          const noteData = notesData.find(n => n.stringIndex === si && n.fret === spec.fret);
+          let label: string | null = null;
+          if (noteData) {
+            switch (this.chordLabelDisplay) {
+              case "fingering": label = si === centerSi ? String(barreFinger) : null; break;
+              case "interval":  label = noteData.intervalLabel !== "?" ? noteData.intervalLabel : null; break;
+              case "notes":     label = noteData.noteName !== "?" ? noteData.noteName : null; break;
+            }
+          }
+          labels.push(label);
+        }
+
+        barreData.push({ fret: spec.fret, stringStart: spec.stringStart, stringEnd: spec.stringEnd, labels });
       }
       // Remove individual note circles that lie on a barre (the bar itself shows them).
       // Muted strings are always kept; open (fret 0) notes can be covered by a nut barre.
@@ -206,19 +244,24 @@ export class ChordDiagramView extends BaseView {
       finalNotes = notesData;
     }
 
-    // Overlay a small red dot at the root position (drawn on top of the barre bar).
+    // Overlay a root-position marker on moveable shapes (drawn on top of the barre bar).
     if (this.rootPosition) {
       const { stringIndex: rStr, fret: rFret } = this.rootPosition;
+      const rootLabel = this.chordLabelDisplay === "fingering"
+        ? ""
+        : this.chordLabelDisplay === "notes"
+        ? (String(this.chord.rootKey) || "R")
+        : "R";
       const rootDot: NoteRenderData = {
         fret: rFret,
         stringIndex: rStr,
-        noteName: "R",
+        noteName: String(this.chord.rootKey) || "R",
         intervalLabel: "R",
-        displayLabel: "",
-        fillColor: "#cc2222",
-        strokeColor: "#ffffff",
-        strokeWidth: 1.5,
-        radiusOverride: this.fretboardConfig.noteRadiusPx * 0.55,
+        displayLabel: rootLabel,
+        fillColor: getComputedStyle(document.documentElement).getPropertyValue('--danger').trim() || '#a83232',
+        strokeColor: "transparent",
+        strokeWidth: 0,
+        radiusOverride: this.fretboardConfig.noteRadiusPx * 0.72,
       };
       // Replace existing note at that position if present, otherwise append.
       const existingIdx = finalNotes.findIndex(

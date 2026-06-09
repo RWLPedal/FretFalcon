@@ -4,6 +4,7 @@ import { FretboardConfig, InstrumentName } from "../fretboard";
 import { ChordDiagramView } from "./chord_diagram_view";
 import { getMoveableShapes } from "../moveable_shapes";
 import { clearAllChildren } from "../fretboard_utils";
+import { ChordLabelDisplay } from "../fretboard_settings";
 
 /**
  * Renders either static chord diagrams or moveable barre-chord shapes depending
@@ -18,11 +19,11 @@ export class MoveableToggleView extends BaseView {
   private readonly moveableViews: ChordDiagramView[];
   readonly hasMoveableShapes: boolean;
 
-  constructor(chords: ReadonlyArray<Chord>, fretboardConfig: FretboardConfig, initialIsMoveable: boolean = false, instrumentName: InstrumentName = InstrumentName.Guitar) {
+  constructor(chords: ReadonlyArray<Chord>, fretboardConfig: FretboardConfig, initialIsMoveable: boolean = false, instrumentName: InstrumentName = InstrumentName.Guitar, chordLabelDisplay: ChordLabelDisplay = "fingering") {
     super();
     this.isMoveable = initialIsMoveable;
     this.staticViews = chords.map(
-      (c) => new ChordDiagramView(c, c.name, fretboardConfig)
+      (c) => new ChordDiagramView(c, c.name, fretboardConfig, undefined, undefined, chordLabelDisplay)
     );
 
     const moveableResults = ([] as Chord[]).concat(
@@ -36,7 +37,7 @@ export class MoveableToggleView extends BaseView {
       (r) => new ChordDiagramView(r, r.name, fretboardConfig, {
         stringIndex: r.rootStringIndex!,
         fret: r.strings[r.rootStringIndex!],
-      })
+      }, undefined, chordLabelDisplay)
     );
 
     this.hasMoveableShapes = this.moveableViews.length > 0;

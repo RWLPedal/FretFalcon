@@ -8,6 +8,7 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 *   Add a "chord hints" mode showing adjacent/related chord shapes based on the current scale/key.
 *   Allow sub-intervals within a scheduled task (e.g., automatically cycle through keys during an interval).
 *   Improve documentation around the schedule format, with hints for supported options per feature class.
+*   Extract configuration for sidebar to json, easy setup of new features.
 
 ## Music-Related Features
 
@@ -19,7 +20,7 @@ This file tracks planned features, improvements, and bug fixes for PracTempo.
 *   Support display of lick/TAB notation snippets within a practice interval.
 *   Clean up and better define functionality that shows important notes over chord changes.
 *   Expand scale library (e.g., bebop scales, whole-tone, diminished).
-*   Add common offset patterns
+*   Guitar shell chords
 
 ## Audio
 

@@ -102,6 +102,8 @@ export interface BarreData {
   stringEnd: number;
   /** Fill color of the barre bar. Defaults to "#777". */
   color?: string;
+  /** Per-string text labels rendered on the bar. Index 0 = stringStart; null = no label. */
+  labels?: (string | null)[];
 }
 
 function _avgHexColors(c1: string, c2: string): string {
@@ -916,6 +918,22 @@ export class Fretboard {
       ctx.fillStyle = barre.color ?? noteAltColor;
       ctx.fill();
       ctx.restore();
+
+      if (barre.labels) {
+        ctx.save();
+        const fontSize = noteRadius * 0.9;
+        ctx.font = `600 ${fontSize}px 'Hanken Grotesk', sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#fff";
+        for (let i = 0; i < barre.labels.length; i++) {
+          const label = barre.labels[i];
+          if (!label) continue;
+          const { x: lx, y: ly } = this.getNoteCoordinates(barre.stringStart + i, barre.fret);
+          ctx.fillText(label, lx, ly + fontSize * 0.05);
+        }
+        ctx.restore();
+      }
     });
   }
 

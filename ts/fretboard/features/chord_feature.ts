@@ -29,7 +29,7 @@ import { resolveTuning, InstrumentName } from "../fretboard";
 import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 import { addHeader, clearAllChildren } from "../fretboard_utils";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS, ChordLabelDisplay } from "../fretboard_settings";
 // Import generic and specific interval settings types
 import { IntervalSettings } from "../../schedule/editor/interval/types";
 import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
@@ -60,7 +60,8 @@ export class ChordFeature extends InstrumentFeature {
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings, // Constructor still expects specific type from base class
     audioController?: AudioController,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    chordLabelDisplay: ChordLabelDisplay = "fingering"
   ) {
     // Peek before super() consumes the pending constraint.
     const totalWidth = peekPendingCanvasWidth();
@@ -97,12 +98,12 @@ export class ChordFeature extends InstrumentFeature {
     const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
 
     if (guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES) {
-      this.moveableView = new MoveableToggleView(chords, this.fretboardConfig, this.isMoveable, guitarSettings.instrument);
+      this.moveableView = new MoveableToggleView(chords, this.fretboardConfig, this.isMoveable, guitarSettings.instrument, chordLabelDisplay);
       this._views.push(this.moveableView);
     } else {
       // Other instruments: static chord diagrams only.
       chords.forEach((chord) => {
-        this._views.push(new ChordDiagramView(chord, chord.name, this.fretboardConfig));
+        this._views.push(new ChordDiagramView(chord, chord.name, this.fretboardConfig, undefined, undefined, chordLabelDisplay));
       });
     }
   }
@@ -133,6 +134,14 @@ export class ChordFeature extends InstrumentFeature {
         enum: chordTypes,
         defaultValue: ChordType.MAJOR,
         description: "Chord quality, or 'All' to show all variations. Available chords depend on the selected instrument.",
+      },
+      {
+        name: "Display",
+        type: ArgType.Enum,
+        enum: ["fingering", "interval", "notes"],
+        enumLabels: ["Fingering", "Interval", "Notes"],
+        defaultValue: "fingering",
+        description: "What to show on chord note circles.",
       },
       {
         name: "Moveable",
@@ -214,13 +223,19 @@ export class ChordFeature extends InstrumentFeature {
     }
 
     const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
+    const VALID_DISPLAY = new Set(["fingering", "interval", "notes"]);
+    const rawDisplay = isNewFormat ? effectiveConfig[2] : undefined;
+    const chordLabelDisplay: ChordLabelDisplay =
+      rawDisplay && VALID_DISPLAY.has(rawDisplay) ? rawDisplay as ChordLabelDisplay : "fingering";
+
     return new ChordFeature(
       effectiveConfig,
       chords,
       settings,
       guitarIntervalSettings,
       audioController,
-      maxCanvasHeight
+      maxCanvasHeight,
+      chordLabelDisplay
     );
   }
 
