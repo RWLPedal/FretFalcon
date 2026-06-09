@@ -39,7 +39,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
   static readonly displayName = 'Chord Progression';
   static readonly requiredInstruments = [
     InstrumentName.Guitar, InstrumentName.Ukulele, InstrumentName.Mandolin, InstrumentName.Mandola,
-    InstrumentName.TenorGuitar, InstrumentName.TenorBanjo,
+    InstrumentName.TenorGuitar, InstrumentName.TenorBanjo, InstrumentName.Charango,
   ] as const;
   static readonly description =
     'Displays chord diagrams for a Roman numeral progression (e.g., I–IV–V) in a specified key and mode.';

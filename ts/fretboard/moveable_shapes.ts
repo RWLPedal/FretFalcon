@@ -351,6 +351,88 @@ export const ukulele_moveable_chord_library: Chord[] = [
   ),
 ];
 
+// Charango GCEAE (re-entrant): strings 0-4 = G(10), C(3), E(7), A(0), E(7).
+// Root on string 3 (A). At baseFret=0 the open A string is the root, so templateNote = N.A.
+export const charango_moveable_chord_library: Chord[] = [
+  // Major: G→root, C→3rd, E/A/E→5th-root-5th (barre strings 2-4)
+  Chord.template(
+    "Barre",
+    [2, 1, 0, 0, 0],
+    [3, 2, 1, 1, 1],
+    [{ fret: 0, stringStart: 2, stringEnd: 4 }],
+    ChordType.MAJOR,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "Barre",
+    [0, 0, 0, 3, 3],
+    [1, 1, 1, 3, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 2 }],
+    ChordType.MAJOR,
+    1,
+    N.A,
+  ),
+  // Minor: G→root, C/E/A/E→b3-5th-root-5th (barre strings 1-4)
+  Chord.template(
+    "Barre",
+    [2, 0, 0, 0, 0],
+    [3, 1, 1, 1, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 4 }],
+    ChordType.MINOR,
+    3,
+    N.A,
+  ),
+  // Dom7: G→b7, C→3rd (+1), E/A/E→5th-root-5th (full barre)
+  Chord.template(
+    "Barre",
+    [0, 1, 0, 0, 0],
+    [1, 2, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 4 }],
+    ChordType.DOM7,
+    3,
+    N.A,
+  ),
+  // Min7: all strings at barre — G→b7, C→b3, E→5th, A→root, E→5th
+  Chord.template(
+    "Barre",
+    [0, 0, 0, 0, 0],
+    [1, 1, 1, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 4 }],
+    ChordType.MIN7,
+    3,
+    N.A,
+  ),
+  // Min7: all strings at barre — G→b7, C→b3, E→5th, A→root, E→5th
+  Chord.template(
+    "Barre",
+    [0, 0, 0, 0, 3],
+    [1, 1, 1, 1, 3],
+    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
+    ChordType.MIN7,
+    3,
+    N.A,
+  ),
+  Chord.template(
+    "Barre",
+    [0, 0, 0, 2, 0],
+    [1, 1, 1, 2, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 4 }],
+    ChordType.MAJ7,
+    1,
+    N.A,
+  ),
+  Chord.template(
+    "Barre",
+    [-1, 0, 0, 2, 3],
+    [-1, 1, 1, 2, 3],
+    [{ fret: 0, stringStart: 1, stringEnd: 4 }],
+    ChordType.MAJ7,
+    1,
+    N.A,
+  ),
+];
+
 export const MOVEABLE_CHORD_LIBRARIES: Partial<
   Record<InstrumentName, Chord[]>
 > = {
@@ -360,6 +442,7 @@ export const MOVEABLE_CHORD_LIBRARIES: Partial<
   [InstrumentName.TenorGuitar]: mandola_moveable_chord_library, // CGDA — same shapes as Mandola
   [InstrumentName.TenorBanjo]: mandola_moveable_chord_library, // CGDA — same shapes as Mandola
   [InstrumentName.Ukulele]: ukulele_moveable_chord_library,
+  [InstrumentName.Charango]: charango_moveable_chord_library,
 };
 
 /** Infers ChordType from a chord name string. */
