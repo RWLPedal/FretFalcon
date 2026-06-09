@@ -1,5 +1,5 @@
 ﻿import { BaseView } from "../../base_view";
-import { Chord } from "../chords";
+import { Chord, ChordType } from "../chords";
 // Import Fretboard class and necessary types/enum from fretboard.ts
 import {
   Fretboard,
@@ -165,6 +165,14 @@ export class ChordDiagramView extends BaseView {
             const noteRelativeToKey =
               (noteOffsetFromA - chordRootIndex + 12) % 12;
             intervalLabel = getIntervalLabel(noteRelativeToKey);
+            // The 9th (14 semitones) folds to 2 via % 12. Re-label it for extension chords.
+            if (
+              intervalLabel === "2" &&
+              (this.chord.chordType === ChordType.ADD9 ||
+                this.chord.chordType === ChordType.MINOR_ADD9)
+            ) {
+              intervalLabel = "9";
+            }
           }
           switch (this.chordLabelDisplay) {
             case "fingering":

@@ -127,6 +127,85 @@ export const guitar_moveable_chord_library: Chord[] = [
     1,
     N.A,
   ),
+
+  // --- Sus2 ---
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 2, 0, 0],
+    [-1, 1, 3, 4, 1, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.SUS2,
+    1,
+    N.A,
+  ),
+  Chord.template(
+    "D-Shape",
+    [-1, -1, 0, 2, 3, 0],
+    [-1, -1, 1, 3, 4, 1],
+    [{ fret: 0, stringStart: 2, stringEnd: 5 }],
+    ChordType.SUS2,
+    2,
+    N.D,
+  ),
+
+  // --- Sus4 ---
+  Chord.template(
+    "E-Shape",
+    [0, 2, 2, 2, 0, 0],
+    [1, 3, 3, 3, 1, 1],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.SUS4,
+    0,
+    N.E,
+  ),
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 2, 3, 0],
+    [-1, 1, 2, 3, 4, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.SUS4,
+    1,
+    N.A,
+  ),
+  Chord.template(
+    "D-Shape",
+    [-1, -1, 0, 2, 3, 3],
+    [-1, -1, 1, 2, 3, 4],
+    [{ fret: 0, stringStart: 2, stringEnd: 5 }],
+    ChordType.SUS4,
+    2,
+    N.D,
+  ),
+
+  // --- Add9 ---
+  Chord.template(
+    "D-Shape",
+    [-1, -1, 2, 1, 0, 2],
+    [-1, -1, 3, 2, 1, 4],
+    [],
+    ChordType.ADD9,
+    2,
+    N.E,
+    2,
+  ),
+  Chord.template(
+    "A-Shape",
+    [-1, 0, 2, 4, 2, 0],
+    [-1, 1, 2, 4, 3, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.ADD9,
+    1,
+    N.A,
+  ),
+  Chord.template(
+    "Am-Shape",
+    [-1, 0, 2, 4, 1, 0],
+    [-1, 1, 2, 4, 3, 1],
+    [{ fret: 0, stringStart: 1, stringEnd: 5 }],
+    ChordType.MINOR_ADD9,
+    1,
+    N.A,
+  ),
 ];
 
 export const mandolin_moveable_chord_library: Chord[] = [

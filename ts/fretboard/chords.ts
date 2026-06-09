@@ -17,6 +17,7 @@ export enum ChordType {
   SUS2 = "Sus2",
   SUS4 = "Sus4",
   ADD9 = "Add9",
+  MINOR_ADD9 = "mAdd9",
   OTHER = "Other",
 }
 
@@ -31,6 +32,7 @@ export const CHORD_TYPE_SORT_ORDER: ChordType[] = [
   ChordType.SUS2,
   ChordType.SUS4,
   ChordType.ADD9,
+  ChordType.MINOR_ADD9,
 ];
 
 import {
@@ -89,7 +91,14 @@ export class Chord {
     openRootKey: NoteName,
     rootFretOffset?: number,
   ): Chord {
-    const t = new Chord(shapeName, strings, fingers, barre, chordType, openRootKey);
+    const t = new Chord(
+      shapeName,
+      strings,
+      fingers,
+      barre,
+      chordType,
+      openRootKey,
+    );
     t.shapeName = shapeName;
     t.rootStringIndex = rootStringIndex;
     t.rootFretOffset = rootFretOffset;
@@ -371,6 +380,24 @@ export const chord_library = {
     undefined,
     CT.SUS4,
     N.E,
+  ),
+
+  // --- Add9 ---
+  CADD9: new Chord(
+    "Cadd9",
+    [-1, 3, 2, 0, 3, 3],
+    [-1, 2, 1, 0, 3, 4],
+    undefined,
+    CT.ADD9,
+    N.C,
+  ),
+  GADD9: new Chord(
+    "Gadd9",
+    [3, 2, 0, 2, 0, 0],
+    [2, 1, 0, 3, 0, 0],
+    undefined,
+    CT.ADD9,
+    N.G,
   ),
 };
 
@@ -778,24 +805,41 @@ export function getChordLibraryForInstrument(
 }
 
 /** All root notes in UI display order. */
-export const ALL_CHORD_ROOTS = ['A', 'Bb', 'B', 'C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab'] as const;
+export const ALL_CHORD_ROOTS = [
+  "A",
+  "Bb",
+  "B",
+  "C",
+  "C#",
+  "D",
+  "Eb",
+  "E",
+  "F",
+  "F#",
+  "G",
+  "Ab",
+] as const;
 
 /**
  * Returns the subset of root notes that have at least one chord in the given library,
  * preserving the standard display order.
  */
 export function getAvailableRoots(library: Record<string, Chord>): string[] {
-  const present = new Set(Object.values(library).map(c => c.rootKey as string));
-  return ALL_CHORD_ROOTS.filter(r => present.has(r));
+  const present = new Set(
+    Object.values(library).map((c) => c.rootKey as string),
+  );
+  return ALL_CHORD_ROOTS.filter((r) => present.has(r));
 }
 
 /**
  * Returns the subset of ChordTypes that appear in the given library,
  * preserving CHORD_TYPE_SORT_ORDER.
  */
-export function getAvailableChordTypes(library: Record<string, Chord>): ChordType[] {
-  const present = new Set(Object.values(library).map(c => c.chordType));
-  return CHORD_TYPE_SORT_ORDER.filter(t => present.has(t));
+export function getAvailableChordTypes(
+  library: Record<string, Chord>,
+): ChordType[] {
+  const present = new Set(Object.values(library).map((c) => c.chordType));
+  return CHORD_TYPE_SORT_ORDER.filter((t) => present.has(t));
 }
 
 // ---------------------------------------------------------------------------
@@ -825,6 +869,7 @@ const _CHORD_TYPES: _ChordTypeSpec[] = [
   //{ key: 'MAJ9',    name: 'Major 9',       intervals: [0, 4, 7, 11, 14] },
   //{ key: 'MIN9',    name: 'Minor 9',       intervals: [0, 3, 7, 10, 14] },
   { key: "ADD9", name: "Add 9", intervals: [0, 4, 7, 14] },
+  { key: "MINOR_ADD9", name: "Minor Add 9", intervals: [0, 3, 7, 14] },
   //{ key: 'MADD9',   name: 'Minor Add 9',   intervals: [0, 3, 7, 14] },
   //{ key: 'MAJ6',    name: 'Major 6',       intervals: [0, 4, 7, 9] },
   //{ key: 'MIN6',    name: 'Minor 6',       intervals: [0, 3, 7, 9] },
