@@ -160,7 +160,11 @@ function buildVoicingLines(
 export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   static readonly typeName       = 'Nearby Triads';
   static readonly displayName    = 'Nearby Triads (Voice Leading)';
-  static readonly requiredInstruments = [InstrumentName.Guitar] as const;
+  static readonly requiredInstruments = [
+    InstrumentName.Guitar,
+    InstrumentName.SevenStrGuitar,
+    InstrumentName.EightStrGuitar,
+  ] as const;
   static readonly description    =
     'Shows guitar triads for a chord progression ranked by transition cost for smooth voice leading.';
 
@@ -173,6 +177,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private readonly diatonicMode: DiatonicMode;
   private readonly maxFretSpan: number;
   private readonly targetFret: number | null;
+  private readonly targetString: number | null;
 
   // Sized for one slot in reference mode (full-width ÷ N); equals fretboardConfig in other modes.
   private slotFretboardConfig: FretboardConfig;
@@ -215,6 +220,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     diatonicMode: DiatonicMode,
     maxFretSpan: number,
     targetFret: number | null,
+    targetString: number | null,
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
@@ -227,8 +233,9 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this.progChordKeys = progChordKeys;
     this.rootNote      = rootNote;
     this.diatonicMode = diatonicMode;
-    this.maxFretSpan  = maxFretSpan;
-    this.targetFret   = targetFret;
+    this.maxFretSpan   = maxFretSpan;
+    this.targetFret    = targetFret;
+    this.targetString  = targetString;
 
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -334,7 +341,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const slot    = this.slots[i];
       const prev    = this.slots[(i - 1 + this.slots.length) % this.slots.length];
       const prevVoicing = prev.rankedVoicings[prev.selectedIndex]?.voicing ?? null;
-      slot.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings, this.targetFret);
+      slot.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, slot.rawVoicings, this.targetFret, this.targetString);
       slot.selectedIndex  = 0;
       slot.previewIndex   = 0;
     }
@@ -746,7 +753,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     if (this.wizardActive) {
       // Lazy-create wizard; initialize from previously applied chords only (no slot defaults)
       if (!this.wizard) {
-        this.wizard = new TriadsWizard(this.fretboardConfig, this.maxFretSpan, this.targetFret);
+        this.wizard = new TriadsWizard(this.fretboardConfig, this.maxFretSpan, this.targetFret, this.targetString);
         if (this._wizardInProgressState) {
           this.wizard.restoreState(this._wizardInProgressState);
           this._wizardInProgressState = null;
@@ -762,6 +769,17 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
           this.wizardActive  = false;
           this._persistWizardState(false);
           reRender();
+          // Sync applied chord keys back to the config panel.
+          const chordKeys = chords.map(c => c.chordKey);
+          const renderContainer = this._renderContainer;
+          if (renderContainer) {
+            setTimeout(() => {
+              renderContainer.dispatchEvent(new CustomEvent('nt-chord-keys-update', {
+                bubbles: true,
+                detail: { chordKeys },
+              }));
+            }, 0);
+          }
         },
         () => {
           this.wizardActive    = false;
@@ -895,7 +913,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const currentVoicings = enumerateVoicings(
       this.drivenCurrentKey, this.fretboardConfig, 15, this.maxFretSpan
     );
-    const ranked = rankVoicingsByTransitionCost(this.drivenLastVoicing, currentVoicings, this.targetFret);
+    const ranked = rankVoicingsByTransitionCost(this.drivenLastVoicing, currentVoicings, this.targetFret, this.targetString);
     const selected = ranked[0]?.voicing ?? null;
 
     let notes: NoteRenderData[] = [];
@@ -907,7 +925,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         const nextVoicings = enumerateVoicings(
           this.drivenNextKey, this.fretboardConfig, 15, this.maxFretSpan
         );
-        const nextRanked = rankVoicingsByTransitionCost(selected, nextVoicings, this.targetFret);
+        const nextRanked = rankVoicingsByTransitionCost(selected, nextVoicings, this.targetFret, this.targetString);
         const nextSelected = nextRanked[0]?.voicing;
         if (nextSelected) {
           notes.push(...buildNextNotes(nextSelected));
@@ -972,6 +990,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     if (this._wizardStateRestored) return;
     this._wizardStateRestored = true;
 
+    // In-progress state (mid-wizard rebuild) always takes priority.
     const ip = (this._renderContainer as any)?.__ntWizardInProgress as WizardInProgressState | undefined;
     if (ip) {
       delete (this._renderContainer as any).__ntWizardInProgress;
@@ -990,10 +1009,36 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     const domState = (this._renderContainer as any)?.__ntWizard as NTWizardPersisted | undefined;
     const p = domState ?? this._loadFromLocalStorage();
-    if (!p) return;
-    this.wizardDismissed = p.dismissed;
-    if (p.chords.length > 0) {
-      this.wizardApplied = this._restoreWizardApplied(p.chords);
+
+    if (this.progChordKeys.length > 0) {
+      // Config has chord keys — treat them as the authoritative chord list.
+      const savedKeys = p?.chords.map(c => c.chordKey) ?? [];
+      const chordsMatch = savedKeys.length === this.progChordKeys.length &&
+        savedKeys.every((k, i) => k === this.progChordKeys[i]);
+
+      if (chordsMatch && p) {
+        // Exact match — use saved state to preserve voicings and dismissed flag.
+        this.wizardDismissed = p.dismissed;
+        this.wizardApplied = this._restoreWizardApplied(p.chords);
+      } else {
+        // Config changed — reconcile: use config chord list, preserve voicings for unchanged chords.
+        const savedMap = new Map((p?.chords ?? []).map(c => [c.chordKey, c]));
+        const reconciledChords: NTWizardPersisted['chords'] = this.progChordKeys.map(ck => {
+          const saved = savedMap.get(ck);
+          if (saved) return saved;
+          const roman = getChordRomanInKey(ck, this.rootNote, this.diatonicMode);
+          const display = chord_tones_library[ck]?.name ?? ck;
+          return { chordKey: ck, display, roman, voicingKey: '', seen: false };
+        });
+        this.wizardApplied = this._restoreWizardApplied(reconciledChords);
+        this._persistWizardState(false);
+      }
+    } else if (p) {
+      // No config chords — use wizard's saved state.
+      this.wizardDismissed = p.dismissed;
+      if (p.chords.length > 0) {
+        this.wizardApplied = this._restoreWizardApplied(p.chords);
+      }
     }
   }
 
@@ -1010,7 +1055,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     for (const p of saved) {
       const raw    = enumerateVoicings(p.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
-      const ranked = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret);
+      const ranked = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret, this.targetString);
 
       let selectedIndex = 0;
       if (p.seen && p.voicingKey) {
@@ -1108,8 +1153,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       name: 'Display',
       type: ArgType.Enum,
       required: true,
-      enum: ['reference', 'compact'],
-      enumLabels: ['Reference', 'Compact'],
+      enum: ['compact', 'reference'],
+      enumLabels: ['Compact', 'Reference'],
       description: 'Display mode.',
     };
     const fretNums = Array.from({ length: 15 }, (_, i) => i + 1);
@@ -1122,9 +1167,19 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       defaultValue: 'none',
       description: 'Center voicings around this fret position (adds 0.5 cost per fret of distance per note).',
     };
+    const stringNums = Array.from({ length: 8 }, (_, i) => i + 1);
+    const targetStringArg: ConfigurationSchemaArg = {
+      name: 'Target String',
+      type: ArgType.Enum,
+      required: false,
+      enum: ['none', ...stringNums.map(n => `string:${n}`)],
+      enumLabels: ['None', ...stringNums.map(String)],
+      defaultValue: 'none',
+      description: 'Prefer voicings that include this string (adds cost per string of distance). String 1 is lowest/thickest.',
+    };
     return {
-      description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,ChordKey,...][,InstrumentSettings]`,
-      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, chordEntryArg(false), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,TargetString][,ChordKey,...][,InstrumentSettings]`,
+      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, targetStringArg, chordEntryArg(false), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 
@@ -1159,9 +1214,13 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const ntMode: NearbyTriadsMode =
       displayStr === 'compact' ? 'compact' : 'reference';
 
-    // Remaining args after the first 3 are degree index strings ("0"–"6") and/or a target fret ("fret:N").
+    // Remaining args after the first 3 are degree index strings ("0"–"6"), a target fret ("fret:N"), or a target string ("string:N").
     const targetFretStr = config.slice(3).find(s => /^fret:\d+$/.test(s));
     const targetFret = targetFretStr ? parseInt(targetFretStr.slice(5), 10) : null;
+
+    const targetStringStr = config.slice(3).find(s => /^string:\d+$/.test(s));
+    // convert 1-indexed UI value to 0-indexed internal string index
+    const targetString = targetStringStr ? parseInt(targetStringStr.slice(7), 10) - 1 : null;
 
     // New format: absolute chord keys (ChordEntryWidget diatonicOnly=false)
     const chordKeyStrings = config.slice(3).filter(s => /^[A-G][b#]?_[A-Z0-9]+$/.test(s));
@@ -1187,6 +1246,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       diatonicMode,
       4,
       targetFret,
+      targetString,
       settings,
       intervalSettings as InstrumentIntervalSettings,
       audioController,

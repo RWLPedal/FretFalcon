@@ -1,6 +1,6 @@
 // ts/fretboard/nearby_triads_algo.ts
 import { FretboardConfig } from './fretboard';
-import { TriadQuality, TriadInversion, TRIAD_SHAPE_CATALOG } from './triads';
+import { TriadQuality, TriadInversion, TRIAD_SHAPE_CATALOG, catalogGroupForIntervalPattern } from './triads';
 import { NOTE_NAMES_FROM_A, getKeyIndex, getIntervalLabel } from './fretboard_utils';
 
 export interface TriadVoicing {
@@ -58,59 +58,66 @@ export function enumerateVoicings(
   const voicings: TriadVoicing[] = [];
   const addedKeys = new Set<string>();
 
-  for (const shape of TRIAD_SHAPE_CATALOG) {
-    if (shape.quality !== quality) continue;
+  // Iterate every adjacent 3-string group the instrument actually has.
+  // Map each to its catalog group by interval pattern so that e.g. [4,5,6]
+  // on a 7-string (G-B-E, M3+P4) correctly uses the [3,4,5] catalog shapes.
+  for (let s0 = 0; s0 + 2 < tuning.length; s0++) {
+    const actualGroup: [number, number, number] = [s0, s0 + 1, s0 + 2];
+    const catalogGroup = catalogGroupForIntervalPattern(actualGroup, tuning);
 
-    const anchorStrIdx = shape.stringGroup[shape.rootStringIndexInGroup];
-    if (anchorStrIdx >= tuning.length) continue;
+    for (const shape of TRIAD_SHAPE_CATALOG) {
+      if (shape.quality !== quality) continue;
+      if (shape.stringGroup[0] !== catalogGroup[0] ||
+          shape.stringGroup[1] !== catalogGroup[1] ||
+          shape.stringGroup[2] !== catalogGroup[2]) continue;
 
-    const anchorTuning = tuning[anchorStrIdx];
-    const rootRelFret = shape.relativeFrets[shape.rootStringIndexInGroup];
+      const anchorStrIdx = actualGroup[shape.rootStringIndexInGroup];
+      const anchorTuning = tuning[anchorStrIdx];
+      const rootRelFret = shape.relativeFrets[shape.rootStringIndexInGroup];
 
-    for (let anchorFret = 0; anchorFret <= fretCount; anchorFret++) {
-      if ((anchorTuning + anchorFret) % 12 !== rootNoteIdx % 12) continue;
+      for (let anchorFret = 0; anchorFret <= fretCount; anchorFret++) {
+        if ((anchorTuning + anchorFret) % 12 !== rootNoteIdx % 12) continue;
 
-      const absFrets: [number, number, number] = [
-        anchorFret + shape.relativeFrets[0] - rootRelFret,
-        anchorFret + shape.relativeFrets[1] - rootRelFret,
-        anchorFret + shape.relativeFrets[2] - rootRelFret,
-      ];
+        const absFrets: [number, number, number] = [
+          anchorFret + shape.relativeFrets[0] - rootRelFret,
+          anchorFret + shape.relativeFrets[1] - rootRelFret,
+          anchorFret + shape.relativeFrets[2] - rootRelFret,
+        ];
 
-      if (absFrets.some(f => f < 0 || f > fretCount)) continue;
+        if (absFrets.some(f => f < 0 || f > fretCount)) continue;
 
-      const frettedFrets = absFrets.filter(f => f > 0);
-      const span = frettedFrets.length > 0
-        ? Math.max(...absFrets) - Math.min(...frettedFrets)
-        : 0;
-      if (span > maxFretSpan) continue;
+        const frettedFrets = absFrets.filter(f => f > 0);
+        const span = frettedFrets.length > 0
+          ? Math.max(...absFrets) - Math.min(...frettedFrets)
+          : 0;
+        if (span > maxFretSpan) continue;
 
-      const notes: string[] = [];
-      const intervalLabels: string[] = [];
-      let valid = true;
-      for (let i = 0; i < 3; i++) {
-        const strIdx = shape.stringGroup[i];
-        if (strIdx >= tuning.length) { valid = false; break; }
-        const noteIdx = (tuning[strIdx] + absFrets[i]) % 12;
-        const noteName = NOTE_NAMES_FROM_A[noteIdx];
-        if (!noteName) { valid = false; break; }
-        notes.push(noteName);
-        intervalLabels.push(getIntervalLabel((noteIdx - rootNoteIdx + 12) % 12));
+        const notes: string[] = [];
+        const intervalLabels: string[] = [];
+        let valid = true;
+        for (let i = 0; i < 3; i++) {
+          const noteIdx = (tuning[actualGroup[i]] + absFrets[i]) % 12;
+          const noteName = NOTE_NAMES_FROM_A[noteIdx];
+          if (!noteName) { valid = false; break; }
+          notes.push(noteName);
+          intervalLabels.push(getIntervalLabel((noteIdx - rootNoteIdx + 12) % 12));
+        }
+        if (!valid) continue;
+
+        const key = `${actualGroup[0]}:${absFrets[0]},${actualGroup[1]}:${absFrets[1]},${actualGroup[2]}:${absFrets[2]}`;
+        if (addedKeys.has(key)) continue;
+        addedKeys.add(key);
+
+        voicings.push({
+          chordKey,
+          stringGroup: [...actualGroup] as [number, number, number],
+          frets: [...absFrets] as [number, number, number],
+          notes,
+          intervalLabels,
+          inversion: shape.inversion,
+          quality,
+        });
       }
-      if (!valid) continue;
-
-      const key = `${shape.stringGroup[0]}:${absFrets[0]},${shape.stringGroup[1]}:${absFrets[1]},${shape.stringGroup[2]}:${absFrets[2]}`;
-      if (addedKeys.has(key)) continue;
-      addedKeys.add(key);
-
-      voicings.push({
-        chordKey,
-        stringGroup: [...shape.stringGroup] as [number, number, number],
-        frets: [...absFrets] as [number, number, number],
-        notes,
-        intervalLabels,
-        inversion: shape.inversion,
-        quality,
-      });
     }
   }
 
@@ -149,29 +156,30 @@ function neckPosition(v: TriadVoicing): number {
   return fretted.length > 0 ? Math.min(...fretted) : 0;
 }
 
-function targetFretCost(v: TriadVoicing, targetFret: number): number {
+function targetFretCost(v: TriadVoicing, targetFret: number | null): number {
+  if (targetFret === null) return 0;
   return v.frets.reduce((sum, f) => sum + Math.abs(f - targetFret) * 0.5, 0);
+}
+
+function targetStringCost(v: TriadVoicing, targetString: number | null): number {
+  if (targetString === null) return 0;
+  return Math.min(...v.stringGroup.map(s => Math.abs(s - targetString)));
 }
 
 export function rankVoicingsByTransitionCost(
   from: TriadVoicing | null,
   candidates: TriadVoicing[],
-  targetFret: number | null = null
+  targetFret: number | null = null,
+  targetString: number | null = null
 ): RankedVoicing[] {
+  const targetCost = (v: TriadVoicing) => targetFretCost(v, targetFret) + targetStringCost(v, targetString);
   if (!from) {
-    if (targetFret !== null) {
-      return candidates
-        .map(v => ({ voicing: v, cost: targetFretCost(v, targetFret) }))
-        .sort((a, b) => a.cost - b.cost);
-    }
+    const hasTarget = targetFret !== null || targetString !== null;
     return candidates
-      .map(v => ({ voicing: v, cost: 0 }))
-      .sort((a, b) => neckPosition(a.voicing) - neckPosition(b.voicing));
+      .map(v => ({ voicing: v, cost: hasTarget ? targetCost(v) : 0 }))
+      .sort((a, b) => a.cost - b.cost || neckPosition(a.voicing) - neckPosition(b.voicing));
   }
   return candidates
-    .map(v => ({
-      voicing: v,
-      cost: transitionCost(from, v) + (targetFret !== null ? targetFretCost(v, targetFret) : 0),
-    }))
+    .map(v => ({ voicing: v, cost: transitionCost(from, v) + targetCost(v) }))
     .sort((a, b) => a.cost - b.cost || neckPosition(a.voicing) - neckPosition(b.voicing));
 }

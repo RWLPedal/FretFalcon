@@ -1,5 +1,6 @@
 import { MobileViewManager } from './mobile_view_manager';
 import { NAV_SECTIONS, Visibility, NavButton } from '../reference_page/nav_sections';
+import { InstrumentName } from '../fretboard/fretboard';
 import { AppSettings } from '../settings';
 import { getViewIcon } from '../panels/panel_registry';
 
@@ -63,7 +64,7 @@ export class MobileHamburger {
         if (!nav) return;
         nav.innerHTML = '';
 
-        const instrument = this.getSettings().instrumentSettings?.instrument ?? 'Guitar';
+        const instrument = this.getSettings().instrumentSettings?.instrument ?? InstrumentName.Guitar;
 
         for (const section of NAV_SECTIONS) {
             const visible = section.buttons.filter(

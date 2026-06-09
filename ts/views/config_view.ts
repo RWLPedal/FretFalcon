@@ -134,6 +134,22 @@ export class ConfigView {
         this.callback(this.buildFlatConfig());
     }
 
+    /** Updates a ChordEntryWidget arg's values and triggers a config change notification. */
+    public updateChordValues(argName: string, values: string[]): void {
+        if (typeof this.schema === 'string') return;
+        const argIndex = this.schema.args.findIndex(a => a.name === argName);
+        if (argIndex === -1) return;
+        const container = this.chordEntryContainers.get(argIndex);
+        if (container) {
+            const fn = (container as any)._setValues as ((vals: string[]) => void) | undefined;
+            if (fn) fn(values);
+            else this.argValues.set(argIndex, values);
+        } else {
+            this.argValues.set(argIndex, values);
+        }
+        this.notifyChange();
+    }
+
     /**
      * Shows or hides "⟳ Driven" (and optionally "⟳ Driven (Next)") sentinel options in the
      * named arg's select element. Pass hasNext=true when the connected source emits next signals.

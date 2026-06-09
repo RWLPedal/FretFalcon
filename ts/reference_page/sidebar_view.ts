@@ -8,6 +8,7 @@ import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
 import { NAV_SECTIONS } from './nav_sections';
+import { InstrumentName } from '../fretboard/fretboard';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 import { getViewIcon } from '../panels/panel_registry';
 
@@ -36,9 +37,9 @@ export class SidebarView {
         this.addBottomBarListeners();
     }
 
-    private getActiveInstrument(): string {
-        if (!this.appSettings) return 'Guitar';
-        return this.appSettings?.instrumentSettings?.instrument ?? 'Guitar';
+    private getActiveInstrument(): InstrumentName {
+        if (!this.appSettings) return InstrumentName.Guitar;
+        return this.appSettings?.instrumentSettings?.instrument ?? InstrumentName.Guitar;
     }
 
     private getCurrentTheme(): Theme {

@@ -241,6 +241,12 @@ export class ConfigurableFeatureView extends BaseView {
                 detail: (e as CustomEvent).detail,
             }));
         });
+
+        // Allow features to push chord key updates back into the config panel.
+        this.listen(container, 'nt-chord-keys-update', (e: Event) => {
+            const { chordKeys } = (e as CustomEvent<{ chordKeys: string[] }>).detail;
+            this.configView?.updateChordValues('Chords', chordKeys);
+        });
     }
 
     private buildDrivenConfig(rawConfig: (string | null)[]): string[] {

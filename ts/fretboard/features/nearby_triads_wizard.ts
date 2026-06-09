@@ -219,6 +219,7 @@ export class TriadsWizard {
     private readonly fretboardConfig: FretboardConfig,
     private readonly maxFretSpan: number,
     private readonly targetFret: number | null,
+    private readonly targetString: number | null,
   ) {}
 
   exportState(): WizardInProgressState {
@@ -246,7 +247,7 @@ export class TriadsWizard {
     let prevVoicing: TriadVoicing | null = null;
     for (const sc of state.chords) {
       const raw    = enumerateVoicings(sc.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
-      const ranked = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret);
+      const ranked = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret, this.targetString);
       let selectedIndex = 0;
       if (sc.seen && sc.selectedVoicingKey) {
         const idx = ranked.findIndex(r => voicingKey(r.voicing) === sc.selectedVoicingKey);
@@ -288,7 +289,7 @@ export class TriadsWizard {
         ? (this.chords[i - 1].rankedVoicings[this.chords[i - 1].selectedIndex]?.voicing ?? null)
         : null;
       const raw = enumerateVoicings(c.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
-      c.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret);
+      c.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret, this.targetString);
       c.selectedIndex  = 0;
       c.seen           = false;
     }
@@ -302,7 +303,7 @@ export class TriadsWizard {
       ? (this.chords[i - 1].rankedVoicings[this.chords[i - 1].selectedIndex]?.voicing ?? null)
       : null;
     const raw = enumerateVoicings(c.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
-    c.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret);
+    c.rankedVoicings = rankVoicingsByTransitionCost(prevVoicing, raw, this.targetFret, this.targetString);
     c.selectedIndex  = 0;
     // seen stays false until the user explicitly clicks to lock a voicing
   }
@@ -556,7 +557,7 @@ export class TriadsWizard {
           nextVoicing = nextC.rankedVoicings[nextC.selectedIndex]?.voicing ?? null;
         } else if (this.hoveredVoicing) {
           const nextRaw = enumerateVoicings(nextC.chordKey, this.fretboardConfig, 15, this.maxFretSpan);
-          nextVoicing = rankVoicingsByTransitionCost(this.hoveredVoicing, nextRaw, this.targetFret)[0]?.voicing ?? null;
+          nextVoicing = rankVoicingsByTransitionCost(this.hoveredVoicing, nextRaw, this.targetFret, this.targetString)[0]?.voicing ?? null;
         }
         if (nextVoicing) {
           notes.push(...buildGhostNotes(nextVoicing, NEXT_FILL, NEXT_STROKE));

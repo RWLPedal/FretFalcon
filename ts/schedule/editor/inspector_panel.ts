@@ -8,6 +8,7 @@ import {
 import { GROUP_COLOR_PALETTE, refreshGroupStats } from "./interval/group_row_ui";
 import { IntervalSettings } from "./interval/types";
 import { NAV_SECTIONS } from "../../reference_page/nav_sections";
+import { InstrumentName } from "../../fretboard/fretboard";
 import { getViewIcon, getViewIconByFeatureType } from "../../panels/panel_registry";
 
 // ─── View dropdown (sources from nav_sections) ────────────────────────────────
@@ -47,7 +48,7 @@ interface ViewOption {
 }
 
 /** Builds an ordered list of view options from nav_sections, filtered for the current instrument. */
-function buildViewOptions(instrument: string): ViewOption[] {
+function buildViewOptions(instrument: InstrumentName): ViewOption[] {
   const options: ViewOption[] = [];
   for (const section of NAV_SECTIONS) {
     for (const btn of section.buttons) {
@@ -69,7 +70,7 @@ function buildViewOptions(instrument: string): ViewOption[] {
 
 function createViewDropdown(
   selectedTypeName: string,
-  instrument: string,
+  instrument: InstrumentName,
 ): HTMLSelectElement {
   const select = document.createElement('select');
   select.classList.add('config-feature-type');
@@ -111,14 +112,14 @@ export class InspectorPanel {
   private containerEl: HTMLElement;
   private contentEl: HTMLElement;
   private _selectedRowEl: HTMLElement | null = null;
-  private _getInstrument: () => string;
+  private _getInstrument: () => InstrumentName;
   private _getTuning: () => string | undefined;
   private _getDefaultCategory: () => string;
   private _onAddInterval: () => void;
 
   constructor(
     containerEl: HTMLElement,
-    getInstrument: () => string,
+    getInstrument: () => InstrumentName,
     getTuning: () => string | undefined,
     getDefaultCategory: () => string,
     onAddInterval: () => void

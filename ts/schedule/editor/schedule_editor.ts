@@ -25,6 +25,7 @@ import { KeyboardShortcutManager } from "./keyboard_shortcut_manager";
 import { ScheduleBuilder } from "./schedule_builder";
 import { InspectorPanel } from "./inspector_panel";
 import { instrumentCategory } from "../../fretboard/fretboard_category";
+import { InstrumentName } from "../../fretboard/fretboard";
 import { refreshGroupStats } from "./interval/group_row_ui";
 
 enum EditorMode {
@@ -83,13 +84,13 @@ export class ScheduleEditor {
     this.rowManager = new RowManager(
       this.uiManager.configEntriesContainerEl,
       this.selectionManager,
-      () => this.appSettings?.instrumentSettings?.instrument ?? 'Guitar',
+      () => this.appSettings?.instrumentSettings?.instrument ?? InstrumentName.Guitar,
       () => this.appSettings?.instrumentSettings?.tuning
     );
 
     this.inspectorPanel = new InspectorPanel(
       this.uiManager.inspectorEl,
-      () => this.appSettings?.instrumentSettings?.instrument ?? 'Guitar',
+      () => this.appSettings?.instrumentSettings?.instrument ?? InstrumentName.Guitar,
       () => this.appSettings?.instrumentSettings?.tuning,
       () => this.defaultCategoryName ?? '',
       () => {

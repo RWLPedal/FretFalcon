@@ -415,7 +415,7 @@ const INVERSION_LINE_COLORS: Record<TriadInversion, string> = {
  * The same interval patterns appear on 7/8-string guitars but at different absolute
  * indices, so we classify by interval rather than by index.
  */
-function catalogGroupForIntervalPattern(
+export function catalogGroupForIntervalPattern(
   group: [number, number, number],
   tuningNotes: readonly number[],
 ): [number, number, number] {
