@@ -114,7 +114,7 @@ export enum UiComponentType {
   Ellipsis = "ellipsis",
   Checkbox = "checkbox",
   LayerList = "layer_list",
-  OrderedDegreeList = "ordered_degree_list",
+  ChordEntryWidget = "chord_entry_widget",
 }
 
 /** A toggle button entry with a separate display label and stored value. */
@@ -143,6 +143,8 @@ export interface ConfigurationSchemaArg {
     rootNoteOptions?: string[];
     chordEntries?: { key: string; label: string }[];
     noteNames?: string[];
+    /** ChordEntryWidget: restrict to diatonic chords only; store as degree indices. */
+    diatonicOnly?: boolean;
   };
   /** Display labels for enum values — parallel array to `enum`. Falls back to value if absent. */
   enumLabels?: string[];

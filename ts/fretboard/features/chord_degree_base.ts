@@ -1,9 +1,7 @@
 // ts/fretboard/features/chord_degree_base.ts
-// Shared base for features driven by an ordered chord-degree list (OrderedDegreeList UI).
 import {
   ArgType,
   ConfigurationSchemaArg,
-  LabelValue,
   UiComponentType,
 } from '../../feature';
 import { InstrumentFeature } from '../fretboard_base';
@@ -12,21 +10,7 @@ import { AudioController } from '../../audio_controller';
 import { InstrumentIntervalSettings } from '../fretboard_interval_settings';
 import { ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from '../music_types';
 import { NOTE_NAMES_FROM_A } from '../fretboard_utils';
-import { scales } from '../scales';
 import { SignalKind, SignalState, ChordSignal } from '../../panels/link_types';
-
-/** Builds a basic 7-degree label set per diatonic mode (no advanced/7th entries). */
-export function buildChordDegreeLabelsByMode(): Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> {
-  const result: Record<string, { basic: LabelValue[]; advanced: LabelValue[] }> = {};
-  for (const mode of ALL_DIATONIC_MODES) {
-    const entries = scales[mode].generateRomanEntries(true);
-    const basic = entries.slice(0, 7).map((e, i) => ({ label: e.roman, value: String(i) }));
-    result[mode] = { basic, advanced: [] };
-  }
-  return result;
-}
-
-export const CHORD_DEGREE_LABELS_BY_MODE = buildChordDegreeLabelsByMode();
 
 export function rootNoteArg(availableRoots?: string[]): ConfigurationSchemaArg {
   return {
@@ -38,7 +22,7 @@ export function rootNoteArg(availableRoots?: string[]): ConfigurationSchemaArg {
   };
 }
 
-export function modeArg(controlsArgName = 'Degrees'): ConfigurationSchemaArg {
+export function modeArg(controlsArgName = 'Chords'): ConfigurationSchemaArg {
   return {
     name: 'Mode',
     type: ArgType.Enum,
@@ -50,15 +34,27 @@ export function modeArg(controlsArgName = 'Degrees'): ConfigurationSchemaArg {
   };
 }
 
-export function degreesArg(labelsByMode = CHORD_DEGREE_LABELS_BY_MODE): ConfigurationSchemaArg {
+/**
+ * Config arg for an ordered chord sequence rendered as a popup chord-entry widget.
+ *
+ * When `diatonicOnly` is true (default for ChordProgressionFeature):
+ *   - Only in-key chords are offered; values stored as degree indices ("0"–"6")
+ *   - The progression transposes automatically when root or mode changes
+ *
+ * When `diatonicOnly` is false (NearbyTriadsFeature):
+ *   - Any chord can be entered; values stored as absolute chord keys ("C_MAJ")
+ */
+export function chordEntryArg(diatonicOnly = false): ConfigurationSchemaArg {
   return {
-    name: 'Degrees',
+    name: 'Chords',
     type: ArgType.String,
     required: false,
-    uiComponentType: UiComponentType.OrderedDegreeList,
-    uiComponentData: { labelsByMode },
+    uiComponentType: UiComponentType.ChordEntryWidget,
+    uiComponentData: { diatonicOnly },
     isVariadic: true,
-    description: 'Ordered chord degrees for the progression — duplicates allowed.',
+    description: diatonicOnly
+      ? 'Ordered chord degrees — stored relative to key, transposes automatically.'
+      : 'Ordered chord sequence — enter by name or Roman numeral. Repeats allowed.',
   };
 }
 

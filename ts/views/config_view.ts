@@ -1,5 +1,7 @@
 import { ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType, LabelValue } from "../feature";
 import { createLayerListInput, extractLayerListValues } from "../fretboard/features/layer_list_ui";
+import { ChordEntryPanel, ChordEntry, entryDisplayLabel } from "../fretboard/features/chord_entry_panel";
+import { DiatonicMode } from "../fretboard/music_types";
 
 export type ConfigChangeCallback = (config: (string | null)[]) => void;
 
@@ -14,6 +16,8 @@ export class ConfigView {
     private argValues: Map<number, string | string[] | null> = new Map();
     // Containers for layer_list args — values extracted from DOM at read time.
     private layerListContainers: Map<number, HTMLElement> = new Map();
+    // Containers for chord_entry_widget args — values stored via hooks.
+    private chordEntryContainers: Map<number, HTMLElement> = new Map();
     // Tracks whether any LayerList arg is currently in linked/driven state.
     private _isLinked = false;
     private _hasNextSignals = false;
@@ -79,15 +83,13 @@ export class ConfigView {
                 btns.forEach(btn => {
                     btn.classList.toggle('is-active', resolvedValues.includes(btn.dataset.value ?? ''));
                 });
-            } else if (arg.isVariadic && arg.uiComponentType === UiComponentType.OrderedDegreeList) {
-                // Ordered-degree-list variadic: consume all remaining values in order
+            } else if (arg.isVariadic && arg.uiComponentType === UiComponentType.ChordEntryWidget) {
+                // Chord-entry widget variadic: consume all remaining values
                 const values = config.slice(configIndex);
                 configIndex = config.length;
-                const control = this.container.querySelector<HTMLElement>(
-                    `[data-arg-index="${argIndex}"] .control`
-                );
-                const fn = (control as any)?._setValues;
-                if (typeof fn === 'function') fn(values);
+                const container = this.chordEntryContainers.get(argIndex);
+                const fn = (container as any)?._setValues as ((vals: string[]) => void) | undefined;
+                if (fn) fn(values);
                 else this.argValues.set(argIndex, values);
             } else {
                 // Non-variadic enum, or variadic enum rendered as a single <select>:
@@ -295,12 +297,8 @@ export class ConfigView {
         if (arg.controlsArgName) {
             const controlledArg = this.schema.args.find(a => a.name === arg.controlsArgName);
             if (controlledArg) {
-                if (controlledArg.uiComponentType === UiComponentType.OrderedDegreeList) {
-                    const control = this.container.querySelector<HTMLElement>(
-                        `[data-arg-name="${controlledArg.name}"] .control`
-                    );
-                    const fn = (control as any)?._rebuildLabels;
-                    if (typeof fn === 'function') fn();
+                if (controlledArg.uiComponentType === UiComponentType.ChordEntryWidget) {
+                    // ChordEntryWidget reads root/mode at popup-open time — no rebuild needed.
                 } else {
                     const controlledIndex = this.schema.args.indexOf(controlledArg);
                     const advCb = this.container.querySelector<HTMLInputElement>(
@@ -376,8 +374,8 @@ export class ConfigView {
         } else if (arg.uiComponentType === UiComponentType.ToggleButtonSelector) {
             const keyType = this.getKeyTypeForArg(arg);
             this.renderToggleButtons(parent, arg, index, keyType, false);
-        } else if (arg.uiComponentType === UiComponentType.OrderedDegreeList) {
-            this.renderOrderedDegreeList(parent, arg, index);
+        } else if (arg.uiComponentType === UiComponentType.ChordEntryWidget) {
+            this.renderChordEntryWidget(parent, arg, index);
         } else if (arg.type === ArgType.Enum) {
             this.renderEnumSelector(parent, arg, index);
         }
@@ -509,98 +507,150 @@ export class ConfigView {
         parent.appendChild(buttonsDiv);
     }
 
-    private renderOrderedDegreeList(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
+    private renderChordEntryWidget(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
         if (!this.argValues.has(index)) this.argValues.set(index, []);
+        this.chordEntryContainers.set(index, parent);
+
+        const diatonicOnly: boolean = arg.uiComponentData?.diatonicOnly ?? false;
+
+        const readonlyRow = document.createElement('div');
+        readonlyRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:22px;';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'config-toggle-btn';
+        editBtn.style.cssText = 'font-size:0.75rem;padding:1px 7px;';
+        editBtn.textContent = '✎ Edit';
+
+        parent.appendChild(readonlyRow);
+        parent.appendChild(editBtn);
 
         const getValues = (): string[] => (this.argValues.get(index) as string[]) ?? [];
 
-        const getLabels = (): LabelValue[] => {
-            const mode = this.getKeyTypeForArg(arg);
-            const lbm = arg.uiComponentData?.labelsByMode?.[mode]?.basic;
-            if (lbm) return lbm as LabelValue[];
-            return (arg.uiComponentData?.buttonLabels ?? []).map(l => ({ label: l, value: l }));
+        const getCurrentRootMode = (): { rootNote: string; mode: DiatonicMode } => {
+            let rootNote = 'C';
+            let mode = DiatonicMode.Ionian;
+            if (typeof this.schema !== 'string') {
+                const rootIdx = this.schema.args.findIndex(a => a.name === 'Root Note');
+                const modeIdx = this.schema.args.findIndex(a => a.name === 'Mode');
+                if (rootIdx !== -1) rootNote = (this.argValues.get(rootIdx) as string) ?? 'C';
+                if (modeIdx !== -1) {
+                    const mv = (this.argValues.get(modeIdx) as string) ?? DiatonicMode.Ionian;
+                    if (Object.values(DiatonicMode).includes(mv as DiatonicMode)) mode = mv as DiatonicMode;
+                }
+            }
+            return { rootNote, mode };
         };
 
-        const chipsDiv = document.createElement('div');
-        chipsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;min-height:22px;margin-bottom:5px;';
-
-        const addRow = document.createElement('div');
-        addRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;align-items:center;';
-
-        const rebuildChips = () => {
-            chipsDiv.innerHTML = '';
-            const labels = getLabels();
-            const labelMap = new Map(labels.map(lv => [lv.value, lv.label]));
-            const values = getValues();
-
+        const refreshDisplay = (values: string[], appliedEntries?: ChordEntry[]) => {
+            readonlyRow.innerHTML = '';
+            if (values.length === 0) {
+                const empty = document.createElement('span');
+                empty.style.cssText = 'font-size:0.78rem;color:var(--clr-text-subtle,#888);';
+                empty.textContent = 'No chords selected';
+                readonlyRow.appendChild(empty);
+                return;
+            }
+            const { rootNote, mode } = getCurrentRootMode();
             values.forEach((val, i) => {
                 const chip = document.createElement('span');
-                chip.style.cssText = 'display:inline-flex;align-items:center;gap:1px;border:1px solid var(--clr-border,#999);border-radius:4px;padding:1px 3px;font-size:0.78rem;white-space:nowrap;';
-
-                const mkNavBtn = (ch: string, title: string, disabled: boolean, handler: () => void) => {
-                    const b = document.createElement('button');
-                    b.textContent = ch; b.title = title; b.disabled = disabled;
-                    b.style.cssText = 'background:none;border:none;padding:0 2px;font-size:0.82rem;cursor:pointer;opacity:' + (disabled ? '0.25' : '0.55') + ';color:inherit;line-height:1;';
-                    b.addEventListener('click', handler);
-                    return b;
-                };
-
-                chip.appendChild(mkNavBtn('‹', 'Move earlier', i === 0, () => {
-                    const arr = getValues(); [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
-                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
-                }));
-
-                const lbl = document.createElement('span');
-                lbl.textContent = labelMap.get(val) ?? val;
-                lbl.style.cssText = 'min-width:22px;text-align:center;font-weight:500;';
-                chip.appendChild(lbl);
-
-                chip.appendChild(mkNavBtn('›', 'Move later', i === values.length - 1, () => {
-                    const arr = getValues(); [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
-                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
-                }));
-
-                const rm = document.createElement('button');
-                rm.textContent = '×'; rm.title = 'Remove';
-                rm.style.cssText = 'background:none;border:none;padding:0 2px;font-size:0.82rem;cursor:pointer;opacity:0.45;color:inherit;line-height:1;';
-                rm.addEventListener('click', () => {
-                    const arr = getValues(); arr.splice(i, 1);
-                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
-                });
-                chip.appendChild(rm);
-
-                chipsDiv.appendChild(chip);
+                chip.style.cssText =
+                    'display:inline-flex;align-items:center;' +
+                    'background:var(--clr-chip,rgba(90,153,90,0.15));' +
+                    'border:1px solid var(--clr-chip-border,rgba(90,153,90,0.4));' +
+                    'border-radius:4px;padding:1px 7px;font-size:0.78rem;font-weight:500;white-space:nowrap;';
+                const label = appliedEntries?.[i]?.display
+                    ?? entryDisplayLabel(val, diatonicOnly, rootNote, mode);
+                chip.textContent = label;
+                readonlyRow.appendChild(chip);
             });
         };
 
-        const rebuildAddButtons = () => {
-            addRow.innerHTML = '';
-            const pfx = document.createElement('span');
-            pfx.textContent = '+'; pfx.style.cssText = 'font-size:0.72rem;opacity:0.6;margin-right:1px;';
-            addRow.appendChild(pfx);
-            getLabels().forEach(lv => {
-                const btn = document.createElement('button');
-                btn.classList.add('config-toggle-btn');
-                btn.textContent = lv.label; btn.title = `Add ${lv.label}`;
-                btn.style.cssText = 'font-size:0.72rem;padding:1px 5px;';
-                btn.addEventListener('click', () => {
-                    const arr = getValues(); arr.push(lv.value);
-                    this.argValues.set(index, arr); rebuildChips(); this.notifyChange();
-                });
-                addRow.appendChild(btn);
-            });
+        refreshDisplay(getValues());
+
+        // ── Popup ────────────────────────────────────────────────────────────────
+
+        let activePopup: HTMLElement | null = null;
+        let activePanel: ChordEntryPanel | null = null;
+        let activeOutsideHandler: ((ev: MouseEvent) => void) | null = null;
+
+        const closePopup = () => {
+            if (activeOutsideHandler) {
+                document.removeEventListener('mousedown', activeOutsideHandler, true);
+                activeOutsideHandler = null;
+            }
+            activePanel?.destroy();
+            activePanel = null;
+            activePopup?.remove();
+            activePopup = null;
         };
 
-        parent.appendChild(chipsDiv);
-        parent.appendChild(addRow);
-        rebuildChips();
-        rebuildAddButtons();
+        const openPopup = () => {
+            if (activePopup) return;
+            const { rootNote, mode } = getCurrentRootMode();
 
-        // Hooks for external updates (setConfig, mode changes)
+            const storedValues = getValues();
+            const initialEntries: ChordEntry[] = storedValues.map(val => ({
+                value: val,
+                display: entryDisplayLabel(val, diatonicOnly, rootNote, mode),
+                roman: null,
+            }));
+
+            const panel = new ChordEntryPanel(rootNote, mode, diatonicOnly);
+            panel.setInitialEntries(initialEntries);
+
+            const popup = document.createElement('div');
+            popup.style.cssText =
+                'position:fixed;z-index:9999;background:var(--clr-panel,var(--dm-panel,#fff));' +
+                'border:1px solid var(--clr-border,#ccc);border-radius:8px;' +
+                'box-shadow:0 4px 16px rgba(0,0,0,0.15);padding:10px 12px;min-width:260px;max-width:340px;';
+            document.body.appendChild(popup);
+            activePopup = popup;
+            activePanel = panel;
+
+            const rect = editBtn.getBoundingClientRect();
+            popup.style.top  = `${rect.bottom + 6}px`;
+            popup.style.left = `${Math.min(rect.left, window.innerWidth - 360)}px`;
+
+            panel.renderInto(popup,
+                (entries) => {
+                    const vals = entries.map(e => e.value);
+                    this.argValues.set(index, vals);
+                    refreshDisplay(vals, entries);
+                    this.notifyChange();
+                    closePopup();
+                },
+                closePopup
+            );
+
+            // Close on outside click (deferred so this click doesn't immediately close).
+            // Store the handler so closePopup can always remove it — preventing stale
+            // handlers from a previous open from firing on the next popup's elements.
+            const onOutside = (ev: MouseEvent) => {
+                if (!popup.contains(ev.target as Node) && ev.target !== editBtn) {
+                    closePopup();
+                }
+            };
+            activeOutsideHandler = onOutside;
+            setTimeout(() => document.addEventListener('mousedown', onOutside, true), 0);
+
+            // Clean up if editBtn leaves DOM
+            const observer = new MutationObserver(() => {
+                if (!document.body.contains(editBtn)) { closePopup(); observer.disconnect(); }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
+        };
+
+        editBtn.addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            if (activePopup) closePopup(); else openPopup();
+        });
+
+        // Hooks for setConfig / buildFlatConfig
         (parent as any)._setValues = (vals: string[]) => {
-            this.argValues.set(index, vals); rebuildChips();
+            this.argValues.set(index, vals);
+            refreshDisplay(vals);
         };
-        (parent as any)._rebuildLabels = () => { rebuildChips(); rebuildAddButtons(); };
+        (parent as any)._getValues = (): string[] => getValues();
     }
 
     // ------------------------------------------------------------------ //
@@ -677,12 +727,8 @@ export class ConfigView {
                 if (!select) return;
 
                 select.addEventListener('change', () => {
-                    if (controlledArg.uiComponentType === UiComponentType.OrderedDegreeList) {
-                        const control = this.container.querySelector<HTMLElement>(
-                            `[data-arg-name="${controlledArg.name}"] .control`
-                        );
-                        const fn = (control as any)?._rebuildLabels;
-                        if (typeof fn === 'function') fn();
+                    if (controlledArg.uiComponentType === UiComponentType.ChordEntryWidget) {
+                        // ChordEntryWidget reads root/mode at popup-open time — no rebuild needed.
                     } else {
                         // Find whether the Advanced checkbox (if any) is currently checked.
                         const advCb = this.container.querySelector<HTMLInputElement>(

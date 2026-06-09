@@ -6,7 +6,7 @@ import {
   ArgType,
 } from '../../feature';
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
-import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, degreesArg } from './chord_degree_base';
+import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
 import { AudioController } from '../../audio_controller';
 import { IntervalSettings } from '../../schedule/editor/interval/types';
@@ -39,7 +39,7 @@ import {
   parseChordKey,
 } from '../nearby_triads_algo';
 import { SignalKind, SignalState, ChordSignal, KeySignal } from '../../panels/link_types';
-import { TriadsWizard, WizardChord, WizardInProgressState } from './nearby_triads_wizard';
+import { TriadsWizard, WizardChord, WizardInProgressState, getChordRomanInKey } from './nearby_triads_wizard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -168,6 +168,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   private readonly ntMode: NearbyTriadsMode;
   private readonly progDegrees: number[];
+  private readonly progChordKeys: string[];
   private readonly rootNote: string;
   private readonly diatonicMode: DiatonicMode;
   private readonly maxFretSpan: number;
@@ -209,6 +210,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     config: ReadonlyArray<string>,
     ntMode: NearbyTriadsMode,
     progDegrees: number[],
+    progChordKeys: string[],
     rootNote: string,
     diatonicMode: DiatonicMode,
     maxFretSpan: number,
@@ -220,9 +222,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   ) {
     const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
-    this.ntMode       = ntMode;
-    this.progDegrees  = progDegrees.length > 0 ? progDegrees : [1, 4, 5];
-    this.rootNote     = rootNote;
+    this.ntMode        = ntMode;
+    this.progDegrees   = progDegrees;
+    this.progChordKeys = progChordKeys;
+    this.rootNote      = rootNote;
     this.diatonicMode = diatonicMode;
     this.maxFretSpan  = maxFretSpan;
     this.targetFret   = targetFret;
@@ -236,7 +239,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this.fretboardConfig = planSingleFretboard(this.fretboardConfig, availW, maxCanvasHeight, zoom, 15);
 
     if (ntMode === 'reference') {
-      const N = this.progDegrees.length;
+      const N = Math.max(this.progDegrees.length, this.progChordKeys.length);
       const gap = 8;      // matches slotsRow CSS gap
       const slotPad = 8;  // col's padding:4px left + 4px right
       const overhead = 42;       // label + 2×gap(2px) + nav controls + 2×vpad(2px) per slot row
@@ -267,30 +270,51 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   private initSlots(): void {
     this.slots = [];
-    const romans = getRomansForMode(this.diatonicMode);
 
-    for (let i = 0; i < this.progDegrees.length; i++) {
-      const deg   = this.progDegrees[i];
-      const entry = romans[deg - 1];
-      const chordKey  = entry
-        ? resolveAbsoluteChordKey(entry.roman, this.rootNote, this.diatonicMode)
-        : null;
-      const chordEntry = chordKey ? chord_tones_library[chordKey] : null;
+    if (this.progChordKeys.length > 0) {
+      for (const ck of this.progChordKeys) {
+        const chordEntry = chord_tones_library[ck];
+        const roman = getChordRomanInKey(ck, this.rootNote, this.diatonicMode);
+        const slot: ChordSlot = {
+          degreeIndex:    -1,
+          chordKey:       ck,
+          roman:          roman ?? chordEntry?.name ?? ck,
+          chordName:      chordEntry?.name ?? ck,
+          rawVoicings:    [],
+          rankedVoicings: [],
+          selectedIndex:  0,
+          previewIndex:   0,
+          fretboardView:  new FretboardView(this.slotFretboardConfig, 15),
+          counterEl:      null,
+          columnEl:       null,
+        };
+        this.slots.push(slot);
+      }
+    } else {
+      const romans = getRomansForMode(this.diatonicMode);
+      for (let i = 0; i < this.progDegrees.length; i++) {
+        const deg   = this.progDegrees[i];
+        const entry = romans[deg - 1];
+        const chordKey  = entry
+          ? resolveAbsoluteChordKey(entry.roman, this.rootNote, this.diatonicMode)
+          : null;
+        const chordEntry = chordKey ? chord_tones_library[chordKey] : null;
 
-      const slot: ChordSlot = {
-        degreeIndex:    deg,
-        chordKey,
-        roman:         entry?.roman ?? String(deg),
-        chordName:     chordEntry?.name ?? (chordKey ?? '?'),
-        rawVoicings:   [],
-        rankedVoicings: [],
-        selectedIndex: 0,
-        previewIndex:  0,
-        fretboardView: new FretboardView(this.slotFretboardConfig, 15),
-        counterEl:     null,
-        columnEl:      null,
-      };
-      this.slots.push(slot);
+        const slot: ChordSlot = {
+          degreeIndex:    deg,
+          chordKey,
+          roman:         entry?.roman ?? String(deg),
+          chordName:     chordEntry?.name ?? (chordKey ?? '?'),
+          rawVoicings:   [],
+          rankedVoicings: [],
+          selectedIndex: 0,
+          previewIndex:  0,
+          fretboardView: new FretboardView(this.slotFretboardConfig, 15),
+          counterEl:     null,
+          columnEl:      null,
+        };
+        this.slots.push(slot);
+      }
     }
 
     this.buildAllRawVoicings();
@@ -475,6 +499,13 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   private buildHeaderText(): string {
     const modeLabel = DIATONIC_MODE_LABELS[this.diatonicMode] ?? this.diatonicMode;
+    if (this.progChordKeys.length > 0) {
+      const names = this.progChordKeys.map(ck => {
+        const roman = getChordRomanInKey(ck, this.rootNote, this.diatonicMode);
+        return roman ?? (chord_tones_library[ck]?.name ?? ck);
+      });
+      return `${names.join(' – ')} in ${this.rootNote} ${modeLabel}`;
+    }
     const romans = getRomansForMode(this.diatonicMode);
     const progression = this.progDegrees
       .map(d => romans[d - 1]?.roman ?? String(d))
@@ -605,6 +636,14 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       this.buildAllRawVoicings();
       this.rankAllSlots();
       this._slotsNeedLayout = false;
+    }
+
+    if (this.slots.length === 0) {
+      const placeholder = document.createElement('div');
+      placeholder.style.cssText = 'font-size:0.82rem;color:var(--clr-text-subtle,#888);text-align:center;padding:16px 0;';
+      placeholder.textContent = 'No chords configured — add chords in the settings above.';
+      container.appendChild(placeholder);
+      return;
     }
 
     const slotsRow = document.createElement('div');
@@ -1084,8 +1123,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       description: 'Center voicings around this fret position (adds 0.5 cost per fret of distance per note).',
     };
     return {
-      description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,Deg1,...][,InstrumentSettings]`,
-      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,ChordKey,...][,InstrumentSettings]`,
+      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, chordEntryArg(false), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 
@@ -1124,15 +1163,26 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const targetFretStr = config.slice(3).find(s => /^fret:\d+$/.test(s));
     const targetFret = targetFretStr ? parseInt(targetFretStr.slice(5), 10) : null;
 
+    // New format: absolute chord keys (ChordEntryWidget diatonicOnly=false)
+    const chordKeyStrings = config.slice(3).filter(s => /^[A-G][b#]?_[A-Z0-9]+$/.test(s));
+    // Legacy format: 0-based degree index strings "0"–"6"
     const degreeStrings = config.slice(3).filter(s => /^\d$/.test(s));
-    const progDegrees = degreeStrings.length > 0
-      ? degreeStrings.map(s => parseInt(s, 10) + 1)
-      : [1, 4, 5];
+
+    let progChordKeys: string[];
+    let progDegrees: number[];
+    if (chordKeyStrings.length > 0) {
+      progChordKeys = chordKeyStrings;
+      progDegrees = [];
+    } else {
+      progChordKeys = [];
+      progDegrees = degreeStrings.map(s => parseInt(s, 10) + 1);
+    }
 
     return new NearbyTriadsFeature(
       config,
       ntMode,
       progDegrees,
+      progChordKeys,
       validRoot as string,
       diatonicMode,
       4,

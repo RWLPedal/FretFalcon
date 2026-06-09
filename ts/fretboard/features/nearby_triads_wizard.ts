@@ -8,6 +8,7 @@ import {
 } from '../nearby_triads_algo';
 import { DiatonicMode } from '../music_types';
 import { CHORD_ROOTS, getRomansForMode, resolveAbsoluteChordKey } from '../chord_key_resolver';
+import { ChordEntryPanel } from './chord_entry_panel';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -342,203 +343,26 @@ export class TriadsWizard {
     onContinue: () => void,
     onCancel: () => void,
   ): void {
-    const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:4px 0;';
-    container.appendChild(wrap);
-
-    const hint = document.createElement('div');
-    hint.style.cssText = 'font-size:0.78rem;color:var(--clr-text-subtle,#888);';
-    hint.textContent = 'Type chord names (Am, G7, Fmaj7…) or roman numerals. Press Enter or click to add.';
-    wrap.appendChild(hint);
-
-    // ── chip row + input ──────────────────────────────────────────────────────
-    const chipRow = document.createElement('div');
-    chipRow.style.cssText =
-      'display:flex;flex-wrap:wrap;align-items:center;gap:4px;' +
-      'border:1px solid var(--clr-border,#ccc);border-radius:6px;padding:4px 6px;' +
-      'background:var(--clr-input-bg,transparent);min-height:36px;cursor:text;';
-    wrap.appendChild(chipRow);
-
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.placeholder = 'C Am F G …';
-    input.style.cssText =
-      'border:none;outline:none;background:transparent;font-size:0.85rem;' +
-      'min-width:80px;flex:1;padding:2px;color:inherit;';
-    chipRow.appendChild(input);
-    chipRow.addEventListener('click', () => input.focus());
-
-    // ── dropdown ──────────────────────────────────────────────────────────────
-    const dropdown = document.createElement('div');
-    dropdown.style.cssText =
-      'display:none;border:1px solid var(--clr-border,#ccc);border-radius:6px;' +
-      'background:var(--clr-panel,var(--dm-panel,#fff));' +
-      'box-shadow:0 4px 12px rgba(0,0,0,0.12);overflow:hidden;';
-    wrap.appendChild(dropdown);
-
-    // ── key indicator ─────────────────────────────────────────────────────────
-    const keyEl = document.createElement('div');
-    keyEl.style.cssText = 'font-size:0.75rem;color:var(--clr-text-subtle,#888);text-align:center;min-height:1em;';
-    wrap.appendChild(keyEl);
-
-    // ── buttons ───────────────────────────────────────────────────────────────
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = 'display:flex;justify-content:space-between;gap:8px;margin-top:2px;';
-    wrap.appendChild(btnRow);
-
-    const cancelBtn = document.createElement('button');
-    cancelBtn.className = 'button is-small';
-    cancelBtn.textContent = '← Cancel';
-    cancelBtn.addEventListener('click', onCancel);
-    btnRow.appendChild(cancelBtn);
-
-    const continueBtn = document.createElement('button');
-    continueBtn.className = 'button is-small is-primary';
-    continueBtn.textContent = 'Select Voicings →';
-    continueBtn.addEventListener('click', () => { if (this.chords.length > 0) onContinue(); });
-    btnRow.appendChild(continueBtn);
-
-    // ── internal state ────────────────────────────────────────────────────────
-    let suggestions: ChordSuggestion[] = [];
-    let highlightIdx = 0;
-
-    const addChord = (chordKey: string, display: string) => {
-      if (this.chords.some(c => c.chordKey === chordKey)) return;
-      this.chords.push({
-        chordKey, display, roman: null, rankedVoicings: [], selectedIndex: 0, seen: false,
-      });
-      this._refreshKey();
-      input.value = '';
-      input.placeholder = 'Add chord…';
-      refresh();
-      input.focus();
-    };
-
-    const refresh = () => {
-      // Rebuild chips
-      while (chipRow.firstChild !== input) chipRow.removeChild(chipRow.firstChild!);
-      for (let ci = 0; ci < this.chords.length; ci++) {
-        const c = this.chords[ci];
-        const chip = document.createElement('span');
-        chip.style.cssText =
-          'display:inline-flex;align-items:center;gap:2px;' +
-          'background:var(--clr-chip,rgba(90,153,90,0.15));' +
-          'border:1px solid var(--clr-chip-border,rgba(90,153,90,0.4));' +
-          'border-radius:4px;padding:1px 4px 1px 6px;font-size:0.82rem;font-weight:500;white-space:nowrap;';
-
-        const nameSpan = document.createElement('span');
-        nameSpan.textContent = c.display + (c.roman ? ` · ${c.roman}` : '');
-        chip.appendChild(nameSpan);
-
-        const del = document.createElement('button');
-        del.textContent = '×';
-        del.style.cssText =
-          'background:none;border:none;padding:0 1px;font-size:0.9rem;cursor:pointer;' +
-          'opacity:0.5;color:inherit;line-height:1;';
-        const capturedIdx = ci;
-        del.addEventListener('click', (e) => {
-          e.stopPropagation();
-          this.chords.splice(capturedIdx, 1);
-          this._refreshKey();
-          refresh();
-        });
-        chip.appendChild(del);
-        chipRow.insertBefore(chip, input);
-      }
-
-      // Key indicator
-      if (this.chords.length >= 2) {
-        const mLabel = this.inferredMode === DiatonicMode.Ionian ? 'major'
-          : this.inferredMode === DiatonicMode.Aeolian ? 'minor'
-          : this.inferredMode;
-        keyEl.textContent = `Inferred key: ${this.inferredRoot} ${mLabel}`;
-      } else {
-        keyEl.textContent = '';
-      }
-
-      continueBtn.disabled = this.chords.length === 0;
-
-      // Update suggestions for current input
-      updateDropdown();
-    };
-
-    const updateDropdown = () => {
-      const partial = input.value;
-      if (!partial.trim()) { dropdown.style.display = 'none'; return; }
-      suggestions = getSuggestions(partial, this.inferredRoot, this.inferredMode);
-      if (!suggestions.length) { dropdown.style.display = 'none'; return; }
-
-      dropdown.innerHTML = '';
-      highlightIdx = 0;
-      suggestions.forEach((s, i) => {
-        const item = document.createElement('div');
-        item.style.cssText =
-          'padding:6px 10px;cursor:pointer;display:flex;justify-content:space-between;' +
-          'align-items:center;font-size:0.85rem;';
-        if (i === 0) item.style.background = 'var(--clr-hover,rgba(128,128,128,0.12))';
-
-        const nameEl = document.createElement('span');
-        nameEl.style.fontWeight = '500';
-        nameEl.textContent = s.display;
-        item.appendChild(nameEl);
-
-        if (s.roman) {
-          const meta = document.createElement('span');
-          meta.style.cssText = 'font-size:0.78rem;color:var(--clr-text-subtle,#888);margin-left:8px;';
-          meta.textContent = `${s.roman} · in key`;
-          item.appendChild(meta);
-        }
-
-        item.addEventListener('mouseenter', () => {
-          highlightIdx = i;
-          Array.from(dropdown.children).forEach((el, j) =>
-            ((el as HTMLElement).style.background =
-              j === i ? 'var(--clr-hover,rgba(128,128,128,0.12))' : '')
-          );
-        });
-        item.addEventListener('mousedown', (e) => {
-          e.preventDefault();
-          addChord(s.chordKey, s.display);
-        });
-        dropdown.appendChild(item);
-      });
-      dropdown.style.display = '';
-    };
-
-    const shiftHighlight = (delta: number) => {
-      highlightIdx = Math.max(0, Math.min(highlightIdx + delta, suggestions.length - 1));
-      Array.from(dropdown.children).forEach((el, j) =>
-        ((el as HTMLElement).style.background =
-          j === highlightIdx ? 'var(--clr-hover,rgba(128,128,128,0.12))' : '')
-      );
-    };
-
-    input.addEventListener('input', updateDropdown);
-    input.addEventListener('blur', () => setTimeout(() => { dropdown.style.display = 'none'; }, 150));
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'ArrowDown')  { e.preventDefault(); shiftHighlight(+1); return; }
-      if (e.key === 'ArrowUp')    { e.preventDefault(); shiftHighlight(-1); return; }
-      if (e.key === 'Escape')     { dropdown.style.display = 'none'; return; }
-      if (e.key === 'Backspace' && input.value === '' && this.chords.length > 0) {
-        this.chords.pop();
+    const panel = new ChordEntryPanel(this.inferredRoot, this.inferredMode, false);
+    panel.setInitialEntries(
+      this.chords.map(c => ({ value: c.chordKey, display: c.display, roman: c.roman }))
+    );
+    panel.renderInto(container,
+      (entries) => {
+        if (entries.length === 0) return;
+        this.chords = entries.map(e => ({
+          chordKey: e.value,
+          display: e.display,
+          roman: e.roman,
+          rankedVoicings: [],
+          selectedIndex: 0,
+          seen: false,
+        }));
         this._refreshKey();
-        refresh();
-        return;
-      }
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        if (suggestions.length > 0) {
-          const s = suggestions[highlightIdx] ?? suggestions[0];
-          addChord(s.chordKey, s.display);
-        } else {
-          const key = parseChordInput(input.value);
-          if (key) addChord(key, chordKeyToDisplay(key));
-        }
-      }
-    });
-
-    refresh();
-    setTimeout(() => input.focus(), 0);
+        onContinue();
+      },
+      onCancel,
+    );
   }
 
   // ─── Step 2: voicing selection ──────────────────────────────────────────────

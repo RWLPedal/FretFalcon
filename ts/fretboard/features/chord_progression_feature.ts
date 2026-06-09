@@ -4,7 +4,7 @@ import {
   ConfigurationSchema,
 } from '../../feature';
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
-import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, degreesArg } from './chord_degree_base';
+import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { BaseView } from '../../base_view';
 import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../chords';
 import { AppSettings } from '../../settings';
@@ -20,7 +20,6 @@ import {
 } from '../fretboard_utils';
 import { InstrumentName } from '../fretboard';
 import { DiatonicMode, DIATONIC_MODE_LABELS } from '../music_types';
-import { scales } from '../scales';
 import { getChordInKey } from '../progressions';
 import { ChordDiagramView } from '../views/chord_diagram_view';
 import { getEasiestMoveableShape, MOVEABLE_CHORD_LIBRARIES } from '../moveable_shapes';
@@ -117,6 +116,14 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     const header = addHeader(container, this.headerText);
     header.classList.add('feature-main-title');
 
+    if (this.chordSlots.length === 0) {
+      const placeholder = document.createElement('div');
+      placeholder.style.cssText = 'font-size:0.82rem;color:var(--clr-text-subtle,#888);text-align:center;padding:16px 0;';
+      placeholder.textContent = 'No chords configured — add chords in the settings above.';
+      container.appendChild(placeholder);
+      return;
+    }
+
     const grid = document.createElement('div');
     grid.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;';
     container.appendChild(grid);
@@ -153,8 +160,8 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
       ? undefined
       : getAvailableRoots(getChordLibraryForInstrument(instrument));
     return {
-      description: `Config: ${this.typeName},RootNote,Mode[,Deg1,...][,InstrumentSettings]`,
-      args: [rootNoteArg(roots), modeArg(), degreesArg(), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},RootNote,Mode[,Deg0,...][,InstrumentSettings]`,
+      args: [rootNoteArg(roots), modeArg(), chordEntryArg(true), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 
@@ -185,9 +192,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     // Degree strings are single digits "0"–"6" (0-based index into the mode's Roman entries).
     // Legacy Roman strings are silently skipped by the filter.
     const degreeStrings = config.slice(2).filter(s => /^\d$/.test(s));
-    const progDegrees   = degreeStrings.length > 0
-      ? degreeStrings.map(s => parseInt(s, 10) + 1)
-      : [1, 4, 5];
+    const progDegrees   = degreeStrings.map(s => parseInt(s, 10) + 1);
 
     return new ChordProgressionFeature(
       config,
