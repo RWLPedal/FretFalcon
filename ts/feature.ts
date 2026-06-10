@@ -112,7 +112,10 @@ export enum UiComponentType {
   Enum = "enum",
   ToggleButtonSelector = "toggle_button_selector",
   Ellipsis = "ellipsis",
+  /** UI-only visibility gate via controlsArgName — writes nothing to the config string. */
   Checkbox = "checkbox",
+  /** Serialized boolean — writes 'true'/'false' to the config string at its schema position. */
+  Toggle = "toggle",
   LayerList = "layer_list",
   ChordEntryWidget = "chord_entry_widget",
 }

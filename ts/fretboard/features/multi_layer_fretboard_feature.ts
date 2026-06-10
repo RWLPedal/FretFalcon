@@ -29,6 +29,12 @@ import {
 } from "./caged_feature";
 import { DriveSignal, ChordSignal, KeySignal, SignalKind, SignalState } from "../../panels/link_types";
 import { LayerType } from "./layer_types";
+import {
+  computeNoteSemantics,
+  toRenderAnnotation,
+  chordToneNamesToSemitones,
+  scaleSemitonesFromDegrees,
+} from "../note_semantics";
 
 // --- Layer Spec Types ---
 // rootNote / chordKey may be the sentinel "driven" — resolved at runtime from the incoming signal.
@@ -138,6 +144,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
 
   readonly typeName = MultiLayerFretboardFeature.typeName;
   private readonly layers: LayerSpec[];
+  private readonly showOverlays: boolean;
   // Last signals received — used to resolve "driven" / "driven_next" sentinels in layer fields
   private lastChordSignal: ChordSignal | null = null;
   private lastRootSignal: ChordSignal | KeySignal | null = null;
@@ -151,6 +158,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   constructor(
     config: ReadonlyArray<string>,
     layers: LayerSpec[],
+    showOverlays: boolean,
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
@@ -159,6 +167,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.layers = layers;
+    this.showOverlays = showOverlays;
 
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -255,6 +264,14 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     }));
     const noteNames = NOTE_NAMES_FROM_A as string[];
 
+    const showOverlaysArg: ConfigurationSchemaArg = {
+      name: "Show Overlays",
+      type: ArgType.Boolean,
+      uiComponentType: UiComponentType.Toggle,
+      defaultValue: "false",
+      description: "Mark avoid notes with an X overlay (requires a scale + driven chord layer) and highlight pivot notes shared between the current and next chord with a gold ring.",
+    };
+
     const layersArg: ConfigurationSchemaArg = {
       name: "Layers",
       type: ArgType.String,
@@ -271,8 +288,8 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     };
 
     return {
-      description: `Config: ${this.typeName}[,layer1][,layer2]...[,InstrumentSettings]`,
-      args: [layersArg, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName}[,ShowOverlays][,layer1]...[,InstrumentSettings]`,
+      args: [showOverlaysArg, layersArg, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
     };
   }
 
@@ -284,14 +301,20 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
+    const isNewFormat = config.length === 0
+      || (config[0] === 'none' || config[0] === 'enabled' || config[0] === 'true' || config[0] === 'false');
+    const showOverlays = isNewFormat && (config[0] === 'enabled' || config[0] === 'true');
+    const layerStart = isNewFormat ? 1 : 0;
+
     const layers: LayerSpec[] = [];
-    for (const layerStr of config) {
+    for (const layerStr of config.slice(layerStart)) {
       const parsed = parseLayerString(layerStr);
       if (parsed) layers.push(parsed);
     }
     return new MultiLayerFretboardFeature(
       config,
       layers,
+      showOverlays,
       settings,
       intervalSettings as InstrumentIntervalSettings,
       audioController,
@@ -335,10 +358,91 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
       });
     }
 
+    // --- Semantic overlays (additive, applied after compositing) ---
+
+    if (this.showOverlays) {
+      const scaleSemitones = this._resolveScaleSemitones();
+      const currentChordSemitones = this._resolveChordSemitones(this.lastChordSignal?.chordKey ?? null);
+      if (scaleSemitones && currentChordSemitones) {
+        const semanticMap = computeNoteSemantics({ scaleSemitones, currentChordSemitones });
+        for (const note of notesData) {
+          const absS = getKeyIndex(note.noteName);
+          if (absS === -1) continue;
+          const sem = semanticMap.get(absS);
+          if (!sem) continue;
+          const ann = toRenderAnnotation(sem);
+          if (ann.xOverlay) note.xOverlay = true;
+        }
+      }
+    }
+
+    if (this.showOverlays) {
+      const currentKey = this.lastChordSignal?.chordKey ?? null;
+      const nextKey = this.lastNextChordSignal?.chordKey ?? null;
+      const currentChordSemitones = currentKey !== null && currentKey === nextKey
+        ? null
+        : this._resolveChordSemitones(currentKey);
+      const nextChordSemitones = this._resolveChordSemitones(nextKey);
+      if (currentChordSemitones && nextChordSemitones) {
+        const semanticMap = computeNoteSemantics({ currentChordSemitones, nextChordSemitones });
+        for (const note of notesData) {
+          const absS = getKeyIndex(note.noteName);
+          if (absS === -1) continue;
+          const sem = semanticMap.get(absS);
+          if (!sem) continue;
+          const ann = toRenderAnnotation(sem);
+          if (ann.outerRing) note.outerRing = true;
+        }
+      }
+    }
+
     requestAnimationFrame(() => {
       this.fretboardViewInstance.setNotes(notesData);
       this.fretboardViewInstance.setLines([]);
     });
+  }
+
+  private _resolveScaleSemitones(): Set<number> | null {
+    const scaleLayer = this.layers.find(l => l.type === LayerType.Scale) as ScaleLayer | undefined;
+    if (!scaleLayer) return null;
+    const rootNote = scaleLayer.rootNote === 'driven_next'
+      ? (this.lastNextRootSignal?.rootNote ?? '')
+      : scaleLayer.rootNote === 'driven'
+      ? (this.lastRootSignal?.rootNote ?? '')
+      : scaleLayer.rootNote;
+    if (!rootNote) return null;
+    let resolvedScaleName = scaleLayer.scaleName;
+    if (resolvedScaleName === 'driven_next') {
+      if (!this.lastNextRootSignal) return null;
+      if (this.lastNextRootSignal.kind === SignalKind.Key) {
+        const s = scales[this.lastNextRootSignal.scaleKey as keyof typeof scales];
+        resolvedScaleName = s?.name ?? 'Major';
+      } else {
+        resolvedScaleName = (this.lastNextRootSignal as ChordSignal).keyType === 'Minor' ? 'Natural Minor' : 'Major';
+      }
+    } else if (resolvedScaleName === 'driven') {
+      if (!this.lastRootSignal) return null;
+      if (this.lastRootSignal.kind === SignalKind.Key) {
+        const s = scales[this.lastRootSignal.scaleKey as keyof typeof scales];
+        resolvedScaleName = s?.name ?? 'Major';
+      } else {
+        resolvedScaleName = (this.lastRootSignal as ChordSignal).keyType === 'Minor' ? 'Natural Minor' : 'Major';
+      }
+    }
+    const scaleKey = scale_names[resolvedScaleName as keyof typeof scale_names]
+      ?? resolvedScaleName.toUpperCase().replace(/ /g, '_');
+    const scale = scales[scaleKey as keyof typeof scales];
+    if (!scale) return null;
+    const keyIndex = getKeyIndex(rootNote);
+    if (keyIndex === -1) return null;
+    return scaleSemitonesFromDegrees(keyIndex, scale.degrees);
+  }
+
+  private _resolveChordSemitones(chordKey: string | null): Set<number> | null {
+    if (!chordKey) return null;
+    const entry = chord_tones_library[chordKey];
+    if (!entry) return null;
+    return chordToneNamesToSemitones(entry.tones);
   }
 
   private getLayerNotes(layer: LayerSpec): NoteRenderData[] {

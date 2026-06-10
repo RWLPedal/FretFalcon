@@ -93,13 +93,18 @@ export class ConfigView {
                 else this.argValues.set(argIndex, values);
             } else {
                 // Non-variadic enum, or variadic enum rendered as a single <select>:
-                // consume exactly one value and update the select element.
+                // consume exactly one value and update the select/toggle element.
                 const val = config[configIndex++];
                 this.argValues.set(argIndex, val);
                 const select = this.container.querySelector<HTMLSelectElement>(
                     `select[data-arg-name="${arg.name}"]`
                 );
                 if (select && val !== undefined) select.value = val;
+                // Sync Toggle checkbox if present
+                const cb = this.container.querySelector<HTMLInputElement>(
+                    `input[type="checkbox"][data-arg-name="${arg.name}"]`
+                );
+                if (cb && val !== undefined) cb.checked = val === 'true';
             }
         });
 
@@ -360,8 +365,8 @@ export class ConfigView {
             field.dataset.argIndex = String(index);
             field.dataset.argName = arg.name;
 
-            // Checkbox and layer_list manage their own labels — skip the separate label element.
-            if (arg.uiComponentType !== UiComponentType.Checkbox && arg.uiComponentType !== UiComponentType.LayerList) {
+            // Checkbox, Toggle, and LayerList manage their own labels — skip the separate label element.
+            if (arg.uiComponentType !== UiComponentType.Checkbox && arg.uiComponentType !== UiComponentType.Toggle && arg.uiComponentType !== UiComponentType.LayerList) {
                 const label = document.createElement('label');
                 label.classList.add('config-label');
                 label.innerText = arg.name;
@@ -385,6 +390,8 @@ export class ConfigView {
     private renderArg(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
         if (arg.uiComponentType === UiComponentType.Checkbox) {
             this.renderCheckbox(parent, arg);
+        } else if (arg.uiComponentType === UiComponentType.Toggle) {
+            this.renderToggle(parent, arg, index);
         } else if (arg.uiComponentType === UiComponentType.LayerList) {
             this.renderLayerList(parent, arg, index);
         } else if (arg.uiComponentType === UiComponentType.ToggleButtonSelector) {
@@ -423,6 +430,36 @@ export class ConfigView {
         wrapper.append(textSpan, toggleLabel);
         parent.appendChild(wrapper);
         // No argValues entry — checkbox is purely UI state.
+    }
+
+    private renderToggle(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('config-checkbox-label');
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = arg.name;
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.argName = arg.name;
+        const defaultVal = arg.defaultValue === 'true';
+        cb.checked = defaultVal;
+
+        const toggleLabel = document.createElement('label');
+        toggleLabel.classList.add('toggle-switch', 'toggle-switch--sm');
+        const slider = document.createElement('span');
+        slider.classList.add('toggle-switch__slider');
+        toggleLabel.append(cb, slider);
+
+        wrapper.append(textSpan, toggleLabel);
+        parent.appendChild(wrapper);
+
+        this.argValues.set(index, defaultVal ? 'true' : 'false');
+
+        cb.addEventListener('change', () => {
+            this.argValues.set(index, cb.checked ? 'true' : 'false');
+            this.notifyChange();
+        });
     }
 
     private renderEnumSelector(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {

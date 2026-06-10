@@ -30,6 +30,8 @@ export interface NoteRenderData {
   opacity?: number; // 0–1, defaults to 1
   dashed?: boolean; // draw stroke as a dashed circle
   donut?: boolean;  // render as multi-color wedge sectors with hollow center (requires array fillColor)
+  xOverlay?: boolean;   // draw a thick X on top of the note circle (uses --danger theme token)
+  outerRing?: boolean;  // draw a ring just outside the note circle (uses --note-pivot theme token)
   // Coords are calculated internally, not passed in
 }
 
@@ -1229,6 +1231,10 @@ export class Fretboard {
             );
             this._drawText(ctx, contentToDraw, x, y, effectiveFontSize, fgColor);
           }
+
+          // Additive overlays — drawn last so they appear on top of fill, label, and root ring
+          if (noteData.outerRing) this._drawOuterRing(ctx, x, y, effectiveRadius, scaleFactor);
+          if (noteData.xOverlay) this._drawXOverlay(ctx, x, y, effectiveRadius, scaleFactor);
         }
         ctx.restore();
       }
@@ -1366,6 +1372,47 @@ export class Fretboard {
     ctx.lineTo(x + size, y + size);
     ctx.moveTo(x + size, y - size);
     ctx.lineTo(x - size, y + size);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private _drawXOverlay(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radius: number,
+    scaleFactor: number
+  ): void {
+    const size = radius * 0.65;
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue('--danger').trim() || '#c0392b';
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5 * scaleFactor;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(x - size, y - size);
+    ctx.lineTo(x + size, y + size);
+    ctx.moveTo(x + size, y - size);
+    ctx.lineTo(x - size, y + size);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  private _drawOuterRing(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    radius: number,
+    scaleFactor: number
+  ): void {
+    const color = getComputedStyle(document.documentElement)
+      .getPropertyValue('--note-pivot').trim() || '#c9952a';
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5 * scaleFactor;
+    ctx.beginPath();
+    ctx.arc(x, y, radius + 3 * scaleFactor, 0, 2 * Math.PI);
     ctx.stroke();
     ctx.restore();
   }

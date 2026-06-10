@@ -1,4 +1,4 @@
-﻿import {
+import {
   Feature,
   ConfigurationSchema,
   ConfigurationSchemaArg,
@@ -11,7 +11,7 @@ import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
 import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
-import { NoteIcon, NoteRenderData, FretboardConfig } from "../fretboard";
+import { NoteRenderData } from "../fretboard";
 import {
   getKeyIndex,
   NOTE_NAMES_FROM_A,
@@ -19,15 +19,18 @@ import {
   OPEN_NOTE_RADIUS_FACTOR,
   addHeader,
   clearAllChildren,
-} from "../fretboard_utils"; // getNotesInScale removed
+} from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
 import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
-// Color for non-highlighted scale notes when highlighting is active
-const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC"; // Lighter grey for contrast
-const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B"; // Muted red for out-of-scale highlights
-const IN_SCALE_HIGHLIGHT_STROKE = "#333333"; // Dark grey/black for in-scale highlights
+import {
+  InstrumentSettings,
+  DEFAULT_INSTRUMENT_SETTINGS,
+} from "../fretboard_settings";
+
+const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC";
+const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B";
+const IN_SCALE_HIGHLIGHT_STROKE = "#333333";
 
 /** Displays scale diagrams on the fretboard using FretboardView. */
 export class ScaleFeature extends InstrumentFeature {
@@ -39,54 +42,53 @@ export class ScaleFeature extends InstrumentFeature {
   readonly typeName = ScaleFeature.typeName;
   private readonly scale: Scale;
   private readonly keyIndex: number;
-  private readonly rootNoteName: string;
-  private readonly highlightNotes: Set<string>; // Store notes to highlight
+  private readonly highlightNotes: Set<string>;
   private readonly headerText: string;
   private fretboardViewInstance: FretboardView;
   private fretCount: number;
 
   constructor(
-    config: ReadonlyArray<string>, // [ScaleName, RootNote, ...HighlightNotes]
+    config: ReadonlyArray<string>,
     scale: Scale,
     keyIndex: number,
-    rootNoteName: string,
     highlightNotes: Set<string>,
     headerText: string,
     settings: AppSettings,
     intervalSettings: InstrumentIntervalSettings,
     audioController?: AudioController,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
   ) {
     const availW = peekPendingCanvasWidth();
     super(config, settings, intervalSettings, audioController, maxCanvasHeight);
     this.scale = scale;
     this.keyIndex = keyIndex;
-    this.rootNoteName = rootNoteName;
     this.highlightNotes = highlightNotes;
     this.headerText = headerText;
     this.fretCount = 18;
 
-    const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
-      ?? DEFAULT_INSTRUMENT_SETTINGS;
+    const guitarSettings =
+      (settings.instrumentSettings as InstrumentSettings | undefined) ??
+      DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
-      this.fretboardConfig, availW, maxCanvasHeight,
-      guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
+      this.fretboardConfig,
+      availW,
+      maxCanvasHeight,
+      guitarSettings.zoomMultiplier ?? 1.2,
+      this.fretCount,
     );
 
     this.fretboardViewInstance = new FretboardView(
       this.fretboardConfig,
-      this.fretCount
+      this.fretCount,
     );
     this._views.unshift(this.fretboardViewInstance);
 
     this.calculateAndSetScaleNotes();
   }
 
-  // --- Static Methods ---
   static getConfigurationSchema(): ConfigurationSchema {
     const availableScaleNames = Object.keys(scale_names).sort();
     const availableKeys = NOTE_NAMES_FROM_A as string[];
-    // Static list of all notes for the toggle buttons (sharps only)
     const allNoteNames = NOTE_NAMES_FROM_A as string[];
 
     const specificArgs: ConfigurationSchemaArg[] = [
@@ -112,14 +114,17 @@ export class ScaleFeature extends InstrumentFeature {
         enum: allNoteNames,
         uiComponentType: UiComponentType.ToggleButtonSelector,
         isVariadic: true,
-        uiComponentData: { buttonLabels: allNoteNames }, // Provide static labels
+        uiComponentData: { buttonLabels: allNoteNames },
         description:
           "Select notes to highlight. Notes outside the scale get a red border. If none selected, colors based on interval.",
       },
     ];
     return {
-      description: `Config: ${this.typeName},ScaleName,RootNote[,HighlightNote1,...][,InstrumentSettings]`,
-      args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},ScaleName,RootNote[,HighlightNote...][,InstrumentSettings]`,
+      args: [
+        ...specificArgs,
+        InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG,
+      ],
     };
   }
 
@@ -129,20 +134,19 @@ export class ScaleFeature extends InstrumentFeature {
     settings: AppSettings,
     intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
-    categoryName: string
+    categoryName: string,
   ): Feature {
     if (config.length < 2) {
       throw new Error(
-        `[${
-          this.typeName
-        }] Invalid config. Expected [ScaleName, RootNote, ...HighlightNotes]. Received: [${config.join(
-          ", "
-        )}]`
+        `[${this.typeName}] Invalid config. Expected [ScaleName, RootNote, ...]. Received: [${config.join(", ")}]`,
       );
     }
-    const scaleNameOrAlias = config[0];
-    const rootNoteName = config[1];
-    const highlightNotesArray = config.slice(2);
+    const scaleNameOrAlias = config[0]!;
+    const rootNoteName = config[1]!;
+
+    const highlightNotesArray = config
+      .slice(2)
+      .filter((v) => !v.startsWith("{"));
     const highlightNotesSet = new Set(highlightNotesArray);
 
     const scaleKey =
@@ -151,7 +155,7 @@ export class ScaleFeature extends InstrumentFeature {
     const scale = scales[scaleKey as keyof typeof scales];
     if (!scale)
       throw new Error(
-        `[${this.typeName}] Unknown scale: "${scaleNameOrAlias}" (tried key "${scaleKey}")`
+        `[${this.typeName}] Unknown scale: "${scaleNameOrAlias}" (tried key "${scaleKey}")`,
       );
 
     const keyIndex = getKeyIndex(rootNoteName);
@@ -160,28 +164,22 @@ export class ScaleFeature extends InstrumentFeature {
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? rootNoteName;
 
     const headerText = `${validRootName} ${scale.name}`;
-    const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
-    const featureSpecificConfig = [
-      scaleNameOrAlias,
-      rootNoteName,
-      ...highlightNotesArray,
-    ];
+    const guitarIntervalSettings =
+      intervalSettings as InstrumentIntervalSettings;
 
     return new ScaleFeature(
-      featureSpecificConfig,
+      config as string[],
       scale,
       keyIndex,
-      validRootName,
       highlightNotesSet,
       headerText,
       settings,
       guitarIntervalSettings,
       audioController,
-      maxCanvasHeight
+      maxCanvasHeight,
     );
   }
 
-  /** Calculates scale notes and passes them to the FretboardView. */
   private calculateAndSetScaleNotes(): void {
     const notesData: NoteRenderData[] = [];
     const config = this.fretboardConfig;
@@ -211,30 +209,33 @@ export class ScaleFeature extends InstrumentFeature {
         if (highlightingActive) {
           if (isNoteHighlighted) {
             shouldRender = true;
-            colorSchemeOverride = "note"; // semantic: show note identity for highlighted notes
+            colorSchemeOverride = "note";
             strokeWidth = 1.5;
             strokeColor = isNoteInScale
               ? IN_SCALE_HIGHLIGHT_STROKE
               : OUT_OF_SCALE_HIGHLIGHT_STROKE;
-            displayLabel = labelDisplay === "note" ? noteName
-              : labelDisplay === "none" ? ""
-              : getIntervalLabel(noteRelativeToKey);
+            displayLabel =
+              labelDisplay === "note"
+                ? noteName
+                : labelDisplay === "none"
+                  ? ""
+                  : getIntervalLabel(noteRelativeToKey);
           } else if (isNoteInScale) {
             shouldRender = true;
-            fillColor = NON_HIGHLIGHTED_SCALE_COLOR; // fixed grey for non-highlighted scale notes
+            fillColor = NON_HIGHLIGHTED_SCALE_COLOR;
             strokeWidth = 1;
-            displayLabel = ""; // always hide label for non-highlighted background notes
+            displayLabel = "";
           }
         } else {
-          // No highlighting — use global color scheme and label settings
           if (isNoteInScale) {
             shouldRender = true;
             const intervalLabel = getIntervalLabel(noteRelativeToKey);
-            // colorSchemeOverride left undefined: global colorScheme flows through
-            // Root ring is handled by the fretboard renderer; no explicit stroke needed
-            displayLabel = labelDisplay === "note" ? noteName
-              : labelDisplay === "none" ? ""
-              : intervalLabel;
+            displayLabel =
+              labelDisplay === "note"
+                ? noteName
+                : labelDisplay === "none"
+                  ? ""
+                  : intervalLabel;
           }
         }
 
@@ -243,7 +244,7 @@ export class ScaleFeature extends InstrumentFeature {
             fret: fretIndex,
             stringIndex: stringIndex,
             noteName: noteName,
-            intervalLabel: getIntervalLabel(noteRelativeToKey), // Keep interval for potential future use
+            intervalLabel: getIntervalLabel(noteRelativeToKey),
             displayLabel: displayLabel,
             fillColor: fillColor,
             strokeColor: strokeColor,
@@ -258,7 +259,6 @@ export class ScaleFeature extends InstrumentFeature {
       }
     }
 
-    // Update the view
     requestAnimationFrame(() => {
       if (this.fretboardViewInstance) {
         this.fretboardViewInstance.setNotes(notesData);
@@ -270,10 +270,10 @@ export class ScaleFeature extends InstrumentFeature {
   render(container: HTMLElement): void {
     clearAllChildren(container);
 
-    const titleRow = document.createElement('div');
-    titleRow.classList.add('feature-title-row');
+    const titleRow = document.createElement("div");
+    titleRow.classList.add("feature-title-row");
     const header = addHeader(titleRow, this.headerText);
-    header.classList.add('feature-main-title');
+    header.classList.add("feature-main-title");
     container.appendChild(titleRow);
   }
 }
