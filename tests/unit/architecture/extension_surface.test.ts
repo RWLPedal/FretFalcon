@@ -21,6 +21,24 @@ const CONFIGURABLE_FEATURE_ALLOWED = new Set([
   'feature_panel',
 ]);
 
+// A module must be self-contained: its view implementation lives inside its own
+// folder (ts/modules/<name>/), not pointed at from ts/views/ or ts/fretboard/views/.
+// This allowlist covers modules not yet co-located (Phase 4.5) plus the privileged
+// modules (any_view, feature_panel). It may only SHRINK — never add a new module here.
+const EXTERNAL_VIEW_ALLOWED = new Set([
+  'timer',
+  'drone',
+  'capo',
+  'global_key',
+  'circle_of_fifths',
+  'metronome',
+  'strum',
+  'backing_track',
+  // privileged:
+  'any_view',
+  'feature_panel',
+]);
+
 function getModuleFiles(): string[] {
   const root = path.resolve(__dirname, '../../../ts/modules');
   return glob.sync('*/module.ts', { cwd: root }).map(f => path.join(root, f));
@@ -64,6 +82,14 @@ describe('Extension surface architecture', () => {
           expect.fail(
             `${moduleName}/module.ts imports ConfigurableFeatureView directly. ` +
             `Use featurePanelModule() from module_types.ts instead.`,
+          );
+        }
+
+        // Modules must own their view implementation (co-located in the module folder).
+        if (!EXTERNAL_VIEW_ALLOWED.has(moduleName) && /\/views\//.test(imp)) {
+          expect.fail(
+            `${moduleName}/module.ts imports a view from outside its folder: ${imp}. ` +
+            `Move the view implementation into ts/modules/${moduleName}/.`,
           );
         }
       }

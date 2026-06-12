@@ -1,9 +1,15 @@
-import { BaseView } from "../../base_view";
-import { AppSettings } from "../../settings";
-import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
-import { INTERVAL_COLORS, NOTE_COLORS } from "../colors";
+// ts/modules/legend/legend_view.ts
+// The view implementation for the Legend module. Lives inside the module folder —
+// an extension is self-contained: module.ts (the contract) + this file (the view).
+// It may use core helpers (BaseView, dom) and app domain APIs (fretboard colors,
+// settings), but no other view in the app.
 
-const SVG_NS = "http://www.w3.org/2000/svg";
+import { BaseView } from "../../core/base_view";
+import { el, svgEl } from "../../core/dom";
+import { AppSettings } from "../../settings";
+import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../../fretboard/fretboard_settings";
+import { INTERVAL_COLORS, NOTE_COLORS } from "../../fretboard/colors";
+
 const SWATCH_SIZE = 20;
 const SWATCH_CX = SWATCH_SIZE / 2;
 const SWATCH_CY = SWATCH_SIZE / 2;
@@ -23,109 +29,107 @@ function _makeNoteSvg(
   circleLabel: string,
   opts: { xOverlay?: boolean; outerRing?: boolean; rootRing?: boolean } = {}
 ): SVGSVGElement {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("width", String(SWATCH_SIZE));
-  svg.setAttribute("height", String(SWATCH_SIZE));
-  svg.setAttribute("viewBox", `0 0 ${SWATCH_SIZE} ${SWATCH_SIZE}`);
-  svg.setAttribute("overflow", "visible");
-  svg.classList.add("legend-note-swatch");
+  const svg = svgEl<SVGSVGElement>("svg", {
+    width: String(SWATCH_SIZE),
+    height: String(SWATCH_SIZE),
+    viewBox: `0 0 ${SWATCH_SIZE} ${SWATCH_SIZE}`,
+    overflow: "visible",
+    class: "legend-note-swatch",
+  });
 
   const fill = fillColor && fillColor !== "transparent" ? fillColor : "#9AABB8";
 
-  const circle = document.createElementNS(SVG_NS, "circle");
-  circle.setAttribute("cx", String(SWATCH_CX));
-  circle.setAttribute("cy", String(SWATCH_CY));
-  circle.setAttribute("r", String(NOTE_RADIUS));
-  circle.setAttribute("fill", fill);
-  circle.setAttribute("stroke", "rgba(0,0,0,0.2)");
-  circle.setAttribute("stroke-width", "1");
-  svg.appendChild(circle);
+  svg.appendChild(
+    svgEl("circle", {
+      cx: String(SWATCH_CX),
+      cy: String(SWATCH_CY),
+      r: String(NOTE_RADIUS),
+      fill,
+      stroke: "rgba(0,0,0,0.2)",
+      "stroke-width": "1",
+    })
+  );
 
   if (circleLabel) {
-    const fg = _fgColor(fill);
-    const text = document.createElementNS(SVG_NS, "text");
-    text.setAttribute("x", String(SWATCH_CX));
-    text.setAttribute("y", String(SWATCH_CY));
-    text.setAttribute("text-anchor", "middle");
-    text.setAttribute("dominant-baseline", "central");
-    text.setAttribute("font-size", circleLabel.length > 1 ? "5.5" : "7");
-    text.setAttribute("font-weight", "600");
-    text.setAttribute("fill", fg);
-    text.setAttribute("font-family", "Hanken Grotesk, sans-serif");
+    const text = svgEl<SVGTextElement>("text", {
+      x: String(SWATCH_CX),
+      y: String(SWATCH_CY),
+      "text-anchor": "middle",
+      "dominant-baseline": "central",
+      "font-size": circleLabel.length > 1 ? "5.5" : "7",
+      "font-weight": "600",
+      fill: _fgColor(fill),
+      "font-family": "Hanken Grotesk, sans-serif",
+    });
     text.textContent = circleLabel;
     svg.appendChild(text);
   }
 
   // Faint ring same color as fill at low opacity — mirrors root-note rendering in fretboard
   if (opts.rootRing) {
-    const ring = document.createElementNS(SVG_NS, "circle");
-    ring.setAttribute("cx", String(SWATCH_CX));
-    ring.setAttribute("cy", String(SWATCH_CY));
-    ring.setAttribute("r", String(NOTE_RADIUS + 2.5));
-    ring.setAttribute("fill", "none");
-    ring.setAttribute("stroke", fill);
-    ring.setAttribute("stroke-width", "1.5");
-    ring.setAttribute("opacity", "0.35");
-    svg.appendChild(ring);
+    svg.appendChild(
+      svgEl("circle", {
+        cx: String(SWATCH_CX),
+        cy: String(SWATCH_CY),
+        r: String(NOTE_RADIUS + 2.5),
+        fill: "none",
+        stroke: fill,
+        "stroke-width": "1.5",
+        opacity: "0.35",
+      })
+    );
   }
 
   // Thick X — uses --danger CSS var, same as fretboard xOverlay
   if (opts.xOverlay) {
     const sz = NOTE_RADIUS * 0.65;
-    const l1 = document.createElementNS(SVG_NS, "line");
-    l1.setAttribute("x1", String(SWATCH_CX - sz));
-    l1.setAttribute("y1", String(SWATCH_CY - sz));
-    l1.setAttribute("x2", String(SWATCH_CX + sz));
-    l1.setAttribute("y2", String(SWATCH_CY + sz));
-    l1.setAttribute("style", "stroke: var(--danger); stroke-width: 2.5; stroke-linecap: round");
-    svg.appendChild(l1);
-
-    const l2 = document.createElementNS(SVG_NS, "line");
-    l2.setAttribute("x1", String(SWATCH_CX + sz));
-    l2.setAttribute("y1", String(SWATCH_CY - sz));
-    l2.setAttribute("x2", String(SWATCH_CX - sz));
-    l2.setAttribute("y2", String(SWATCH_CY + sz));
-    l2.setAttribute("style", "stroke: var(--danger); stroke-width: 2.5; stroke-linecap: round");
-    svg.appendChild(l2);
+    const xStyle = "stroke: var(--danger); stroke-width: 2.5; stroke-linecap: round";
+    svg.appendChild(
+      svgEl("line", {
+        x1: String(SWATCH_CX - sz),
+        y1: String(SWATCH_CY - sz),
+        x2: String(SWATCH_CX + sz),
+        y2: String(SWATCH_CY + sz),
+        style: xStyle,
+      })
+    );
+    svg.appendChild(
+      svgEl("line", {
+        x1: String(SWATCH_CX + sz),
+        y1: String(SWATCH_CY - sz),
+        x2: String(SWATCH_CX - sz),
+        y2: String(SWATCH_CY + sz),
+        style: xStyle,
+      })
+    );
   }
 
   // Outer ring — uses --note-pivot CSS var, same as fretboard outerRing
   if (opts.outerRing) {
-    const ring = document.createElementNS(SVG_NS, "circle");
-    ring.setAttribute("cx", String(SWATCH_CX));
-    ring.setAttribute("cy", String(SWATCH_CY));
-    ring.setAttribute("r", String(NOTE_RADIUS + 3));
-    ring.setAttribute("fill", "none");
-    ring.setAttribute("style", "stroke: var(--note-pivot); stroke-width: 2.5");
-    svg.appendChild(ring);
+    svg.appendChild(
+      svgEl("circle", {
+        cx: String(SWATCH_CX),
+        cy: String(SWATCH_CY),
+        r: String(NOTE_RADIUS + 3),
+        fill: "none",
+        style: "stroke: var(--note-pivot); stroke-width: 2.5",
+      })
+    );
   }
 
   return svg;
 }
 
 function _makeLegendItem(svg: SVGSVGElement, labelText: string): HTMLDivElement {
-  const item = document.createElement("div");
-  item.classList.add("legend-item");
-  item.appendChild(svg);
-  const label = document.createElement("span");
-  label.classList.add("legend-label");
-  label.textContent = labelText;
-  item.appendChild(label);
-  return item;
+  return el("div", { class: "legend-item" }, svg, el("span", { class: "legend-label", text: labelText }));
 }
 
 function _makeSectionLabel(text: string): HTMLDivElement {
-  const el = document.createElement("div");
-  el.classList.add("legend-section-label");
-  el.textContent = text;
-  return el;
+  return el("div", { class: "legend-section-label", text });
 }
 
 function _makeGrid(single = false): HTMLDivElement {
-  const grid = document.createElement("div");
-  grid.classList.add("legend-grid");
-  if (single) grid.classList.add("legend-grid--single");
-  return grid;
+  return el("div", { class: single ? ["legend-grid", "legend-grid--single"] : "legend-grid" });
 }
 
 export class LegendView extends BaseView {
@@ -142,10 +146,7 @@ export class LegendView extends BaseView {
     this.container.innerHTML = "";
     this.container.classList.add("legend-view");
 
-    const titleEl = document.createElement("div");
-    titleEl.classList.add("legend-title");
-    titleEl.textContent = "Legend";
-    this.container.appendChild(titleEl);
+    this.container.appendChild(el("div", { class: "legend-title", text: "Legend" }));
 
     const guitarSettings =
       (this.appSettings.instrumentSettings as InstrumentSettings | undefined) ??

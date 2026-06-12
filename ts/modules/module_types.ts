@@ -34,7 +34,8 @@ export interface ViewModule<S = unknown> {
   panel: {
     displayName: string;
     icon: string;
-    defaultSize?: { width: number; height: number };
+    /** Initial panel size; omit height to let the panel auto-size vertically. */
+    defaultSize?: { width: number; height?: number };
     minSize?: { width: number; height: number };
     singleton?: boolean;
     /** When false, excluded from spawnable-panel picker menus. Defaults to true. */
@@ -83,7 +84,7 @@ export interface FeaturePanelModuleOpts {
   displayName: string;
   icon: string;
   featureTypeName: string;
-  defaultSize?: { width: number; height: number };
+  defaultSize?: { width: number; height?: number };
   minSize?: { width: number; height: number };
   showInMenu?: boolean;
   nav?: ViewModule['nav'];
