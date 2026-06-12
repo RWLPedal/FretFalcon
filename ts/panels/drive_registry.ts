@@ -1,8 +1,9 @@
 // ts/panels/drive_registry.ts
 import { DriveSignal, SignalKind } from './link_types';
+import { ViewId } from '../core/ids';
 
 export interface DriveSourceDescriptor {
-  viewId: string;
+  viewId: ViewId;
   featureTypeName?: string; // set for configurable features e.g. 'MultiLayerFretboard'
   /** Declarative list of SignalKinds this source can emit. Used for arrow tooltip display. */
   emittedKinds: SignalKind[];
@@ -14,13 +15,13 @@ export interface DriveSourceDescriptor {
    * BackingTrack returns a single-element array.
    * MultiLayerFretboard returns one ChordSignal per chord/driven layer in order.
    */
-  extractSignals(eventDetail: any): DriveSignal[];
+  extractSignals(eventDetail: unknown): DriveSignal[];
 }
 
 export interface DriveTargetSlot {
   featureTypeName: string;  // e.g. 'Chord', 'MultiLayerFretboard'
   /** For standalone (non-configurable) view targets, the floating view's viewId. */
-  viewId?: string;
+  viewId?: ViewId;
   argName: string;          // config arg name this slot can drive
   label: string;            // human-readable label shown in the UI
   acceptedKinds: SignalKind[]; // uses same SignalKind enum as DriveSignal.kind
@@ -41,7 +42,7 @@ export interface DriveTargetSlot {
 const sourceDescriptors = new Map<string, DriveSourceDescriptor>();
 const targetSlots = new Map<string, DriveTargetSlot[]>();
 // Maps floating-view viewId → featureTypeName for standalone view targets.
-const viewIdToTargetFeatureTypeName = new Map<string, string>();
+const viewIdToTargetFeatureTypeName = new Map<ViewId, string>();
 
 // ─── Registration functions ───────────────────────────────────────────────────
 
@@ -62,7 +63,7 @@ export function registerDriveTarget(slot: DriveTargetSlot): void {
 // ─── Lookup functions ─────────────────────────────────────────────────────────
 
 export function getDriveSourceDescriptor(
-  viewId: string,
+  viewId: ViewId | string,
   featureTypeName?: string
 ): DriveSourceDescriptor | undefined {
   if (featureTypeName) {
@@ -80,6 +81,6 @@ export function getDriveTargetSlots(featureTypeName: string): DriveTargetSlot[] 
  * Returns the featureTypeName registered for a standalone view target by its viewId.
  * Returns null if no target slot was registered with that viewId.
  */
-export function getFeatureTypeNameByViewId(viewId: string): string | null {
-  return viewIdToTargetFeatureTypeName.get(viewId) ?? null;
+export function getFeatureTypeNameByViewId(viewId: ViewId | string): string | null {
+  return viewIdToTargetFeatureTypeName.get(viewId as ViewId) ?? null;
 }

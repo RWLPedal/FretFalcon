@@ -7,6 +7,7 @@ import { InstrumentIntervalSettings } from "../fretboard/fretboard_interval_sett
 import { getDriveTargetSlots } from "../panels/drive_registry";
 import { DriveSignal, SignalState } from "../panels/link_types";
 import { setPendingRenderConstraints } from "../fretboard/fretboard_base";
+import { emitEvent } from "../core/events";
 
 export class ConfigurableFeatureView extends BaseView {
     private appSettings: AppSettings;
@@ -103,10 +104,7 @@ export class ConfigurableFeatureView extends BaseView {
             this.configContainer.style.transition = '';
         }
         // Notify wrapper of the initial state so the button reflects it.
-        container.dispatchEvent(new CustomEvent('config-collapse-changed', {
-            bubbles: true,
-            detail: { collapsed: this.configCollapsed, isInitial: true },
-        }));
+        emitEvent(container, 'config-collapse-changed', { collapsed: this.configCollapsed, isInitial: true });
 
         // Handle user-triggered config toggle from the title-bar button.
         this.listen(container, 'config-visibility-toggle', () => {
@@ -122,10 +120,7 @@ export class ConfigurableFeatureView extends BaseView {
             this.configContainer.classList.toggle('is-collapsed', this.configCollapsed);
 
             // Persist the new state via the standard save channel.
-            container.dispatchEvent(new CustomEvent('feature-state-changed', {
-                bubbles: true,
-                detail: { configCollapsed: this.configCollapsed },
-            }));
+            emitEvent(container, 'feature-state-changed', { configCollapsed: this.configCollapsed });
 
             // After the CSS transition completes, tell the wrapper to resize.
             // A setTimeout fallback guards against transitionend not firing.
@@ -143,10 +138,7 @@ export class ConfigurableFeatureView extends BaseView {
                 }
 
                 const delta = this.configCollapsed ? -this._lastConfigHeight : this._lastConfigHeight;
-                container.dispatchEvent(new CustomEvent('config-collapse-changed', {
-                    bubbles: true,
-                    detail: { collapsed: this.configCollapsed, delta, isInitial: false },
-                }));
+                emitEvent(container, 'config-collapse-changed', { collapsed: this.configCollapsed, delta, isInitial: false });
             };
             const onEnd = (e: TransitionEvent) => {
                 if (e.propertyName !== 'max-height') return;
@@ -157,8 +149,7 @@ export class ConfigurableFeatureView extends BaseView {
         });
 
         // Rescale canvases when the user manually resizes the floating wrapper.
-        this.listen(container, 'wrapper-user-resized', (e: Event) => {
-            const { width, height } = (e as CustomEvent<{ width: number; height: number }>).detail;
+        this.listenEvent(container, 'wrapper-user-resized', ({ width, height }) => {
             this._availableHeight = Math.max(50, height);
             this._availableWidth  = Math.max(50, width);
             if (this.configView) {
@@ -169,8 +160,7 @@ export class ConfigurableFeatureView extends BaseView {
         });
 
         // React to incoming link notifications — show/hide "Driven" / "Driven (Next)" options
-        this.listen(container, 'link-status-changed', (e: Event) => {
-            const { hasIncomingLinks, hasNextSignals } = (e as CustomEvent<{ hasIncomingLinks: boolean; hasNextSignals?: boolean }>).detail;
+        this.listenEvent(container, 'link-status-changed', ({ hasIncomingLinks, hasNextSignals }) => {
             const slots = getDriveTargetSlots(this.featureTypeName);
             for (const slot of slots) {
                 if (slot.transparent) continue; // transparent slots update silently, no UI affordance
@@ -184,8 +174,7 @@ export class ConfigurableFeatureView extends BaseView {
         });
 
         // React to incoming drive signals
-        this.listen(container, 'drive-signal', (e: Event) => {
-            const detail = (e as CustomEvent<{ signal: DriveSignal; linkId: string }>).detail;
+        this.listenEvent(container, 'drive-signal', (detail) => {
             const { signal } = detail;
             const isNext = (signal.state ?? SignalState.Current) === SignalState.Next;
             const slots = getDriveTargetSlots(this.featureTypeName);
@@ -225,26 +214,23 @@ export class ConfigurableFeatureView extends BaseView {
             }
 
             // Forward to featureContainer so features that self-handle drive signals
-            // (e.g. MultiLayerFretboardFeature, AnyFeature) can receive the event —
+            // (e.g. MultiLayerFretboardFeature) can receive the event —
             // the event was dispatched on this container (parent) and does not bubble down.
-            this.featureContainer?.dispatchEvent(new CustomEvent('drive-signal', {
-                bubbles: false,
-                detail,
-            }));
+            if (this.featureContainer) {
+                emitEvent(this.featureContainer, 'drive-signal', detail, { bubbles: false });
+            }
         });
 
         // Forward link-status-changed to featureContainer so features that track link
-        // state directly (e.g. AnyFeature) can react — events bubble up, not down.
-        this.listen(container, 'link-status-changed', (e: Event) => {
-            this.featureContainer?.dispatchEvent(new CustomEvent('link-status-changed', {
-                bubbles: false,
-                detail: (e as CustomEvent).detail,
-            }));
+        // state directly can react — events bubble up, not down.
+        this.listenEvent(container, 'link-status-changed', (detail) => {
+            if (this.featureContainer) {
+                emitEvent(this.featureContainer, 'link-status-changed', detail, { bubbles: false });
+            }
         });
 
         // Allow features to push chord key updates back into the config panel.
-        this.listen(container, 'nt-chord-keys-update', (e: Event) => {
-            const { chordKeys } = (e as CustomEvent<{ chordKeys: string[] }>).detail;
+        this.listenEvent(container, 'nt-chord-keys-update', ({ chordKeys }) => {
             this.configView?.updateChordValues('Chords', chordKeys);
         });
     }
@@ -302,10 +288,7 @@ export class ConfigurableFeatureView extends BaseView {
         if (typeof titleFn === 'function') {
             const partialTitle = titleFn(finalConfig) as string | null;
             if (partialTitle) {
-                this.featureContainer.dispatchEvent(new CustomEvent<{ title: string }>('feature-title-changed', {
-                    bubbles: true,
-                    detail: { title: partialTitle },
-                }));
+                emitEvent(this.featureContainer, 'feature-title-changed', { title: partialTitle });
             }
         }
 
@@ -372,10 +355,7 @@ export class ConfigurableFeatureView extends BaseView {
             // Notify the FloatingViewWrapper of the current feature title
             const mainTitleEl = this.featureContainer.querySelector<HTMLElement>('.feature-main-title');
             if (mainTitleEl?.textContent) {
-                this.featureContainer.dispatchEvent(new CustomEvent<{ title: string }>('feature-title-changed', {
-                    bubbles: true,
-                    detail: { title: mainTitleEl.textContent },
-                }));
+                emitEvent(this.featureContainer, 'feature-title-changed', { title: mainTitleEl.textContent });
             }
 
             // Auto-size the wrapper the first time a feature renders, but only when the user
@@ -383,15 +363,16 @@ export class ConfigurableFeatureView extends BaseView {
             // explicitly sized the panel before the first config was complete — respect that
             // size instead of overriding it with the feature's unconstrained natural size.
             if (isFirstRender && this._availableWidth === 0) {
-                this.featureContainer.dispatchEvent(new CustomEvent('feature-auto-size', { bubbles: true }));
+                emitEvent(this.featureContainer, 'feature-auto-size', {});
             }
 
             // Persist current config (skip during driven real-time updates to avoid flooding localStorage)
-            const eventName = this.isDrivenUpdate ? 'feature-state-drive' : 'feature-state-changed';
-            this.featureContainer.dispatchEvent(new CustomEvent(eventName, {
-                bubbles: true,
-                detail: { featureTypeName: this.featureTypeName, config: finalConfig },
-            }));
+            if (!this.isDrivenUpdate) {
+                emitEvent(this.featureContainer, 'feature-state-changed', {
+                    featureTypeName: this.featureTypeName,
+                    config: finalConfig,
+                });
+            }
         } catch (error) {
             this.featureContainer.innerHTML = `<p>Error creating feature: ${error instanceof Error ? error.message : String(error)}</p>`;
             console.error(error);

@@ -47,16 +47,14 @@ export class AnyFloatingView extends BaseView {
     this.featureContainer.classList.add('any-view-feature-container');
     container.appendChild(this.featureContainer);
 
-    this.listen(container, 'drive-signal', (e: Event) => {
-      const detail = (e as CustomEvent<{ signal: DriveSignal }>).detail;
-      if (detail?.signal?.kind === SignalKind.Feature) {
-        this._handleFeatureSignal(detail.signal as FeatureSignal);
+    this.listenEvent(container, 'drive-signal', ({ signal }) => {
+      if (signal.kind === SignalKind.Feature) {
+        this._handleFeatureSignal(signal as FeatureSignal);
       }
     });
 
-    this.listen(container, 'link-status-changed', (e: Event) => {
-      const detail = (e as CustomEvent<{ hasIncomingLinks: boolean }>).detail;
-      this.isLinked = !!detail?.hasIncomingLinks;
+    this.listenEvent(container, 'link-status-changed', ({ hasIncomingLinks }) => {
+      this.isLinked = hasIncomingLinks;
       if (!this.isLinked && !this.currentFeature) {
         this._showPlaceholder(PLACEHOLDER_UNLINKED);
       }

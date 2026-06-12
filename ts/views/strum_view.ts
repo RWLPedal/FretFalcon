@@ -1,6 +1,7 @@
 // ts/views/strum_view.ts
 import { BaseView } from '../base_view';
 import { SignalKind, GrooveSignal, DriveSignal, StrumAction } from '../panels/link_types';
+import { emitEvent, FeatureStateChangedDetail } from '../core/events';
 import { AudioController } from '../audio_controller';
 import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
@@ -553,50 +554,35 @@ export class StrumView extends BaseView {
 
   private dispatchGrooveTick(beat: number): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('groove-tick', {
-      bubbles: true,
-      detail: { bpm: this.bpm, timeSig: this.timeSig, swing: this.swing, beat },
-    }));
+    emitEvent(this.container, 'groove-tick', { bpm: this.bpm, timeSig: this.timeSig, swing: this.swing, beat });
   }
 
   private dispatchTransportChanged(playing: boolean): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('transport-changed', {
-      bubbles: true,
-      detail: { playing },
-    }));
+    emitEvent(this.container, 'transport-changed', { playing });
   }
 
   private dispatchStrumTick(step: number): void {
     if (!this.container) return;
     const n = totalSlots(this.timeSig, this.subdivision);
-    this.container.dispatchEvent(new CustomEvent('strum-tick', {
-      bubbles: true,
-      detail: {
-        action:     this.slots[step] as unknown as StrumAction,
-        direction:  slotDirection(step),
-        bpm:        this.bpm,
-        timeSig:    this.timeSig,
-        step,
-        totalSteps: n,
-      },
-    }));
+    emitEvent(this.container, 'strum-tick', {
+      action:     this.slots[step] as unknown as StrumAction,
+      direction:  slotDirection(step),
+      bpm:        this.bpm,
+      timeSig:    this.timeSig,
+      step,
+      totalSteps: n,
+    });
   }
 
   private dispatchGrooveConfig(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('metronome-tempo-changed', {
-      bubbles: true,
-      detail: { bpm: this.bpm, timeSig: this.timeSig, swing: this.swing },
-    }));
+    emitEvent(this.container, 'metronome-tempo-changed', { bpm: this.bpm, timeSig: this.timeSig, swing: this.swing });
   }
 
   private dispatchStateChange(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail: this.getState(),
-    }));
+    emitEvent(this.container, 'feature-state-changed', this.getState() as unknown as FeatureStateChangedDetail);
   }
 
   private getState(): StrumViewState {

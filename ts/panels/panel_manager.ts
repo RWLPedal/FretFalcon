@@ -1,5 +1,6 @@
 ﻿// ts/panels/panel_manager.ts
 import { FloatingViewWrapper, GRID_UNIT } from "./panel_wrapper";
+import { emitEvent } from '../core/events';
 import {
   FloatingViewDescriptor,
   FloatingViewInstanceState,
@@ -10,6 +11,7 @@ import { getFloatingViewDescriptor } from "./panel_registry";
 import { AppSettings } from "../settings"; // Needed for createView
 import { LinkManager } from "./link_manager";
 import { getFeatureTypeNameByViewId } from "./drive_registry";
+import { ViewId, CORE_VIEW_IDS } from "../core/ids";
 import { ScreenConfigManager } from "../screen_config/screen_config_manager";
 import { CurrentPayload } from "../screen_config/screen_config_types";
 
@@ -173,7 +175,7 @@ export class FloatingViewManager {
     return this.activeViews.get(instanceId)?.contentEl ?? null;
   }
 
-  public getViewId(instanceId: string): string | null {
+  public getViewId(instanceId: string): ViewId | null {
     return (
       (
         this.activeViews.get(instanceId)?.["state"] as
@@ -194,7 +196,7 @@ export class FloatingViewManager {
       | FloatingViewInstanceState
       | undefined;
     if (!state) return null;
-    if (state.viewId === "configurable_instrument_feature") {
+    if (state.viewId === CORE_VIEW_IDS.ConfigurableFeature) {
       return (state.viewState as any)?.featureTypeName ?? null;
     }
     const descriptor = getFloatingViewDescriptor(state.viewId);
@@ -206,7 +208,7 @@ export class FloatingViewManager {
   }
 
   public spawnView(
-    viewId: string,
+    viewId: ViewId | string,
     options?: {
       viewState?: any;
       position?: { x: number; y: number };
@@ -260,7 +262,7 @@ export class FloatingViewManager {
     const spawnPosition = options?.position ?? defaultPosition;
     const state: FloatingViewInstanceState = {
       instanceId: instanceId,
-      viewId: viewId,
+      viewId: viewId as ViewId,
       position: spawnPosition,
       size: options?.size,
       gridPosition: {
@@ -416,6 +418,7 @@ export class FloatingViewManager {
           // Build the runtime state with pixel fields populated.
           const state: FloatingViewInstanceState = {
             ...savedEntry,
+            viewId: savedEntry.viewId as ViewId,
             position: { x: clampedX, y: clampedY },
             size: pixelSize,
           };
@@ -499,9 +502,7 @@ export class FloatingViewManager {
   private handleConfigToggleRequest(instanceId: string): void {
     const wrapper = this.activeViews.get(instanceId);
     if (!wrapper) return;
-    wrapper.contentEl.dispatchEvent(
-      new CustomEvent("config-visibility-toggle", { bubbles: false }),
-    );
+    emitEvent(wrapper.contentEl, 'config-visibility-toggle', {}, { bubbles: false });
   }
 
   /**
@@ -656,9 +657,9 @@ export class FloatingViewManager {
     if (!guitarSettingsChanged && !themeChanged) return;
 
     // Views that manage their own runtime state should not be re-created.
-    const SKIP_VIEW_IDS = new Set([
-      "instrument_floating_metronome",
-      "floating_timer",
+    const SKIP_VIEW_IDS = new Set<ViewId>([
+      "instrument_floating_metronome" as ViewId,
+      "floating_timer" as ViewId,
     ]);
 
     this.activeViews.forEach((wrapper, instanceId) => {

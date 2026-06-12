@@ -6,6 +6,7 @@ import { registerDriveSource, registerDriveTarget } from './drive_registry';
 import { SignalKind, SignalState, ChordSignal, KeySignal, GrooveSignal, DriveSignal, FeatureSignal, StrumSignal } from './link_types';
 import { KeyType, DiatonicMode, ChordQuality } from '../fretboard/music_types';
 import { scales } from '../fretboard/scales';
+import { viewId } from '../core/ids';
 
 // Maps DiatonicMode values to the scale display names used by ScaleFeature config.
 // scales[mode].name gives the canonical name (e.g. "Minor" for NATURAL_MINOR).
@@ -47,7 +48,7 @@ const SCALE_NAME_TO_MODE: Record<string, DiatonicMode> = {
 //   { currentMeasure, currentChordDeg, currentRoman, chordKey, progRootNote, progMode, bpm }
 
 registerDriveSource({
-  viewId: 'drum_machine',
+  viewId: viewId('drum_machine'),
   emittedKinds: [SignalKind.Chord, SignalKind.Key, SignalKind.Groove, SignalKind.Play],
   emitsNextSignals: true,
   extractSignals(detail: any): DriveSignal[] {
@@ -125,14 +126,14 @@ function extractMultiFretSignals(detail: any): ChordSignal[] {
 }
 
 registerDriveSource({
-  viewId: 'configurable_instrument_feature',
+  viewId: viewId('configurable_instrument_feature'),
   featureTypeName: 'MultiLayerFretboard',
   emittedKinds: [SignalKind.Chord],
   extractSignals: extractMultiFretSignals,
 });
 
 registerDriveSource({
-  viewId: 'instrument_multifret',
+  viewId: viewId('instrument_multifret'),
   featureTypeName: 'MultiLayerFretboard',
   emittedKinds: [SignalKind.Chord],
   extractSignals: extractMultiFretSignals,
@@ -154,14 +155,14 @@ function extractScaleSignals(detail: any): DriveSignal[] {
 }
 
 registerDriveSource({
-  viewId: 'configurable_instrument_feature',
+  viewId: viewId('configurable_instrument_feature'),
   featureTypeName: 'Scale',
   emittedKinds: [SignalKind.Chord, SignalKind.Key],
   extractSignals: extractScaleSignals,
 });
 
 registerDriveSource({
-  viewId: 'instrument_scale',
+  viewId: viewId('instrument_scale'),
   featureTypeName: 'Scale',
   emittedKinds: [SignalKind.Chord, SignalKind.Key],
   extractSignals: extractScaleSignals,
@@ -336,7 +337,7 @@ registerDriveTarget({
 // ─── Metronome as groove source ───────────────────────────────────────────────
 
 registerDriveSource({
-  viewId: 'instrument_floating_metronome',
+  viewId: viewId('instrument_floating_metronome'),
   emittedKinds: [SignalKind.Groove, SignalKind.Play],
   extractSignals(detail: any): DriveSignal[] {
     if (typeof detail?.bpm !== 'number') return [];
@@ -354,7 +355,7 @@ registerDriveSource({
 // ─── DroneView as source ──────────────────────────────────────────────────────
 
 registerDriveSource({
-  viewId: 'drone_view',
+  viewId: viewId('drone_view'),
   emittedKinds: [SignalKind.Play],
   extractSignals(_detail: any): DriveSignal[] { return []; },
 });
@@ -363,7 +364,7 @@ registerDriveSource({
 
 registerDriveTarget({
   featureTypeName: 'Drone',
-  viewId: 'drone_view',
+  viewId: viewId('drone_view'),
   argName: 'Note',
   label: 'Root note (from linked source)',
   acceptedKinds: [SignalKind.Chord],
@@ -374,7 +375,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Drone',
-  viewId: 'drone_view',
+  viewId: viewId('drone_view'),
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
@@ -383,7 +384,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Drone',
-  viewId: 'drone_view',
+  viewId: viewId('drone_view'),
   argName: 'Strum',
   label: 'Strum rhythm (from linked source)',
   acceptedKinds: [SignalKind.Strum],
@@ -394,7 +395,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
-  viewId: 'drum_machine',
+  viewId: viewId('drum_machine'),
   argName: 'BPM',
   label: 'BPM (from linked groove source)',
   acceptedKinds: [SignalKind.Groove],
@@ -405,7 +406,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
-  viewId: 'drum_machine',
+  viewId: viewId('drum_machine'),
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
@@ -414,7 +415,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'BackingTrack',
-  viewId: 'drum_machine',
+  viewId: viewId('drum_machine'),
   argName: 'Strum',
   label: 'Strum rhythm (from linked source)',
   acceptedKinds: [SignalKind.Strum],
@@ -425,7 +426,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Metronome',
-  viewId: 'instrument_floating_metronome',
+  viewId: viewId('instrument_floating_metronome'),
   argName: 'BPM',
   label: 'BPM (from linked groove source)',
   acceptedKinds: [SignalKind.Groove],
@@ -436,7 +437,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Metronome',
-  viewId: 'instrument_floating_metronome',
+  viewId: viewId('instrument_floating_metronome'),
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
@@ -449,7 +450,7 @@ registerDriveTarget({
 // (picked up by the strum-tick listener added below).
 
 registerDriveSource({
-  viewId: 'strum_view',
+  viewId: viewId('strum_view'),
   emittedKinds: [SignalKind.Groove, SignalKind.Strum, SignalKind.Play],
   extractSignals(detail: any): DriveSignal[] {
     if (typeof detail?.bpm !== 'number') return [];
@@ -468,7 +469,7 @@ registerDriveSource({
 
 registerDriveTarget({
   featureTypeName: 'Strum',
-  viewId: 'strum_view',
+  viewId: viewId('strum_view'),
   argName: 'BPM',
   label: 'BPM (from linked groove source)',
   acceptedKinds: [SignalKind.Groove],
@@ -479,7 +480,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'Strum',
-  viewId: 'strum_view',
+  viewId: viewId('strum_view'),
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
@@ -491,14 +492,14 @@ registerDriveTarget({
 // ─── TimerView as play source/target ─────────────────────────────────────────
 
 registerDriveSource({
-  viewId: 'floating_timer',
+  viewId: viewId('floating_timer'),
   emittedKinds: [SignalKind.Play],
   extractSignals(_detail: any): DriveSignal[] { return []; },
 });
 
 registerDriveTarget({
   featureTypeName: 'Timer',
-  viewId: 'floating_timer',
+  viewId: viewId('floating_timer'),
   argName: 'Play',
   label: 'Play/stop (from linked source)',
   acceptedKinds: [SignalKind.Play],
@@ -508,7 +509,7 @@ registerDriveTarget({
 // ─── ScheduleFloatingView as source ───────────────────────────────────────────
 
 registerDriveSource({
-  viewId: 'schedule_floating_view',
+  viewId: viewId('schedule_floating_view'),
   emittedKinds: [SignalKind.Feature],
   emitsNextSignals: true,
   extractSignals(detail: any): DriveSignal[] {
@@ -528,7 +529,7 @@ registerDriveSource({
 // Broadcasts to ALL panels via LinkManager's global-source mechanism.
 
 registerDriveSource({
-  viewId: 'global_key',
+  viewId: viewId('global_key'),
   emittedKinds: [SignalKind.Key, SignalKind.Chord],
   extractSignals(detail: any): DriveSignal[] {
     const rootNote: string = detail?.root ?? 'C';
@@ -550,7 +551,7 @@ registerDriveSource({
 // Signal 0 = KeySignal (always); Signal 1 = ChordSignal (always, chordKey null when no chord selected).
 
 registerDriveSource({
-  viewId: 'circle_of_fifths',
+  viewId: viewId('circle_of_fifths'),
   emittedKinds: [SignalKind.Key, SignalKind.Chord],
   extractSignals(detail: any): DriveSignal[] {
     const keySignal: KeySignal = {
@@ -633,7 +634,7 @@ registerDriveTarget({
 
 registerDriveTarget({
   featureTypeName: 'CircleOfFifths',
-  viewId: 'circle_of_fifths',
+  viewId: viewId('circle_of_fifths'),
   argName: '_key',
   label: 'Key (from linked source)',
   acceptedKinds: [SignalKind.Key, SignalKind.Chord],

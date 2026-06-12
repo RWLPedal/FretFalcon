@@ -3,6 +3,7 @@ import { BaseView } from "../../base_view";
 import { AudioController } from "../../audio_controller";
 import { SignalKind, GrooveSignal } from "../../panels/link_types";
 import { ValueSlider } from "../../views/components/value_slider";
+import { emitEvent } from "../../core/events";
 
 enum BeatState {
   Silent = 0,
@@ -296,36 +297,26 @@ export class MetronomeView extends BaseView {
 
   private dispatchTempoEvent(): void {
     if (!this.container) return;
-    // Config-change event (no beat): consumed by link_manager → metronome-tempo-changed path
-    this.container.dispatchEvent(new CustomEvent("metronome-tempo-changed", {
-      bubbles: true,
-      detail: {
-        bpm: this.bpm,
-        timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
-        swing: 0,
-      },
-    }));
+    emitEvent(this.container, 'metronome-tempo-changed', {
+      bpm: this.bpm,
+      timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
+      swing: 0,
+    });
   }
 
   private dispatchGrooveTick(beat: number): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent("groove-tick", {
-      bubbles: true,
-      detail: {
-        bpm: this.bpm,
-        timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
-        swing: 0,
-        beat,
-      },
-    }));
+    emitEvent(this.container, 'groove-tick', {
+      bpm: this.bpm,
+      timeSig: { beats: this.currentTimeSignature.beats, division: this.currentTimeSignature.subdivision },
+      swing: 0,
+      beat,
+    });
   }
 
   private dispatchTransportChanged(playing: boolean): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent("transport-changed", {
-      bubbles: true,
-      detail: { playing },
-    }));
+    emitEvent(this.container, 'transport-changed', { playing });
   }
 
   private handleGrooveSignal(groove: GrooveSignal): void {

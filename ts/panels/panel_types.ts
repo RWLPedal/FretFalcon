@@ -1,10 +1,11 @@
 ﻿import { View } from "../view";
 import { AppSettings } from "../settings";
 import { LinkRecord } from "./link_types";
+import { ViewId } from "../core/ids";
 
 // Describes a registered type of floating view
 export interface FloatingViewDescriptor {
-  viewId: string; // Unique identifier (e.g., "instrument_color_legend")
+  viewId: ViewId; // Unique identifier (e.g., "instrument_color_legend")
   displayName: string; // User-friendly name (e.g., "Color Legend (Guitar)")
   /** When true, this panel is re-created when instrument settings change. */
   refreshOnInstrumentChange?: boolean;
@@ -49,7 +50,7 @@ export function isFretboardDescriptor(
 // gridPosition and gridSize are the persisted grid-unit coordinates.
 export interface FloatingViewInstanceState {
   instanceId: string;
-  viewId: string;
+  viewId: ViewId;
   /** Runtime only. Derived from gridPosition on load; updated on drag. */
   position: { x: number; y: number };
   /** Runtime only. Derived from gridSize on load; updated on user resize. */

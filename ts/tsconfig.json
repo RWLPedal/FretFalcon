@@ -12,6 +12,8 @@
     "noImplicitThis": true,
     "strictBindCallApply": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true
-  }
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitAny": true
+  },
+  "exclude": ["../tests/**/*"]
 }

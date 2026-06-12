@@ -2,6 +2,7 @@
 import { BaseView } from "../base_view";
 import { ValueSlider } from "./components/value_slider";
 import { SignalKind, StrumSignal } from "../panels/link_types";
+import { emitEvent, FeatureStateChangedDetail } from "../core/events";
 import {
   DrumSoundId,
   DRUM_SOUND_LABELS,
@@ -2617,12 +2618,7 @@ export class BackingTrackView extends BaseView {
 
   private dispatchTransportChanged(playing: boolean): void {
     if (!this.container) return;
-    this.container.dispatchEvent(
-      new CustomEvent("transport-changed", {
-        bubbles: true,
-        detail: { playing },
-      }),
-    );
+    emitEvent(this.container, 'transport-changed', { playing });
   }
 
   private startInterval(): void {
@@ -2685,17 +2681,12 @@ export class BackingTrackView extends BaseView {
 
   private dispatchGrooveTick(beat: number): void {
     if (!this.container) return;
-    this.container.dispatchEvent(
-      new CustomEvent("groove-tick", {
-        bubbles: true,
-        detail: {
-          bpm: this.bpm,
-          timeSig: { beats: 4, division: 4 },
-          swing: this.swingAmount,
-          beat,
-        },
-      }),
-    );
+    emitEvent(this.container, 'groove-tick', {
+      bpm: this.bpm,
+      timeSig: { beats: 4, division: 4 },
+      swing: this.swingAmount,
+      beat,
+    });
   }
 
   private dispatchTickEvent(chordDeg: number | null): void {
@@ -2735,26 +2726,21 @@ export class BackingTrackView extends BaseView {
       }
     }
 
-    this.container.dispatchEvent(
-      new CustomEvent("backing-track-tick", {
-        bubbles: true,
-        detail: {
-          currentMeasure: this.currentMeasure,
-          currentChordDeg: chordDeg,
-          currentRoman,
-          chordKey,
-          progRootNote: this.progRootNote,
-          progMode: this.progMode,
-          bpm: this.bpm,
-          timeSig: { beats: 4, division: 4 },
-          swing: this.swingAmount,
-          beat: 0,
-          nextChordKey,
-          nextRootNote,
-          nextRoman,
-        },
-      }),
-    );
+    emitEvent(this.container, 'backing-track-tick', {
+      currentMeasure: this.currentMeasure,
+      currentChordDeg: chordDeg,
+      currentRoman,
+      chordKey,
+      progRootNote: this.progRootNote,
+      progMode: this.progMode,
+      bpm: this.bpm,
+      timeSig: { beats: 4, division: 4 },
+      swing: this.swingAmount,
+      beat: 0,
+      nextChordKey,
+      nextRootNote,
+      nextRoman,
+    });
   }
 
   private clearStepHighlight(): void {
@@ -3038,11 +3024,6 @@ export class BackingTrackView extends BaseView {
 
   private dispatchStateChange(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(
-      new CustomEvent("feature-state-changed", {
-        bubbles: true,
-        detail: this.getState(),
-      }),
-    );
+    emitEvent(this.container, 'feature-state-changed', this.getState() as FeatureStateChangedDetail);
   }
 }

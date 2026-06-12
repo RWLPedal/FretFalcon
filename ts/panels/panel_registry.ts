@@ -1,6 +1,7 @@
 import { FloatingViewDescriptor } from "./panel_types";
+import { ViewId, _trackViewId } from "../core/ids";
 
-const registry = new Map<string, FloatingViewDescriptor>();
+const registry = new Map<ViewId, FloatingViewDescriptor>();
 
 export function registerFloatingView(descriptor: FloatingViewDescriptor): void {
   if (!descriptor || !descriptor.viewId) {
@@ -11,25 +12,26 @@ export function registerFloatingView(descriptor: FloatingViewDescriptor): void {
     return;
   }
   if (registry.has(descriptor.viewId)) {
-    console.warn(
-      `Floating view ID "${descriptor.viewId}" is already registered. Overwriting.`
+    throw new Error(
+      `Duplicate floating view ID "${descriptor.viewId}". Each view ID must be unique.`
     );
   }
+  _trackViewId(descriptor.viewId);
   registry.set(descriptor.viewId, descriptor);
 }
 
 export function getFloatingViewDescriptor(
-  viewId: string
+  viewId: ViewId | string
 ): FloatingViewDescriptor | undefined {
-  return registry.get(viewId);
+  return registry.get(viewId as ViewId);
 }
 
 export function getAvailableFloatingViews(): FloatingViewDescriptor[] {
   return Array.from(registry.values());
 }
 
-export function getViewIcon(viewId: string): string {
-  return registry.get(viewId)?.icon ?? 'widgets';
+export function getViewIcon(viewId: ViewId | string): string {
+  return registry.get(viewId as ViewId)?.icon ?? 'widgets';
 }
 
 export function getViewIconByFeatureType(featureTypeName: string): string | undefined {

@@ -356,16 +356,6 @@ export const ukulele_moveable_chord_library: Chord[] = [
     1,
   ),
   Chord.template(
-    "C-Shape",
-    [0, 0, 0, 3],
-    [1, 1, 1, 4],
-    [{ fret: 0, stringStart: 0, stringEnd: 3 }],
-    ChordType.MAJOR,
-    2,
-    N.C,
-    1,
-  ),
-  Chord.template(
     "A Minor Shape",
     [2, 0, 0, 0],
     [3, 1, 1, 1],

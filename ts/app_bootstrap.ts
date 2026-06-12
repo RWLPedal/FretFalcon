@@ -1,6 +1,7 @@
 import { registerCategory } from "./feature_registry";
 import { registerFloatingView } from "./panels/panel_registry";
 import { FretboardFloatingViewDescriptor } from "./panels/panel_types";
+import { viewId } from "./core/ids";
 import { instrumentCategory } from "./fretboard/fretboard_category";
 import { TimerView } from "./views/timer_view";
 import { DroneView } from "./views/drone_view";
@@ -31,7 +32,7 @@ export function registerBuiltins(): void {
   registerCategory(instrumentCategory);
 
   registerFloatingView({
-    viewId: "floating_timer",
+    viewId: viewId("floating_timer"),
     displayName: "Timer",
     icon: "alarm",
     defaultWidth: 300,
@@ -43,7 +44,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "drone_view",
+    viewId: viewId("drone_view"),
     displayName: "Drone",
     icon: "graphic_eq",
     defaultWidth: 320,
@@ -54,7 +55,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "schedule_floating_view",
+    viewId: viewId("schedule_floating_view"),
     displayName: "Schedule",
     icon: "event_note",
     defaultWidth: 900,
@@ -67,7 +68,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "any_floating_view",
+    viewId: viewId("any_floating_view"),
     displayName: "Any",
     icon: "smart_display",
     defaultWidth: 420,
@@ -78,7 +79,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "drum_machine",
+    viewId: viewId("drum_machine"),
     displayName: "Backing Track",
     icon: "queue_music",
     defaultWidth: 575,
@@ -89,7 +90,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "capo_view",
+    viewId: viewId("capo_view"),
     displayName: "Capo",
     icon: "adjust",
     defaultWidth: 240,
@@ -99,7 +100,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "instrument_color_legend",
+    viewId: viewId("instrument_color_legend"),
     displayName: "Legend",
     icon: "palette",
     refreshOnInstrumentChange: true,
@@ -120,7 +121,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "configurable_instrument_feature",
+    viewId: viewId("configurable_instrument_feature"),
     displayName: "Configurable Feature",
     icon: "tune",
     refreshOnInstrumentChange: true,
@@ -139,7 +140,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_notes",
+    viewId: viewId("instrument_notes"),
     displayName: "Notes",
     icon: "music_note",
     featureTypeName: NotesFeature.typeName,
@@ -162,7 +163,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_scale",
+    viewId: viewId("instrument_scale"),
     displayName: "Scale",
     icon: "show_chart",
     featureTypeName: ScaleFeature.typeName,
@@ -185,7 +186,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_chord",
+    viewId: viewId("instrument_chord"),
     displayName: "Chord",
     icon: "grid_on",
     featureTypeName: ChordFeature.typeName,
@@ -208,7 +209,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_triad",
+    viewId: viewId("instrument_triad"),
     displayName: "Triad Shapes",
     icon: "change_history",
     featureTypeName: TriadFeature.typeName,
@@ -231,7 +232,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_nearby_triads",
+    viewId: viewId("instrument_nearby_triads"),
     displayName: "Nearby Triads",
     icon: "swap_horiz",
     featureTypeName: NearbyTriadsFeature.typeName,
@@ -254,7 +255,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_arpeggio",
+    viewId: viewId("instrument_arpeggio"),
     displayName: "Arpeggio",
     icon: "linear_scale",
     featureTypeName: ArpeggioFeature.typeName,
@@ -277,7 +278,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_caged",
+    viewId: viewId("instrument_caged"),
     displayName: "CAGED",
     icon: "grid_view",
     featureTypeName: CagedFeature.typeName,
@@ -300,7 +301,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_multifret",
+    viewId: viewId("instrument_multifret"),
     displayName: "MultiFret",
     icon: "layers",
     featureTypeName: MultiLayerFretboardFeature.typeName,
@@ -323,7 +324,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_notes_reference",
+    viewId: viewId("instrument_notes_reference"),
     displayName: "Fretboard Notes",
     icon: "music_note",
     refreshOnInstrumentChange: true,
@@ -357,7 +358,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_chord_progression",
+    viewId: viewId("instrument_chord_progression"),
     displayName: "Chord Progression",
     icon: "arrow_forward",
     featureTypeName: ChordProgressionFeature.typeName,
@@ -381,7 +382,7 @@ export function registerBuiltins(): void {
   } as FretboardFloatingViewDescriptor);
 
   registerFloatingView({
-    viewId: "instrument_floating_metronome",
+    viewId: viewId("instrument_floating_metronome"),
     displayName: "Metronome",
     icon: "timer",
     refreshOnInstrumentChange: true,
@@ -399,7 +400,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "circle_of_fifths",
+    viewId: viewId("circle_of_fifths"),
     displayName: "Circle of Fifths",
     icon: "donut_large",
     defaultWidth: 360,
@@ -409,7 +410,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: GLOBAL_KEY_VIEW_ID,
+    viewId: viewId(GLOBAL_KEY_VIEW_ID),
     displayName: "Global Key",
     icon: "cell_tower",
     defaultWidth: 300,
@@ -421,7 +422,7 @@ export function registerBuiltins(): void {
   });
 
   registerFloatingView({
-    viewId: "strum_view",
+    viewId: viewId("strum_view"),
     displayName: "Strum",
     icon: "music_note",
     defaultWidth: 520,

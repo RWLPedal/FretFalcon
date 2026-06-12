@@ -1,5 +1,6 @@
 import { View } from "../view";
 import { FloatingViewInstanceState } from "./panel_types";
+import { emitEvent, onEvent } from '../core/events';
 
 // --- Grid Snap ---
 /** The canonical grid cell size in pixels. Used for both visual snap-to-grid
@@ -366,30 +367,23 @@ export class FloatingViewWrapper {
 
     // Listen for dynamic title updates - must be registered before render so
     // events fired synchronously during render (e.g. on saved-state restore) are caught.
-    this.contentElement.addEventListener('feature-title-changed', (e: Event) => {
-      const detail = (e as CustomEvent<{ title: string }>).detail;
-      if (detail?.title) {
-        this.titleTextEl.textContent = detail.title;
-      }
+    onEvent(this.contentElement, 'feature-title-changed', (detail) => {
+      if (detail.title) this.titleTextEl.textContent = detail.title;
     });
 
     // Persist view state whenever any child view signals a change.
-    this.contentElement.addEventListener('feature-state-changed', (e: Event) => {
-      const detail = (e as CustomEvent<Record<string, unknown>>).detail;
-      if (detail) {
-        this.state.viewState = { ...this.state.viewState, ...detail };
-        this.onSaveCallback();
-      }
+    onEvent(this.contentElement, 'feature-state-changed', (detail) => {
+      this.state.viewState = { ...this.state.viewState, ...detail };
+      this.onSaveCallback();
     });
 
     // Auto-size when a feature renders for the first time (tile was empty/unconfigured before).
-    this.contentElement.addEventListener('feature-auto-size', () => {
+    onEvent(this.contentElement, 'feature-auto-size', () => {
       requestAnimationFrame(() => this._autoSizeToContent(true));
     });
 
     // React to config collapse/expand: sync button state; resize wrapper after transition.
-    this.contentElement.addEventListener('config-collapse-changed', (e: Event) => {
-      const { collapsed, isInitial, delta } = (e as CustomEvent<{ collapsed: boolean; isInitial: boolean; delta?: number }>).detail;
+    onEvent(this.contentElement, 'config-collapse-changed', ({ collapsed, isInitial, delta }) => {
       this.configToggleButtonEl?.classList.toggle('is-active', collapsed);
       if (!isInitial && delta !== undefined) {
         requestAnimationFrame(() => this._adjustHeightToContent(delta));
@@ -420,10 +414,7 @@ export class FloatingViewWrapper {
         const w = this.contentElement.clientWidth;
         const h = this.element.clientHeight - titleBarH;
         if (w > 0 && h > 0) {
-          this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
-            bubbles: false,
-            detail: { width: w, height: h },
-          }));
+          emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
         }
       });
     }
@@ -475,10 +466,7 @@ export class FloatingViewWrapper {
           const titleBarH = titleBarEl?.offsetHeight ?? 30;
           const evtW = this.contentElement.clientWidth;
           const evtH = this.element.clientHeight - titleBarH;
-          this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
-            bubbles: false,
-            detail: { width: evtW, height: evtH },
-          }));
+          emitEvent(this.contentElement, 'wrapper-user-resized', { width: evtW, height: evtH }, { bubbles: false });
         }
       }, 150);
     });
@@ -543,10 +531,7 @@ export class FloatingViewWrapper {
     const w = this.contentElement.clientWidth;
     const h = this._defaultHeight - titleBarH;
     if (w > 0 && h > 0) {
-      this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
-        bubbles: false,
-        detail: { width: w, height: h },
-      }));
+      emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
     }
   }
 
@@ -595,10 +580,7 @@ export class FloatingViewWrapper {
         const w = this.contentElement.clientWidth;
         const h = this.element.clientHeight - titleBarH;
         if (w > 0 && h > 0) {
-          this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
-            bubbles: false,
-            detail: { width: w, height: h },
-          }));
+          emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
         }
       }
       // forceAutoSize=false (theme-only change): the canvas is already sized to fill
@@ -670,10 +652,7 @@ export class FloatingViewWrapper {
     // Notify content of the new available space so ConfigurableFeatureView updates
     // _availableWidth/Height and rebuilds the feature to correctly fill the auto-sized
     // panel. Mirrors the "saved size restored" path in the constructor (lines 305-316).
-    this.contentElement.dispatchEvent(new CustomEvent('wrapper-user-resized', {
-      bubbles: false,
-      detail: { width: newWidth, height: newHeight - titleBarH },
-    }));
+    emitEvent(this.contentElement, 'wrapper-user-resized', { width: newWidth, height: newHeight - titleBarH }, { bubbles: false });
   }
 
   /** Reflects the current zoom state on the zoom button (active = zoomed). */

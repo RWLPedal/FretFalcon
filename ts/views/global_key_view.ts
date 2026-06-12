@@ -1,6 +1,7 @@
 // ts/views/global_key_view.ts
 import { BaseView } from '../base_view';
 import { NOTE_NAMES, DiatonicMode, DIATONIC_MODE_LABELS, ALL_DIATONIC_MODES } from '../fretboard/music_types';
+import { emitEvent } from '../core/events';
 
 export const GLOBAL_KEY_VIEW_ID = 'global_key';
 
@@ -76,17 +77,11 @@ export class GlobalKeyView extends BaseView {
 
   private dispatchKey(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('cof-key-selected', {
-      bubbles: true,
-      detail: { root: this.rootNote, mode: this.scaleKey },
-    }));
+    emitEvent(this.container, 'cof-key-selected', { root: this.rootNote, mode: this.scaleKey as DiatonicMode });
   }
 
   private saveViewState(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail: { rootNote: this.rootNote, scaleKey: this.scaleKey },
-    }));
+    emitEvent(this.container, 'feature-state-changed', { rootNote: this.rootNote, scaleKey: this.scaleKey });
   }
 }

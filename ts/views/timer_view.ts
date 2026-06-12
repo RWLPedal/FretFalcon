@@ -2,6 +2,7 @@ import { BaseView } from '../base_view';
 import { formatDuration, parseDurationString } from '../time_utils';
 import { Status } from '../display_controller';
 import { SignalKind, DriveSignal } from '../panels/link_types';
+import { emitEvent } from '../core/events';
 
 export class TimerView extends BaseView {
   private duration: number;
@@ -202,10 +203,7 @@ export class TimerView extends BaseView {
     });
 
     // Persist initial duration so the wrapper can restore it on reload.
-    container.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail: { duration: this.duration },
-    }));
+    emitEvent(container, 'feature-state-changed', { duration: this.duration });
   }
 
   start(): void {
@@ -349,10 +347,7 @@ export class TimerView extends BaseView {
       this.duration = clamped;
       this.currentSeconds = clamped;
       this.onDurationEditCallback?.(clamped);
-      this.container?.dispatchEvent(new CustomEvent('feature-state-changed', {
-        bubbles: true,
-        detail: { duration: clamped },
-      }));
+      if (this.container) emitEvent(this.container, 'feature-state-changed', { duration: clamped });
     } catch {
       // Invalid input – restore previous value
     }
@@ -411,10 +406,7 @@ export class TimerView extends BaseView {
 
   private dispatchTransportChanged(playing: boolean): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('transport-changed', {
-      bubbles: true,
-      detail: { playing },
-    }));
+    emitEvent(this.container, 'transport-changed', { playing });
   }
 
   // ─── Sounds ────────────────────────────────────────────────────────────────

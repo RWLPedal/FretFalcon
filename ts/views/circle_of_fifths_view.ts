@@ -4,6 +4,8 @@ import { BaseView } from '../base_view';
 import { DiatonicMode, KeyType, ChordQuality } from '../fretboard/music_types';
 import { scales } from '../fretboard/scales';
 import { DriveSignal, SignalKind } from '../panels/link_types';
+import { svgEl } from '../core/dom';
+import { emitEvent } from '../core/events';
 
 // ─── Circle of Fifths order ───────────────────────────────────────────────────
 
@@ -120,7 +122,6 @@ const MODE_FULL: Record<DiatonicMode, string> = {
 
 // ─── SVG helpers ──────────────────────────────────────────────────────────────
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
 const CX = 150, CY = 150;
 const R_OUTER = 140;  // outer edge of major-key ring
 const R_MID   = 90;   // boundary between major-key and minor-key rings
@@ -147,11 +148,7 @@ function wedgePath(r1: number, r2: number, startDeg: number, endDeg: number): st
   ].join(' ');
 }
 
-function svgEl<T extends SVGElement>(tag: string, attrs: Record<string, string> = {}): T {
-  const el = document.createElementNS(SVG_NS, tag) as T;
-  for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
-  return el;
-}
+
 
 function svgText(x: number, y: number, cls: string, content = ''): SVGTextElement {
   const el = svgEl<SVGTextElement>('text', {
@@ -485,10 +482,9 @@ export class CircleOfFifthsView extends BaseView {
     }
 
     if (this.container) {
-      this.container.dispatchEvent(new CustomEvent('feature-title-changed', {
-        bubbles: true,
-        detail: { title: `Circle of Fifths · ${this.selectedRoot} ${MODE_FULL[this.selectedMode]}` },
-      }));
+      emitEvent(this.container, 'feature-title-changed', {
+        title: `Circle of Fifths · ${this.selectedRoot} ${MODE_FULL[this.selectedMode]}`,
+      });
     }
   }
 
@@ -542,33 +538,24 @@ export class CircleOfFifthsView extends BaseView {
 
   private _emitKeySelected(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('cof-key-selected', {
-      bubbles: true,
-      detail: {
-        root: this.selectedRoot, mode: this.selectedMode,
-        chordKey: null, chordRoot: null, roman: null, keyType: null,
-      },
-    }));
+    emitEvent(this.container, 'cof-key-selected', {
+      root: this.selectedRoot, mode: this.selectedMode,
+      chordKey: null, chordRoot: null, roman: null, keyType: null,
+    });
   }
 
   private _emitChordSelected(entry: ProgEntry): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('cof-key-selected', {
-      bubbles: true,
-      detail: {
-        root: this.selectedRoot, mode: this.selectedMode,
-        chordKey: entry.chordKey, chordRoot: entry.chordName,
-        roman: entry.roman, keyType: entry.keyType,
-      },
-    }));
+    emitEvent(this.container, 'cof-key-selected', {
+      root: this.selectedRoot, mode: this.selectedMode,
+      chordKey: entry.chordKey, chordRoot: entry.chordName,
+      roman: entry.roman, keyType: entry.keyType,
+    });
   }
 
   private _saveState(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail: { root: this.selectedRoot, mode: this.selectedMode },
-    }));
+    emitEvent(this.container, 'feature-state-changed', { root: this.selectedRoot, mode: this.selectedMode });
   }
 
   private _applySvgSize(): void {

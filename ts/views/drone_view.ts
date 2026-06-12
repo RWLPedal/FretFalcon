@@ -2,6 +2,7 @@ import { BaseView } from '../base_view';
 import { NoteName, NOTE_NAMES, SustainedNote, SustainedNoteOptions, getGuitarWave } from '../sounds/note_sounds';
 import { DriveSignal, SignalKind, StrumSignal } from '../panels/link_types';
 import { volumeManager } from '../sounds/volume_manager';
+import { emitEvent } from '../core/events';
 
 type ChordMode = 'note' | 'fifth' | 'major' | 'minor';
 type EnvelopeMode = 'sustain' | 'slow' | 'fast';
@@ -368,10 +369,7 @@ export class DroneView extends BaseView {
 
   private dispatchTransportChanged(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('transport-changed', {
-      bubbles: true,
-      detail: { playing: this.isPlaying },
-    }));
+    emitEvent(this.container, 'transport-changed', { playing: this.isPlaying });
   }
 
   private updatePlayBtn(): void {
@@ -383,17 +381,13 @@ export class DroneView extends BaseView {
 
   private dispatchTitle(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('feature-title-changed', {
-      bubbles: true,
-      detail: { title: `Drone · ${this.note}` },
-    }));
+    emitEvent(this.container, 'feature-title-changed', { title: `Drone · ${this.note}` });
   }
 
   private saveState(): void {
     if (!this.container) return;
-    this.container.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail: { note: this.note, octave: this.octave, chordMode: this.chordMode, envelope: this.envelope },
-    }));
+    emitEvent(this.container, 'feature-state-changed', {
+      note: this.note, octave: this.octave, chordMode: this.chordMode, envelope: this.envelope,
+    });
   }
 }

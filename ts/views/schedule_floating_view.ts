@@ -5,6 +5,7 @@ import { Schedule } from '../schedule/schedule';
 import { ScheduleEditor } from '../schedule/editor/schedule_editor';
 import { ScheduleDisplayAdapter } from '../schedule/schedule_display_adapter';
 import { SchedulePlaybackView } from './schedule_playback_view';
+import { emitEvent } from '../core/events';
 
 type SFVMode = 'edit' | 'play';
 
@@ -235,10 +236,7 @@ export class ScheduleFloatingView extends BaseView {
     const scheduleJSON = this.editor?.getScheduleJSON();
     const detail: Record<string, unknown> = { mode: this.mode };
     if (scheduleJSON) detail.scheduleJSON = scheduleJSON;
-    this.container?.dispatchEvent(new CustomEvent('feature-state-changed', {
-      bubbles: true,
-      detail,
-    }));
+    if (this.container) emitEvent(this.container, 'feature-state-changed', detail);
   }
 
   private _saveScheduleToStorage(): void {

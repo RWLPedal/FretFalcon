@@ -6,6 +6,7 @@ import {
   ArgType,
 } from '../../feature';
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
+import { emitEvent } from '../../core/events';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
 import { AudioController } from '../../audio_controller';
@@ -774,10 +775,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
           const renderContainer = this._renderContainer;
           if (renderContainer) {
             setTimeout(() => {
-              renderContainer.dispatchEvent(new CustomEvent('nt-chord-keys-update', {
-                bubbles: true,
-                detail: { chordKeys },
-              }));
+              emitEvent(renderContainer, 'nt-chord-keys-update', { chordKeys });
             }, 0);
           }
         },

@@ -7,6 +7,7 @@ import {
   getDriveTargetSlots,
   getFeatureTypeNameByViewId,
 } from './drive_registry';
+import { emitEvent, onEvent } from '../core/events';
 
 export class LinkManager {
   private links: LinkRecord[] = [];
@@ -52,89 +53,82 @@ export class LinkManager {
     };
 
     // Listen for backing-track-tick (real-time per-measure chord signal)
-    viewAreaEl.addEventListener('backing-track-tick', (e: Event) => {
+    onEvent(viewAreaEl, 'backing-track-tick', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
       if (!viewId) return;
       const descriptor = getDriveSourceDescriptor(viewId);
       if (!descriptor) return;
-      const signals = descriptor.extractSignals((e as CustomEvent).detail);
+      const signals = descriptor.extractSignals(detail);
       this.routeSignals(instanceId, signals);
     });
 
     // Listen for metronome-tempo-changed (BPM/config change from MetronomeView)
-    viewAreaEl.addEventListener('metronome-tempo-changed', (e: Event) => {
+    onEvent(viewAreaEl, 'metronome-tempo-changed', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
       if (!viewId) return;
       const descriptor = getDriveSourceDescriptor(viewId);
       if (!descriptor) return;
-      const signals = descriptor.extractSignals((e as CustomEvent).detail);
+      const signals = descriptor.extractSignals(detail);
       this.routeSignals(instanceId, signals);
     });
 
     // Listen for groove-tick (per-beat sync signal from MetronomeView or BackingTrackView)
-    viewAreaEl.addEventListener('groove-tick', (e: Event) => {
+    onEvent(viewAreaEl, 'groove-tick', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
-      const detail = (e as CustomEvent).detail;
-      if (typeof detail?.bpm !== 'number') return;
       const signal: GrooveSignal = {
-        kind: SignalKind.Groove,
-        bpm: detail.bpm,
+        kind:   SignalKind.Groove,
+        bpm:    detail.bpm,
         timeSig: detail.timeSig ?? { beats: 4, division: 4 },
-        swing: detail.swing ?? 0,
-        beat: typeof detail.beat === 'number' ? detail.beat : undefined,
+        swing:  detail.swing ?? 0,
+        beat:   typeof detail.beat === 'number' ? detail.beat : undefined,
       };
       this.routeBeatSignal(instanceId, signal);
     });
 
     // Listen for strum-tick (per-step strum action from StrumView)
-    viewAreaEl.addEventListener('strum-tick', (e: Event) => {
+    onEvent(viewAreaEl, 'strum-tick', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
-      const detail = (e as CustomEvent).detail;
-      if (!detail?.action) return;
       const signal: StrumSignal = {
         kind:       SignalKind.Strum,
         action:     detail.action,
-        direction:  detail.direction ?? 'down',
-        bpm:        detail.bpm ?? 120,
-        timeSig:    detail.timeSig ?? { beats: 4, division: 4 },
-        step:       typeof detail.step === 'number' ? detail.step : 0,
-        totalSteps: typeof detail.totalSteps === 'number' ? detail.totalSteps : 1,
+        direction:  detail.direction,
+        bpm:        detail.bpm,
+        timeSig:    detail.timeSig,
+        step:       detail.step,
+        totalSteps: detail.totalSteps,
       };
       this.routeUncachedSignal(instanceId, signal);
     });
 
     // Listen for transport-changed (play/stop state from BackingTrackView or other transport sources)
-    viewAreaEl.addEventListener('transport-changed', (e: Event) => {
+    onEvent(viewAreaEl, 'transport-changed', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
-      const detail = (e as CustomEvent).detail;
-      if (typeof detail?.playing !== 'boolean') return;
       const signal: PlaySignal = { kind: SignalKind.Play, playing: detail.playing };
       this.routeUncachedSignal(instanceId, signal);
     });
 
     // Listen for cof-key-selected (Circle of Fifths key/chord selection)
-    viewAreaEl.addEventListener('cof-key-selected', (e: Event) => {
+    onEvent(viewAreaEl, 'cof-key-selected', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
       if (!viewId) return;
       const descriptor = getDriveSourceDescriptor(viewId);
       if (!descriptor) return;
-      const signals = descriptor.extractSignals((e as CustomEvent).detail);
+      const signals = descriptor.extractSignals(detail);
       this.routeSignals(instanceId, signals);
     });
 
     // Listen for feature-state-changed (for configurable features as sources)
-    viewAreaEl.addEventListener('feature-state-changed', (e: Event) => {
-      const detail = (e as CustomEvent).detail as { featureTypeName?: string } | null;
-      if (!detail?.featureTypeName) return;
+    onEvent(viewAreaEl, 'feature-state-changed', (detail, e) => {
+      if (!detail.featureTypeName) return;
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
@@ -146,21 +140,20 @@ export class LinkManager {
     });
 
     // Listen for schedule-feature-changed (ScheduleFloatingView → link system)
-    viewAreaEl.addEventListener('schedule-feature-changed', (e: Event) => {
+    onEvent(viewAreaEl, 'schedule-feature-changed', (detail, e) => {
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       const viewId = this.instanceIdToViewId(instanceId);
       if (!viewId) return;
       const descriptor = getDriveSourceDescriptor(viewId);
       if (!descriptor) return;
-      const signals = descriptor.extractSignals((e as CustomEvent).detail);
+      const signals = descriptor.extractSignals(detail);
       this.routeSignals(instanceId, signals);
     });
 
     // Relay signals forwarded by features (e.g. MultiLayerFretboard driven update → ChordDiagram)
-    viewAreaEl.addEventListener('feature-signal-relay', (e: Event) => {
-      const detail = (e as CustomEvent<{ featureTypeName?: string; signal?: DriveSignal }>).detail;
-      if (!detail?.signal) return;
+    onEvent(viewAreaEl, 'feature-signal-relay', (detail, e) => {
+      if (!detail.signal) return;
       const instanceId = this.resolveSourceInstanceId(e);
       if (!instanceId) return;
       this.routeSignals(instanceId, [detail.signal]);
@@ -352,10 +345,7 @@ export class LinkManager {
     const targetEl = this.getContentEl(targetInstanceId) ?? this.getWrapperEl(targetInstanceId);
     if (!targetEl) return;
     signals.forEach(signal => {
-      targetEl.dispatchEvent(new CustomEvent('drive-signal', {
-        bubbles: true,
-        detail: { signal, linkId: 'global' },
-      }));
+      emitEvent(targetEl, 'drive-signal', { signal, linkId: 'global' });
     });
   }
 
@@ -377,10 +367,7 @@ export class LinkManager {
     const targetEl = this.getContentEl(link.targetInstanceId) ?? this.getWrapperEl(link.targetInstanceId);
     if (!targetEl) return;
     signals.forEach(signal => {
-      targetEl.dispatchEvent(new CustomEvent('drive-signal', {
-        bubbles: true,
-        detail: { signal, linkId: link.id },
-      }));
+      emitEvent(targetEl, 'drive-signal', { signal, linkId: link.id });
     });
   }
 
@@ -423,10 +410,7 @@ export class LinkManager {
       const ftName = this.instanceIdToFeatureTypeName?.(l.sourceInstanceId) ?? undefined;
       return getDriveSourceDescriptor(viewId, ftName)?.emitsNextSignals === true;
     });
-    targetEl.dispatchEvent(new CustomEvent('link-status-changed', {
-      bubbles: true,
-      detail: { hasIncomingLinks: hasIncoming, hasNextSignals },
-    }));
+    emitEvent(targetEl, 'link-status-changed', { hasIncomingLinks: hasIncoming, hasNextSignals });
   }
 
   private notifyAllLinkStatuses(): void {

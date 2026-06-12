@@ -3,6 +3,7 @@ import { Interval } from './schedule';
 import { IDisplayController, Status } from '../display_controller';
 import { SchedulePlaybackView } from '../views/schedule_playback_view';
 import { SignalKind, SignalState, FeatureSignal } from '../panels/link_types';
+import { emitEvent } from '../core/events';
 
 /**
  * An IDisplayController implementation for the Schedule floating view.
@@ -120,9 +121,6 @@ export class ScheduleDisplayAdapter implements IDisplayController {
 
   private _dispatchFeatureSignal(signal: FeatureSignal): void {
     if (!this.signalSourceEl) return;
-    this.signalSourceEl.dispatchEvent(new CustomEvent('schedule-feature-changed', {
-      bubbles: true,
-      detail: signal,
-    }));
+    emitEvent(this.signalSourceEl, 'schedule-feature-changed', signal);
   }
 }

@@ -6,6 +6,7 @@ import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AppSettings } from "../../settings";
 import { AudioController } from "../../audio_controller";
+import { emitEvent } from "../../core/events";
 import { IntervalSettings } from "../../schedule/editor/interval/types";
 import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData } from "../fretboard";
@@ -193,7 +194,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
 
     // Listen for drive-signal events forwarded by ConfigurableFeatureView
     this.driveSignalHandler = (e: Event) => {
-      const { signal } = (e as CustomEvent<{ signal: DriveSignal; linkId: string }>).detail;
+      const { signal } = (e as CustomEvent<{ signal: DriveSignal }>).detail;
       const isNextState = (signal.state ?? SignalState.Current) === SignalState.Next;
 
       const hasDrivenRootNote = this.layers.some(l => l.type === LayerType.Scale && (l as ScaleLayer).rootNote === 'driven');
@@ -237,10 +238,9 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
       }
       if (changed) {
         this.calculateAndSetNotes();
-        container.dispatchEvent(new CustomEvent('feature-signal-relay', {
-          bubbles: true,
-          detail: { featureTypeName: MultiLayerFretboardFeature.typeName, signal },
-        }));
+        emitEvent(container, 'feature-signal-relay', {
+          featureTypeName: MultiLayerFretboardFeature.typeName, signal,
+        });
       }
     };
     container.addEventListener('drive-signal', this.driveSignalHandler);
