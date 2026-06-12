@@ -16,7 +16,7 @@ import { FloatingViewDescriptor, FretboardFloatingViewDescriptor } from '../pane
 import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
 import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
-import { MobileController } from '../mobile/mobile_controller';
+
 
 function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
   const isFretboard = !!(mod.panel.capabilities?.rotate || mod.panel.capabilities?.zoom);
@@ -50,7 +50,6 @@ class ReferencePage {
     private settingsManager: SettingsManager;
     private sidebarView: SidebarView | null = null;
     private themeManager: ThemeManager;
-    private mobileController: MobileController | null = null;
 
     constructor() {
         registerCategory(instrumentCategory);
@@ -117,19 +116,13 @@ class ReferencePage {
         // Settings button is re-rendered inside sidebar on each refresh, so wire it up after render.
         this._wireSettingsButton();
 
+        // Give TabbedLayout (mobile) access to the settings modal.
+        this.floatingViewManager.setSettingsCallback(() => this.settingsManager.open());
+
         this.applySettings();
         this.floatingViewManager.restoreViewsFromState();
 
         initOnboarding(this.floatingViewManager);
-
-        const mobileRoot = document.getElementById('mobile-layout');
-        if (mobileRoot) {
-            this.mobileController = new MobileController(
-                mobileRoot,
-                this.settings,
-                (newSettings) => this.saveSettings(newSettings),
-            );
-        }
     }
 
     private _wireSettingsButton(): void {
@@ -164,7 +157,6 @@ class ReferencePage {
             if (this.floatingViewManager) {
                 this.floatingViewManager.applySettingsChange(newSettings);
             }
-            this.mobileController?.applySettings(newSettings);
             // Refresh sidebar so instrument-dependent buttons update.
             if (this.sidebarView) {
                 this.sidebarView.refresh(newSettings);

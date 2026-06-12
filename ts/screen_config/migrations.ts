@@ -2,12 +2,12 @@
 //
 // Migration chain for screen configuration versioning.
 //
-// To add a new version (e.g. V1 → V2):
-//   1. Add V2PersistedViewEntry and V2Payload to screen_config_types.ts
-//   2. Update CurrentPayload alias to V2Payload
-//   3. Bump CURRENT_SCREEN_CONFIG_VERSION to 2
-//   4. Write migrateV1ToV2() below
-//   5. Append (p) => migrateV1ToV2(p as V1Payload) to MIGRATIONS
+// To add a new version (e.g. V2 → V3):
+//   1. Add V3PersistedViewEntry and V3Payload to screen_config_types.ts
+//   2. Update CurrentPayload alias to V3Payload
+//   3. Bump CURRENT_SCREEN_CONFIG_VERSION to 3
+//   4. Write migrateV2ToV3() below
+//   5. Append (p) => migrateV2ToV3(p as V2Payload) to MIGRATIONS
 //   6. Update default_configs.ts to the new shape
 //   7. Update SCREEN_CONFIG_FORMAT.md
 
@@ -18,6 +18,7 @@ import {
   V0Payload,
   V1Payload,
   V2Payload,
+  V3Payload,
   VersionedScreenConfig,
 } from "./screen_config_types";
 
@@ -42,9 +43,6 @@ export class FutureVersionError extends Error {
 
 // ─── Per-version migration functions ─────────────────────────────────────────
 
-/** V0 (legacy, no version field) → V1.
- *  The unversioned blob is structurally equivalent to V1Payload.
- *  We only normalise missing optional fields to safe defaults. */
 function migrateV0ToV1(raw: V0Payload): V1Payload {
   return {
     referenceGrid: raw.referenceGrid ?? { cols: 80, rows: 60 },
@@ -54,18 +52,52 @@ function migrateV0ToV1(raw: V0Payload): V1Payload {
   };
 }
 
-/** V1 → V2: adds customTunings field (empty by default). */
 function migrateV1ToV2(v1: V1Payload): V2Payload {
   return { ...v1, customTunings: {} };
+}
+
+/** V2 → V3: split flat openViews into separate instances + layout.floating objects. */
+function migrateV2ToV3(v2: V2Payload): V3Payload {
+  const instances: V3Payload["instances"] = {};
+  const perInstance: Record<string, { gridPosition: { col: number; row: number }; gridSize?: { cols: number; rows: number }; zIndex: number }> = {};
+
+  for (const [id, entry] of Object.entries(v2.openViews ?? {})) {
+    instances[id] = {
+      instanceId: entry.instanceId,
+      viewId: entry.viewId,
+      viewState: entry.viewState,
+      collapsed: (entry as any).collapsed,
+      orientationOverride: entry.orientationOverride,
+      zoomActive: entry.zoomActive,
+    };
+    perInstance[id] = {
+      gridPosition: entry.gridPosition,
+      gridSize: entry.gridSize,
+      zIndex: entry.zIndex,
+    };
+  }
+
+  return {
+    instances,
+    links: v2.links ?? [],
+    layout: {
+      floating: {
+        referenceGrid: v2.referenceGrid,
+        nextZIndex: v2.nextZIndex,
+        perInstance,
+      },
+    },
+    customTunings: v2.customTunings,
+  };
 }
 
 // ─── Migration chain ──────────────────────────────────────────────────────────
 
 // Index N transforms payload_N → payload_N+1.
-// MIGRATIONS[0] = V0→V1, MIGRATIONS[1] = V1→V2, etc.
 const MIGRATIONS: Array<(payload: unknown) => unknown> = [
   (p) => migrateV0ToV1(p as V0Payload),
   (p) => migrateV1ToV2(p as V1Payload),
+  (p) => migrateV2ToV3(p as V2Payload),
 ];
 
 // ─── Envelope detection ───────────────────────────────────────────────────────
@@ -82,15 +114,6 @@ function isVersionedEnvelope(raw: unknown): raw is VersionedScreenConfig {
 
 // ─── Public entry point ───────────────────────────────────────────────────────
 
-/**
- * Takes any raw parsed JSON value — a versioned envelope, a legacy unversioned
- * blob, or unknown garbage — applies all needed migrations in sequence, and
- * returns a CurrentPayload.
- *
- * Throws MigrationError if a migration step fails.
- * Throws FutureVersionError if the stored version exceeds CURRENT_SCREEN_CONFIG_VERSION.
- *   In that case callers must NOT overwrite storage (the user may be on an older build).
- */
 export function migrate(raw: unknown): CurrentPayload {
   let version: number;
   let payload: unknown;
@@ -99,7 +122,6 @@ export function migrate(raw: unknown): CurrentPayload {
     version = raw.version;
     payload = raw.payload;
   } else {
-    // Legacy: no version field — treat as V0.
     version = 0;
     payload = raw;
   }

@@ -1,4 +1,3 @@
-import { View } from "../view";
 import { FloatingViewInstanceState } from "./panel_types";
 import { emitEvent, onEvent } from '../core/events';
 
@@ -178,9 +177,8 @@ export class FloatingViewWrapper {
   private contentElement: HTMLElement;
 
   public get contentEl(): HTMLElement { return this.contentElement; }
-  private viewInstance: View;
   private state: FloatingViewInstanceState;
-  private onDestroyCallback: (instanceId: string) => void;
+  private onCloseCallback: (instanceId: string) => void;
   private onStateChangeCallback: (state: FloatingViewInstanceState) => void;
   private onSaveCallback: () => void;
   private onRotateCallback: (() => void) | null;
@@ -192,21 +190,26 @@ export class FloatingViewWrapper {
   private collapseButtonEl: HTMLButtonElement | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private _resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
-  /** True while _autoSizeToContent or _adjustHeightToContent is setting element styles,
-   *  so the ResizeObserver skips grid snapping for programmatic resizes. */
   private _isProgrammaticResize = false;
   private _firstResizeObserverFire = true;
-  /** Minimum wrapper width (px) — the descriptor's defaultWidth. Used as a floor
-   *  when resizing after rotation so the config UI is never clipped. */
   private readonly defaultWidth: number;
-  /** Default wrapper height (px) from the descriptor, or 0 if unset. */
   private readonly _defaultHeight: number;
+  // Unlisten functions for events bound to contentElement
+  private _unlistens: Array<() => void> = [];
 
+  /**
+   * @param contentEl  Pre-rendered content element (the view has already been
+   *                   rendered into it). The wrapper appends it and manages the
+   *                   chrome around it. On destroy() the element is detached and
+   *                   returned so PanelHost can reuse it during strategy switches.
+   * @param onClose    Called when the user clicks the close button. PanelHost
+   *                   is responsible for full teardown (view destruction etc.).
+   */
   constructor(
     state: FloatingViewInstanceState,
     title: string,
-    viewInstance: View,
-    onDestroy: (instanceId: string) => void,
+    contentEl: HTMLElement,
+    onClose: (instanceId: string) => void,
     onStateChange: (state: FloatingViewInstanceState) => void,
     onSave: () => void,
     defaultWidth?: number,
@@ -218,8 +221,8 @@ export class FloatingViewWrapper {
     onConfigToggle?: () => void
   ) {
     this.state = state;
-    this.viewInstance = viewInstance;
-    this.onDestroyCallback = onDestroy;
+    this.contentElement = contentEl;
+    this.onCloseCallback = onClose;
     this.onStateChangeCallback = onStateChange;
     this.onSaveCallback = onSave;
     this.onRotateCallback = onRotate ?? null;
@@ -245,13 +248,10 @@ export class FloatingViewWrapper {
       if (defaultHeight) this.element.style.height = `${defaultHeight}px`;
     }
 
-    // Make wrapper focusable and handle z-index bring-to-front
     this.element.setAttribute("tabindex", "-1");
     this.element.addEventListener(
       "mousedown",
-      () => {
-        this.onStateChangeCallback(this.state);
-      },
+      () => { this.onStateChangeCallback(this.state); },
       true
     );
 
@@ -264,16 +264,14 @@ export class FloatingViewWrapper {
     const titleBar = document.createElement("div");
     titleBar.classList.add("floating-view-titlebar");
     titleBar.style.cursor = "grab";
-    titleBar.addEventListener("mousedown", (e) => {
-      startDrag(e, this.element);
-    });
+    titleBar.addEventListener("mousedown", (e) => { startDrag(e, this.element); });
 
     this.titleTextEl = document.createElement("span");
     this.titleTextEl.classList.add("floating-view-title-text");
     this.titleTextEl.textContent = title;
     titleBar.appendChild(this.titleTextEl);
 
-    // --- Right-aligned button group (rotate + close) ---
+    // --- Right-aligned button group ---
     const buttonGroup = document.createElement("div");
     buttonGroup.classList.add("floating-view-button-group");
 
@@ -282,10 +280,7 @@ export class FloatingViewWrapper {
       rotateButton.classList.add("floating-view-rotate");
       rotateButton.innerHTML = '<span class="material-icons">autorenew</span>';
       rotateButton.title = "Rotate fretboard";
-      rotateButton.onclick = (e) => {
-        e.stopPropagation();
-        this.onRotateCallback!();
-      };
+      rotateButton.onclick = (e) => { e.stopPropagation(); this.onRotateCallback!(); };
       buttonGroup.appendChild(rotateButton);
     }
 
@@ -294,10 +289,7 @@ export class FloatingViewWrapper {
       configToggleButton.classList.add("floating-view-config-toggle");
       configToggleButton.innerHTML = '<span class="material-icons">tune</span>';
       configToggleButton.title = "Toggle configuration";
-      configToggleButton.onclick = (e) => {
-        e.stopPropagation();
-        this.onConfigToggleCallback!();
-      };
+      configToggleButton.onclick = (e) => { e.stopPropagation(); this.onConfigToggleCallback!(); };
       buttonGroup.appendChild(configToggleButton);
       this.configToggleButtonEl = configToggleButton;
     }
@@ -307,13 +299,8 @@ export class FloatingViewWrapper {
       zoomButton.classList.add("floating-view-zoom");
       zoomButton.innerHTML = '<span class="material-icons">zoom_in</span>';
       zoomButton.title = "Toggle zoom";
-      if (state.zoomActive) {
-        zoomButton.classList.add("is-active");
-      }
-      zoomButton.onclick = (e) => {
-        e.stopPropagation();
-        this.onZoomCallback!();
-      };
+      if (state.zoomActive) zoomButton.classList.add("is-active");
+      zoomButton.onclick = (e) => { e.stopPropagation(); this.onZoomCallback!(); };
       buttonGroup.appendChild(zoomButton);
       this.zoomButtonEl = zoomButton;
     }
@@ -322,10 +309,7 @@ export class FloatingViewWrapper {
     collapseButton.classList.add("floating-view-collapse");
     collapseButton.innerHTML = '<span class="material-icons">expand_less</span>';
     collapseButton.title = "Collapse";
-    collapseButton.onclick = (e) => {
-      e.stopPropagation();
-      this._toggleCollapse();
-    };
+    collapseButton.onclick = (e) => { e.stopPropagation(); this._toggleCollapse(); };
     buttonGroup.appendChild(collapseButton);
     this.collapseButtonEl = collapseButton;
 
@@ -335,18 +319,17 @@ export class FloatingViewWrapper {
     closeButton.title = "Close";
     closeButton.onclick = (e) => {
       e.stopPropagation();
-      this.destroy();
+      this.onCloseCallback(this.state.instanceId);
     };
     buttonGroup.appendChild(closeButton);
     titleBar.appendChild(buttonGroup);
     this.element.appendChild(titleBar);
 
     // --- Content Area ---
-    this.contentElement = document.createElement("div");
     this.contentElement.classList.add("floating-view-content");
     this.element.appendChild(this.contentElement);
 
-    // --- Resize Handles (all 4 corners; visual affordance only on bottom-right) ---
+    // --- Resize Handles ---
     const _cornerDefs: Array<{ cls: string; corner: 'tl' | 'tr' | 'bl' | 'br' }> = [
       { cls: 'floating-view-resize-tl', corner: 'tl' },
       { cls: 'floating-view-resize-tr', corner: 'tr' },
@@ -365,49 +348,32 @@ export class FloatingViewWrapper {
       this.element.appendChild(handle);
     }
 
-    // Listen for dynamic title updates - must be registered before render so
-    // events fired synchronously during render (e.g. on saved-state restore) are caught.
-    onEvent(this.contentElement, 'feature-title-changed', (detail) => {
+    // Listen for dynamic title updates
+    this._unlistens.push(onEvent(this.contentElement, 'feature-title-changed', (detail) => {
       if (detail.title) this.titleTextEl.textContent = detail.title;
-    });
+    }));
 
     // Persist view state whenever any child view signals a change.
-    onEvent(this.contentElement, 'feature-state-changed', (detail) => {
+    this._unlistens.push(onEvent(this.contentElement, 'feature-state-changed', (detail) => {
       this.state.viewState = { ...this.state.viewState, ...detail };
       this.onSaveCallback();
-    });
+    }));
 
-    // Auto-size when a feature renders for the first time (tile was empty/unconfigured before).
-    onEvent(this.contentElement, 'feature-auto-size', () => {
+    // Auto-size when a feature renders for the first time.
+    this._unlistens.push(onEvent(this.contentElement, 'feature-auto-size', () => {
       requestAnimationFrame(() => this._autoSizeToContent(true));
-    });
+    }));
 
-    // React to config collapse/expand: sync button state; resize wrapper after transition.
-    onEvent(this.contentElement, 'config-collapse-changed', ({ collapsed, isInitial, delta }) => {
+    // React to config collapse/expand.
+    this._unlistens.push(onEvent(this.contentElement, 'config-collapse-changed', ({ collapsed, isInitial, delta }) => {
       this.configToggleButtonEl?.classList.toggle('is-active', collapsed);
       if (!isInitial && delta !== undefined) {
         requestAnimationFrame(() => this._adjustHeightToContent(delta));
       }
-    });
+    }));
 
-    // --- Render the actual View ---
-    try {
-      this.viewInstance.render(this.contentElement);
-    } catch (e) {
-      console.error(`Error rendering view ${state.viewId}:`, e);
-      this.contentElement.textContent = "Error rendering view.";
-    }
-
-    // Auto-size to canvas content after the element is in the DOM
-    if (!state.size) {
-      requestAnimationFrame(() => this._autoSizeToContent(false));
-    } else {
-      // Saved size restored — tell content its available space so features rescale to fit.
-      // Without this, ConfigurableFeatureView's _availableWidth/Height stay 0 and the
-      // fretboard renders at its default size instead of fitting the saved wrapper size.
-      // Use element.clientHeight minus title-bar height rather than contentElement.clientHeight:
-      // after the initial unconstrained render, contentElement reflects the natural content
-      // height (e.g. 523px), not the wrapper's saved constraint (e.g. 384px).
+    // Notify content of its available space when the wrapper has a saved size.
+    if (state.size) {
       requestAnimationFrame(() => {
         const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
         const titleBarH = titleBarEl?.offsetHeight ?? 30;
@@ -417,21 +383,20 @@ export class FloatingViewWrapper {
           emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
         }
       });
+    } else {
+      // Auto-size to canvas content after the element is in the DOM
+      requestAnimationFrame(() => this._autoSizeToContent(false));
     }
 
-    // Capture size after every resize (auto-size and manual CSS resize handle).
-    // Uses a separate save callback to avoid triggering z-index bring-to-front logic.
+    // Capture size after every resize.
     this.resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[entries.length - 1];
       if (!entry) return;
-      // Use borderBoxSize so saved dimensions match what style.width/height restores to.
-      // contentRect excludes the border, causing a -2px drift per reload with border-box sizing.
       const bo = entry.borderBoxSize?.[0];
       const w = bo ? Math.round(bo.inlineSize) : Math.round(entry.contentRect.width);
       const h = bo ? Math.round(bo.blockSize) : Math.round(entry.contentRect.height);
       if (w <= 0 || h <= 0) return;
 
-      // Don't overwrite the saved pre-collapse size while the panel is collapsed.
       if (this.state.collapsed) return;
 
       const isFirst = this._firstResizeObserverFire;
@@ -440,9 +405,6 @@ export class FloatingViewWrapper {
       this._isProgrammaticResize = false;
       this.state.size = { width: w, height: h };
 
-      // Debounce to avoid flooding localStorage during manual CSS resize drags.
-      // Snap is applied here (not in the observer) so we never resize the element
-      // from inside the observer callback, which causes glitchy feedback loops.
       if (this._resizeSaveTimer !== null) clearTimeout(this._resizeSaveTimer);
       this._resizeSaveTimer = setTimeout(() => {
         this._resizeSaveTimer = null;
@@ -457,10 +419,6 @@ export class FloatingViewWrapper {
           }
         }
         this.onSaveCallback();
-        // Notify content so features can rescale to the new available space.
-        // Skipped on initial layout fire and on programmatic resizes (zoom, rotation, auto-size).
-        // Use element.clientHeight minus title-bar height: contentElement.clientHeight reflects
-        // the previous render's content (which may overflow the new wrapper size).
         if (!wasProgrammatic && !isFirst) {
           const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
           const titleBarH = titleBarEl?.offsetHeight ?? 30;
@@ -472,7 +430,6 @@ export class FloatingViewWrapper {
     });
     this.resizeObserver.observe(this.element);
 
-    // Apply saved collapsed state immediately (element isn't in DOM yet so no ResizeObserver fire).
     if (state.collapsed) {
       this.element.classList.add('is-panel-collapsed');
       this.element.style.height = '';
@@ -502,28 +459,19 @@ export class FloatingViewWrapper {
     this.onSaveCallback();
   }
 
-  public get instanceId(): string {
-    return this.state.instanceId;
-  }
+  public get instanceId(): string { return this.state.instanceId; }
 
   public bringToFront(zIndex: number): void {
     this.state.zIndex = zIndex;
     this.element.style.zIndex = `${zIndex}`;
   }
 
-  /** Moves the view to the given pixel position without triggering a z-index change. */
   public setPosition(x: number, y: number): void {
     this.state.position = { x, y };
     this.element.style.left = `${x}px`;
     this.element.style.top = `${y}px`;
   }
 
-  /**
-   * Fire wrapper-user-resized with the default dimensions. Must be called after the
-   * element is appended to the DOM. This lets features with height-dependent layouts
-   * (e.g. NearbyTriads reference mode) re-render at the correct size before the
-   * auto-size RAF reads their canvas dimensions.
-   */
   public notifyDefaultDimensions(): void {
     if (this.state.size || !this._defaultHeight) return;
     const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
@@ -535,46 +483,27 @@ export class FloatingViewWrapper {
     }
   }
 
-  /** Returns the current pixel size of the wrapper element. */
   public getSize(): { width: number; height: number } {
-    return {
-      width: this.element.offsetWidth,
-      height: this.element.offsetHeight,
-    };
+    return { width: this.element.offsetWidth, height: this.element.offsetHeight };
+  }
+
+  public setTitle(title: string): void {
+    this.titleTextEl.textContent = title;
+  }
+
+  public updateZoomButtonState(active: boolean): void {
+    if (!this.zoomButtonEl) return;
+    this.zoomButtonEl.classList.toggle("is-active", active);
   }
 
   /**
-   * Destroys the current view instance, renders a new one in its place.
-   *
-   * @param forceAutoSize - When true (rotation, zoom, instrument settings changes),
-   *   auto-size the wrapper to fit the new canvas. When false (theme-only changes),
-   *   keep the current wrapper size and let the canvas fill it via wrapper-user-resized.
-   *   Passing false avoids the 12px-per-change growth that occurs when _autoSizeToContent
-   *   adds its padding overhead on top of a canvas already constrained by clientWidth.
+   * Called after PanelHost has re-rendered a new view into contentEl (e.g. after
+   * rotate or zoom). Triggers the same RAF-based resize notification and optional
+   * auto-size that the old replaceViewContent() did.
    */
-  public replaceViewContent(newViewInstance: View, forceAutoSize = true): void {
-    try {
-      this.viewInstance.destroy();
-    } catch (e) {
-      console.error(`Error destroying old view ${this.state.viewId}:`, e);
-    }
-
-    this.contentElement.innerHTML = "";
-    this.viewInstance = newViewInstance;
-
-    try {
-      this.viewInstance.render(this.contentElement);
-    } catch (e) {
-      console.error(`Error rendering rotated view ${this.state.viewId}:`, e);
-      this.contentElement.textContent = "Error rendering view.";
-    }
-
+  public notifyContentReplaced(forceAutoSize: boolean): void {
     requestAnimationFrame(() => {
       if (this.state.size) {
-        // Tell the new view its available space so features scale to the saved wrapper
-        // size, not their unconstrained natural size. Mirrors the saved-size path in the
-        // constructor. The event handler runs synchronously, so canvases exist by the
-        // time _autoSizeToContent runs below.
         const titleBarEl = this.element.querySelector<HTMLElement>('.floating-view-titlebar');
         const titleBarH = titleBarEl?.offsetHeight ?? 30;
         const w = this.contentElement.clientWidth;
@@ -583,28 +512,10 @@ export class FloatingViewWrapper {
           emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
         }
       }
-      // forceAutoSize=false (theme-only change): the canvas is already sized to fill
-      // the current wrapper via wrapper-user-resized above. Calling _autoSizeToContent
-      // here would add contentPaddingH on top of a canvas already constrained by
-      // clientWidth, growing the wrapper by 12px on every theme change.
-      if (forceAutoSize) {
-        this._autoSizeToContent(true);
-      }
+      if (forceAutoSize) this._autoSizeToContent(true);
     });
   }
 
-  /**
-   * Sizes the wrapper to fit all content in the content area.
-   *
-   * Width is driven by the canvas pixel width (so the fretboard never gets
-   * clipped), falling back to scrollWidth when there is no canvas.
-   *
-   * Height uses contentElement.scrollHeight so that any configuration
-   * sections rendered above or below the canvas are included automatically.
-   *
-   * @param force - When true, resize even if state.size is already set
-   *                (used after a rotation where the canvas dimensions change).
-   */
   private _autoSizeToContent(force: boolean): void {
     if (!force && this.state.size) return;
 
@@ -614,58 +525,23 @@ export class FloatingViewWrapper {
     const titleBarEl = this.element.querySelector<HTMLElement>(".floating-view-titlebar");
     const titleBarH = titleBarEl?.offsetHeight ?? 30;
 
-    // .floating-view-content has 5px padding each side (10px total horizontal).
-    // Inner content (e.g. chord-diagram-view) may add another 5px each side.
-    // The wrapper border adds 2px and we include a 2px safety buffer = 24px total.
-    // This matches the chord diagram layout exactly; fretboard views without an inner
-    // wrapper see ~10px extra space, which is harmless.
     const contentPaddingH = 24;
     const canvasBasedWidth = canvas.width + contentPaddingH;
-
-    // Always floor at defaultWidth so the config UI is never clipped and panels
-    // with multiple side-by-side canvases (e.g. NearbyTriads reference mode)
-    // don't shrink to just the first canvas's width on initial open.
     const newWidth = Math.max(canvasBasedWidth, this.defaultWidth);
 
-    // Set the new width FIRST so that line-wrapping in the config section (flex-wrap)
-    // is resolved at the correct width before we read scrollHeight for the height.
-    // If we read scrollHeight before changing the width, it reflects the old layout
-    // (e.g. the wider zoomed state) and produces an incorrect — too-short — height.
     this._isProgrammaticResize = true;
     this.element.style.width = `${newWidth}px`;
-
-    // Clear any explicit height so scrollHeight reflects the natural content height
-    // at the new width, not the old explicitly-set value.
     this.element.style.height = "";
 
-    // scrollHeight includes the content element's padding, so it covers everything:
-    // config section + feature header + canvas.  Add 4px for wrapper border (2px) +
-    // safety buffer (2px) so a rounding pixel never triggers a scrollbar.
     const newHeight = this.contentElement.scrollHeight + titleBarH + 4;
-
     this.element.style.height = `${newHeight}px`;
 
-    // Persist so the size survives save/restore
     this.state.size = { width: newWidth, height: newHeight };
     this.onStateChangeCallback(this.state);
 
-    // Notify content of the new available space so ConfigurableFeatureView updates
-    // _availableWidth/Height and rebuilds the feature to correctly fill the auto-sized
-    // panel. Mirrors the "saved size restored" path in the constructor (lines 305-316).
     emitEvent(this.contentElement, 'wrapper-user-resized', { width: newWidth, height: newHeight - titleBarH }, { bubbles: false });
   }
 
-  /** Reflects the current zoom state on the zoom button (active = zoomed). */
-  public updateZoomButtonState(active: boolean): void {
-    if (!this.zoomButtonEl) return;
-    this.zoomButtonEl.classList.toggle("is-active", active);
-  }
-
-  /**
-   * Adjusts the wrapper height by a pixel delta (positive = grow, negative = shrink).
-   * Used after a config collapse/expand transition to keep the canvas visible without
-   * re-measuring scrollHeight (which is unreliable for overflow:hidden children).
-   */
   private _adjustHeightToContent(delta: number): void {
     const currentH = this.state.size?.height ?? parseFloat(this.element.style.height || "0");
     const newHeight = Math.max(currentH + delta, 50);
@@ -676,7 +552,13 @@ export class FloatingViewWrapper {
     this.onSaveCallback();
   }
 
-  public destroy(): void {
+  /**
+   * Removes the chrome from the DOM and cleans up its listeners.
+   * The content element is detached from the wrapper and returned so PanelHost
+   * can reuse it (e.g. during a strategy switch to TabbedLayout).
+   * Does NOT destroy the View instance — PanelHost is responsible for that.
+   */
+  public destroy(): HTMLElement {
     if (this.resizeObserver) {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
@@ -685,14 +567,18 @@ export class FloatingViewWrapper {
       clearTimeout(this._resizeSaveTimer);
       this._resizeSaveTimer = null;
     }
-    try {
-      this.viewInstance.destroy();
-    } catch (e) {
-      console.error(`Error destroying view ${this.state.viewId}:`, e);
+    // Remove all event listeners from contentElement
+    this._unlistens.forEach(u => u());
+    this._unlistens = [];
+
+    // Detach contentElement from wrapper so PanelHost can reuse it
+    if (this.contentElement.parentNode === this.element) {
+      this.element.removeChild(this.contentElement);
     }
+    // Remove wrapper from DOM
     if (this.element.parentNode) {
       this.element.parentNode.removeChild(this.element);
     }
-    this.onDestroyCallback(this.state.instanceId);
+    return this.contentElement;
   }
 }

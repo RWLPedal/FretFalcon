@@ -1,14 +1,12 @@
 // ts/screen_config/default_configs.ts
 //
 // Bundled starter layouts as TypeScript constants. These are always at the
-// current payload shape, so they never need migration at runtime.
+// current V3 payload shape, so they never need migration at runtime.
 //
 // To add a new starter layout:
 //   1. Define a new Readonly<CurrentPayload> constant here.
-//   2. Add it to DEFAULT_CONFIGS as { default: MY_LAYOUT } (optionally add compact: MY_LAYOUT_COMPACT).
+//   2. Add it to DEFAULT_CONFIGS as { default: MY_LAYOUT }.
 //   3. It becomes accessible via ScreenConfigManager.loadNamed("default:<key>").
-//      If a compact variant is provided it is used automatically on viewports narrower
-//      than COMPACT_BREAKPOINT_COLS (≈1200px).
 
 import { CurrentPayload } from "./screen_config_types";
 import { A_MINOR_WORKOUT_SCHEDULE_JSON } from "../schedule/api";
@@ -18,56 +16,25 @@ import { A_MINOR_WORKOUT_SCHEDULE_JSON } from "../schedule/api";
 /** An empty canvas — no open views, no links. Used as the safe fallback when
  *  localStorage is empty or a migration fails unrecoverably. */
 export const EMPTY_CONFIG: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 80, rows: 60 },
-  openViews: {},
-  nextZIndex: 100,
+  instances: {},
   links: [],
+  layout: {
+    floating: { referenceGrid: { cols: 80, rows: 60 }, nextZIndex: 100, perInstance: {} },
+  },
 });
 
-/** General-purpose reference layout: Notes and Scales side-by-side across the
- *  top half, Color Legend and Metronome filling the bottom half. Works for all
- *  supported instruments since it avoids guitar-only views (CAGED, Triads). */
+/** General-purpose reference layout: Scale + Triad Shapes across the top,
+ *  Chord and Chord Progression filling the right column. */
 export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 113, rows: 64 },
-  nextZIndex: 144,
-  links: [
-    {
-      id: "link-1",
-      sourceInstanceId: "fv-8",
-      sourceHandle: "bottom" as const,
-      targetInstanceId: "fv-6",
-      targetHandle: "top" as const,
-    },
-    {
-      id: "link-2",
-      sourceInstanceId: "fv-8",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-7",
-      targetHandle: "left" as const,
-    },
-    {
-      id: "link-3",
-      sourceInstanceId: "fv-8",
-      sourceHandle: "bottom" as const,
-      targetInstanceId: "fv-9",
-      targetHandle: "left" as const,
-    },
-  ],
-  openViews: {
+  instances: {
     "fv-6": {
       instanceId: "fv-6",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 17, row: 27 },
-      gridSize: { cols: 48, rows: 30 },
-      zIndex: 140,
+      viewId: "instrument_triad",
       viewState: { featureTypeName: "Triad Shapes", config: ["G", "Major"] },
     },
     "fv-7": {
       instanceId: "fv-7",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 68, row: 1 },
-      gridSize: { cols: 15, rows: 56 },
-      zIndex: 142,
+      viewId: "instrument_chord",
       viewState: {
         featureTypeName: "Chord",
         config: ["G", "Major"],
@@ -77,62 +44,45 @@ export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     },
     "fv-8": {
       instanceId: "fv-8",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 48, rows: 23 },
-      zIndex: 141,
+      viewId: "instrument_scale",
       viewState: { featureTypeName: "Scale", config: ["Major", "G"] },
     },
     "fv-9": {
       instanceId: "fv-9",
       viewId: "instrument_chord_progression",
-      gridPosition: { col: 85, row: 1 },
-      gridSize: { cols: 23, rows: 56 },
-      zIndex: 143,
       viewState: {
         featureTypeName: "Chord Progression",
         config: ["G", "MAJOR", "0", "3", "4"],
       },
     },
   },
+  links: [
+    { id: "link-1", sourceInstanceId: "fv-8", sourceHandle: "bottom" as const, targetInstanceId: "fv-6", targetHandle: "top" as const },
+    { id: "link-2", sourceInstanceId: "fv-8", sourceHandle: "right" as const, targetInstanceId: "fv-7", targetHandle: "left" as const },
+    { id: "link-3", sourceInstanceId: "fv-8", sourceHandle: "bottom" as const, targetInstanceId: "fv-9", targetHandle: "left" as const },
+  ],
+  layout: {
+    floating: {
+      referenceGrid: { cols: 113, rows: 64 },
+      nextZIndex: 144,
+      perInstance: {
+        "fv-6": { gridPosition: { col: 17, row: 27 }, gridSize: { cols: 48, rows: 30 }, zIndex: 140 },
+        "fv-7": { gridPosition: { col: 68, row: 1 }, gridSize: { cols: 15, rows: 56 }, zIndex: 142 },
+        "fv-8": { gridPosition: { col: 17, row: 1 }, gridSize: { cols: 48, rows: 23 }, zIndex: 141 },
+        "fv-9": { gridPosition: { col: 85, row: 1 }, gridSize: { cols: 23, rows: 56 }, zIndex: 143 },
+      },
+    },
+  },
 });
 
 /** Backing track layout centred on an indie rock backing track. The drum machine
- *  loads with a pre-built 8-bar pattern (C Major, 118 BPM). A scale reference
+ *  loads with a pre-built 8-bar pattern (C Major, 79 BPM). A scale reference
  *  and timer fill the right column so you can stay focused while practising. */
 export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 113, rows: 64 },
-  nextZIndex: 136,
-  links: [
-    {
-      id: "link-3",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "bottom" as const,
-      targetInstanceId: "fv-5",
-      targetHandle: "top" as const,
-    },
-    {
-      id: "link-4",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-7",
-      targetHandle: "left" as const,
-    },
-    {
-      id: "link-5",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-8",
-      targetHandle: "left" as const,
-    },
-  ],
-  openViews: {
+  instances: {
     "fv-1": {
       instanceId: "fv-1",
       viewId: "drum_machine",
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 36, rows: 21 },
-      zIndex: 134,
       viewState: {
         bpm: 79,
         steps: 16,
@@ -141,97 +91,12 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         progMode: "MAJOR",
         measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
         tracks: [
-          [
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "kick",
-            null,
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-          ],
-          [
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-          ],
-          [
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-          ],
-          [
-            "crash",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-          ],
+          ["kick", null, null, null, null, null, "kick", null, "kick", null, null, null, null, null, null, null],
+          [null, null, null, null, "snare", null, null, null, null, null, null, null, "snare", null, null, null],
+          ["hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null],
+          ["crash", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null],
         ],
-        bassTrack: [
-          1,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          null,
-          null,
-          null,
-          null,
-          null,
-          7,
-          null,
-        ],
+        bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
         swingAmount: 0,
         trackSounds: ["kick", "snare", "hihat", "crash"],
       },
@@ -239,17 +104,11 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-4": {
       instanceId: "fv-4",
       viewId: "floating_timer",
-      gridPosition: { col: 66, row: 1 },
-      gridSize: { cols: 16, rows: 9 },
-      zIndex: 120,
       viewState: { duration: 300 },
     },
     "fv-5": {
       instanceId: "fv-5",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 17, row: 28 },
-      gridSize: { cols: 60, rows: 33 },
-      zIndex: 131,
+      viewId: "instrument_multifret",
       viewState: {
         featureTypeName: "MultiLayerFretboard",
         config: [
@@ -262,28 +121,35 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-6": {
       instanceId: "fv-6",
       viewId: "drone_view",
-      gridPosition: { col: 66, row: 11 },
-      gridSize: { cols: 16, rows: 8 },
-      zIndex: 122,
       viewState: { note: "A" },
     },
     "fv-7": {
       instanceId: "fv-7",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 83, row: 1 },
-      gridSize: { cols: 24, rows: 29 },
-      zIndex: 136,
+      viewId: "instrument_chord",
       viewState: { featureTypeName: "Chord", config: ["driven", "driven"] },
     },
     "fv-8": {
       instanceId: "fv-8",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 83, row: 32 },
-      gridSize: { cols: 24, rows: 29 },
-      zIndex: 135,
-      viewState: {
-        featureTypeName: "Chord",
-        config: ["driven_next", "driven_next"],
+      viewId: "instrument_chord",
+      viewState: { featureTypeName: "Chord", config: ["driven_next", "driven_next"] },
+    },
+  },
+  links: [
+    { id: "link-3", sourceInstanceId: "fv-1", sourceHandle: "bottom" as const, targetInstanceId: "fv-5", targetHandle: "top" as const },
+    { id: "link-4", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-7", targetHandle: "left" as const },
+    { id: "link-5", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-8", targetHandle: "left" as const },
+  ],
+  layout: {
+    floating: {
+      referenceGrid: { cols: 113, rows: 64 },
+      nextZIndex: 136,
+      perInstance: {
+        "fv-1": { gridPosition: { col: 17, row: 1 }, gridSize: { cols: 36, rows: 21 }, zIndex: 134 },
+        "fv-4": { gridPosition: { col: 66, row: 1 }, gridSize: { cols: 16, rows: 9 }, zIndex: 120 },
+        "fv-5": { gridPosition: { col: 17, row: 28 }, gridSize: { cols: 60, rows: 33 }, zIndex: 131 },
+        "fv-6": { gridPosition: { col: 66, row: 11 }, gridSize: { cols: 16, rows: 8 }, zIndex: 122 },
+        "fv-7": { gridPosition: { col: 83, row: 1 }, gridSize: { cols: 24, rows: 29 }, zIndex: 136 },
+        "fv-8": { gridPosition: { col: 83, row: 32 }, gridSize: { cols: 24, rows: 29 }, zIndex: 135 },
       },
     },
   },
@@ -299,48 +165,36 @@ const _MINOR_WORKOUT_SCHEDULE = A_MINOR_WORKOUT_SCHEDULE_JSON;
  *  current interval's feature. A metronome below the Any view is also linked
  *  to it so groove/tempo changes propagate to whatever feature is displayed. */
 export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 113, rows: 64 },
-  nextZIndex: 105,
-  links: [
-    {
-      id: "link-1",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-2",
-      targetHandle: "left" as const,
-    },
-    {
-      id: "link-2",
-      sourceInstanceId: "fv-3",
-      sourceHandle: "top" as const,
-      targetInstanceId: "fv-2",
-      targetHandle: "bottom" as const,
-    },
-  ],
-  openViews: {
+  instances: {
     "fv-1": {
       instanceId: "fv-1",
       viewId: "schedule_floating_view",
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 35, rows: 58 },
-      zIndex: 100,
       viewState: { mode: "play", scheduleJSON: _MINOR_WORKOUT_SCHEDULE },
     },
     "fv-2": {
       instanceId: "fv-2",
       viewId: "any_floating_view",
-      gridPosition: { col: 62, row: 1 },
-      gridSize: { cols: 38, rows: 42 },
-      zIndex: 101,
       viewState: {},
     },
     "fv-3": {
       instanceId: "fv-3",
       viewId: "instrument_floating_metronome",
-      gridPosition: { col: 62, row: 46 },
-      gridSize: { cols: 20, rows: 13 },
-      zIndex: 102,
       viewState: {},
+    },
+  },
+  links: [
+    { id: "link-1", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-2", targetHandle: "left" as const },
+    { id: "link-2", sourceInstanceId: "fv-3", sourceHandle: "top" as const, targetInstanceId: "fv-2", targetHandle: "bottom" as const },
+  ],
+  layout: {
+    floating: {
+      referenceGrid: { cols: 113, rows: 64 },
+      nextZIndex: 105,
+      perInstance: {
+        "fv-1": { gridPosition: { col: 17, row: 1 }, gridSize: { cols: 35, rows: 58 }, zIndex: 100 },
+        "fv-2": { gridPosition: { col: 62, row: 1 }, gridSize: { cols: 38, rows: 42 }, zIndex: 101 },
+        "fv-3": { gridPosition: { col: 62, row: 46 }, gridSize: { cols: 20, rows: 13 }, zIndex: 102 },
+      },
     },
   },
 });
@@ -348,31 +202,10 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
 /** Triad practice layout: drum machine drives a Nearby Triads reference panel
  *  and a multi-layer fretboard. A timer sits in the top-right column. */
 export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 113, rows: 64 },
-  nextZIndex: 140,
-  links: [
-    {
-      id: "link-2",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "bottom" as const,
-      targetInstanceId: "fv-5",
-      targetHandle: "top" as const,
-    },
-    {
-      id: "link-3",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-2",
-      targetHandle: "left" as const,
-    },
-  ],
-  openViews: {
+  instances: {
     "fv-1": {
       instanceId: "fv-1",
       viewId: "drum_machine",
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 33, rows: 22 },
-      zIndex: 139,
       viewState: {
         bpm: 63,
         steps: 16,
@@ -382,106 +215,18 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         progMode: "MAJOR",
         measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
         tracks: [
-          [
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "kick",
-            null,
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-          ],
-          [
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-          ],
-          [
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-          ],
-          [
-            "crash",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-          ],
+          ["kick", null, null, null, null, null, "kick", null, "kick", null, null, null, null, null, null, null],
+          [null, null, null, null, "snare", null, null, null, null, null, null, null, "snare", null, null, null],
+          ["hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null],
+          ["crash", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null],
         ],
-        bassTrack: [
-          1,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          null,
-          null,
-          null,
-          null,
-          null,
-          7,
-          null,
-        ],
+        bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
         trackSounds: ["kick", "snare", "hihat", "crash"],
       },
     },
     "fv-2": {
       instanceId: "fv-2",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 75, row: 1 },
-      gridSize: { cols: 28, rows: 62 },
-      zIndex: 138,
+      viewId: "instrument_nearby_triads",
       viewState: {
         featureTypeName: "Nearby Triads",
         config: ["C", "MAJOR", "reference", "0", "4", "5", "3"],
@@ -489,10 +234,7 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     },
     "fv-5": {
       instanceId: "fv-5",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 17, row: 37 },
-      gridSize: { cols: 50, rows: 26 },
-      zIndex: 134,
+      viewId: "instrument_multifret",
       viewState: {
         featureTypeName: "MultiLayerFretboard",
         config: [
@@ -504,310 +246,31 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-6": {
       instanceId: "fv-6",
       viewId: "floating_timer",
-      gridPosition: { col: 17, row: 27 },
-      gridSize: { cols: 17, rows: 7 },
-      zIndex: 137,
       viewState: { duration: 300 },
     },
   },
-});
-// ─── Compact variants ─────────────────────────────────────────────────────────
-// Used automatically when the viewport is below COMPACT_BREAKPOINT_COLS (~1200px).
-// Each keeps only the essential panels so nothing overlaps on smaller screens.
-
-/** Compact backing layout: drum machine + fretboard only. Drops timer, drone,
- *  and the two chord side-panels to avoid cramping on smaller screens. */
-export const BACKING_LAYOUT_COMPACT: Readonly<CurrentPayload> = Object.freeze({
-  referenceGrid: { cols: 85, rows: 55 },
-  nextZIndex: 122,
   links: [
-    {
-      id: "link-3",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "bottom" as const,
-      targetInstanceId: "fv-5",
-      targetHandle: "top" as const,
-    },
+    { id: "link-2", sourceInstanceId: "fv-1", sourceHandle: "bottom" as const, targetInstanceId: "fv-5", targetHandle: "top" as const },
+    { id: "link-3", sourceInstanceId: "fv-1", sourceHandle: "right" as const, targetInstanceId: "fv-2", targetHandle: "left" as const },
   ],
-  openViews: {
-    "fv-1": {
-      instanceId: "fv-1",
-      viewId: "drum_machine",
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 62, rows: 26 },
-      zIndex: 121,
-      viewState: {
-        bpm: 79,
-        steps: 16,
-        numMeasures: 8,
-        progRootNote: "C",
-        progMode: "MAJOR",
-        measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
-        tracks: [
-          [
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            "kick",
-            null,
-            "kick",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-          ],
-          [
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            "snare",
-            null,
-            null,
-            null,
-          ],
-          [
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-            "hihat",
-            null,
-          ],
-          [
-            "crash",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-            "shaker",
-            null,
-          ],
-        ],
-        bassTrack: [
-          1,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          null,
-          5,
-          null,
-          null,
-          null,
-          null,
-          null,
-          7,
-          null,
-        ],
-        swingAmount: 0,
-        trackSounds: ["kick", "snare", "hihat", "crash"],
-      },
-    },
-    "fv-5": {
-      instanceId: "fv-5",
-      viewId: "configurable_instrument_feature",
-      gridPosition: { col: 17, row: 30 },
-      gridSize: { cols: 62, rows: 22 },
-      zIndex: 120,
-      viewState: {
-        featureTypeName: "MultiLayerFretboard",
-        config: [
-          "chord|driven|var(--dm-palette-2)|none",
-          "chord|driven_next|none|var(--dm-palette-4)",
-          "scale|driven|driven|var(--dm-palette-3)|none",
-        ],
+  layout: {
+    floating: {
+      referenceGrid: { cols: 113, rows: 64 },
+      nextZIndex: 140,
+      perInstance: {
+        "fv-1": { gridPosition: { col: 17, row: 1 }, gridSize: { cols: 33, rows: 22 }, zIndex: 139 },
+        "fv-2": { gridPosition: { col: 75, row: 1 }, gridSize: { cols: 28, rows: 62 }, zIndex: 138 },
+        "fv-5": { gridPosition: { col: 17, row: 37 }, gridSize: { cols: 50, rows: 26 }, zIndex: 134 },
+        "fv-6": { gridPosition: { col: 17, row: 27 }, gridSize: { cols: 17, rows: 7 }, zIndex: 137 },
       },
     },
   },
 });
 
-/** Compact triad practice layout: drum machine + Nearby Triads only. Drops the
- *  multi-layer fretboard and timer to keep both panels comfortably visible. */
-export const TRIAD_PRACTICE_LAYOUT_COMPACT: Readonly<CurrentPayload> =
-  Object.freeze({
-    referenceGrid: { cols: 85, rows: 55 },
-    nextZIndex: 122,
-    links: [
-      {
-        id: "link-3",
-        sourceInstanceId: "fv-1",
-        sourceHandle: "right" as const,
-        targetInstanceId: "fv-2",
-        targetHandle: "left" as const,
-      },
-    ],
-    openViews: {
-      "fv-1": {
-        instanceId: "fv-1",
-        viewId: "drum_machine",
-        gridPosition: { col: 17, row: 1 },
-        gridSize: { cols: 42, rows: 26 },
-        zIndex: 121,
-        viewState: {
-          bpm: 63,
-          steps: 16,
-          swingAmount: 0,
-          numMeasures: 8,
-          progRootNote: "C",
-          progMode: "MAJOR",
-          measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
-          tracks: [
-            [
-              "kick",
-              null,
-              null,
-              null,
-              null,
-              null,
-              "kick",
-              null,
-              "kick",
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-            ],
-            [
-              null,
-              null,
-              null,
-              null,
-              "snare",
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              null,
-              "snare",
-              null,
-              null,
-              null,
-            ],
-            [
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-              "hihat",
-              null,
-            ],
-            [
-              "crash",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-              "shaker",
-              null,
-            ],
-          ],
-          bassTrack: [
-            1,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            5,
-            null,
-            null,
-            null,
-            null,
-            null,
-            7,
-            null,
-          ],
-          trackSounds: ["kick", "snare", "hihat", "crash"],
-        },
-      },
-      "fv-2": {
-        instanceId: "fv-2",
-        viewId: "configurable_instrument_feature",
-        gridPosition: { col: 60, row: 1 },
-        gridSize: { cols: 24, rows: 52 },
-        zIndex: 120,
-        viewState: {
-          featureTypeName: "Nearby Triads",
-          config: ["C", "MAJOR", "reference", "0", "4", "5", "3"],
-        },
-      },
-    },
-  });
-
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
-/** Grid-column threshold below which the compact variant of a layout is
- *  selected. 100 cols ≈ 1200px — comfortably between the 768px mobile
- *  breakpoint (64 cols) and the 1366px design target (113 cols). */
-export const COMPACT_BREAKPOINT_COLS = 115;
-
-/** Each entry bundles the full layout with an optional compact variant.
- *  The compact variant is used when the viewport is below COMPACT_BREAKPOINT_COLS. */
 export interface DefaultConfigEntry {
   default: CurrentPayload;
-  compact?: CurrentPayload;
 }
 
 /** All built-in presets. Keys are accessed via the "default:" namespace in
@@ -816,12 +279,9 @@ export const DEFAULT_CONFIGS: Readonly<Record<string, DefaultConfigEntry>> =
   Object.freeze({
     empty: { default: EMPTY_CONFIG },
     reference: { default: REFERENCE_LAYOUT },
-    backing: { default: BACKING_LAYOUT, compact: BACKING_LAYOUT_COMPACT },
+    backing: { default: BACKING_LAYOUT },
     practice: { default: PRACTICE_LAYOUT },
-    triad_practice: {
-      default: TRIAD_PRACTICE_LAYOUT,
-      compact: TRIAD_PRACTICE_LAYOUT_COMPACT,
-    },
+    triad_practice: { default: TRIAD_PRACTICE_LAYOUT },
   });
 
 /** Ordered list of presets to show in UI pickers. "empty" is intentionally

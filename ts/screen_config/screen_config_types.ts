@@ -14,7 +14,7 @@ export type { LinkRecord };
 /** The schema version this build of the app reads and writes. Bump when the
  *  payload shape changes in a breaking way, and add a migration step in
  *  migrations.ts. See SCREEN_CONFIG_FORMAT.md for the full checklist. */
-export const CURRENT_SCREEN_CONFIG_VERSION = 2;
+export const CURRENT_SCREEN_CONFIG_VERSION = 3;
 
 // ─── V0: legacy (unversioned) ─────────────────────────────────────────────────
 
@@ -34,40 +34,73 @@ export interface V0Payload {
  *  Runtime-only fields (pixel position, pixel size) are excluded — they are
  *  derived from gridPosition/gridSize when the view is restored. */
 export interface V1PersistedViewEntry {
-  /** Stable runtime ID, e.g. "fv-3". Preserved across saves so links survive. */
   instanceId: string;
-  /** The registered viewId that identifies which view type to recreate. */
   viewId: string;
-  /** Position in GRID_UNIT-sized cells at the time of saving. */
   gridPosition: { col: number; row: number };
-  /** Size in GRID_UNIT-sized cells at the time of saving. */
   gridSize?: { cols: number; rows: number };
   zIndex: number;
-  /** Opaque blob owned entirely by the individual view. The persistence layer
-   *  stores and restores this without interpreting it. If a view's internal
-   *  state format needs to change, the view itself should include a version
-   *  marker (e.g. { _v: 2, ... }) and handle migration in createView(). */
   viewState?: unknown;
-  /** Per-instance orientation override, independent of the global instrument setting. */
   orientationOverride?: "vertical" | "horizontal";
-  /** Whether this instance is in the zoomed state. */
   zoomActive?: boolean;
 }
 
 export interface V1Payload {
-  /** Viewport dimensions in grid units at the time of saving, used to scale
-   *  positions proportionally when loading on a different screen size. */
   referenceGrid: { cols: number; rows: number };
   openViews: Record<string, V1PersistedViewEntry>;
   nextZIndex: number;
-  /** Always an array (empty if there are no links). Normalised from the
-   *  optional field in FloatingViewManagerSaveState. */
   links: LinkRecord[];
 }
 
 // ─── V2: adds customTunings for export/import ─────────────────────────────────
 
 export interface V2Payload extends V1Payload {
+  customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>;
+}
+
+// ─── V3: separates layout-independent instance data from layout geometry ──────
+// Also unifies floating and tabbed persistence into a single storage key.
+
+/** Instance data that is independent of which layout strategy is active. */
+export interface V3PersistedViewEntry {
+  instanceId: string;
+  viewId: string;
+  viewState?: unknown;
+  collapsed?: boolean;
+  orientationOverride?: "vertical" | "horizontal";
+  zoomActive?: boolean;
+}
+
+/** Floating-layout geometry for a single instance. */
+export interface V3FloatingPerInstance {
+  gridPosition: { col: number; row: number };
+  gridSize?: { cols: number; rows: number };
+  zIndex: number;
+}
+
+/** All floating-layout state needed to restore positions and z-order. */
+export interface V3FloatingLayout {
+  referenceGrid: { cols: number; rows: number };
+  nextZIndex: number;
+  perInstance: Record<string, V3FloatingPerInstance>;
+}
+
+/** Tabbed-layout state: tab order and the last-active tab. */
+export interface V3TabbedLayout {
+  order: string[];
+  activeId?: string;
+}
+
+export interface V3Payload {
+  /** Layout-independent data for each open panel instance. */
+  instances: Record<string, V3PersistedViewEntry>;
+  /** All panel links. */
+  links: LinkRecord[];
+  /** Layout-specific data. Both keys may be present so state is preserved when
+   *  switching between form factors. */
+  layout: {
+    floating?: V3FloatingLayout;
+    tabbed?: V3TabbedLayout;
+  };
   /** User-defined custom tunings, keyed by InstrumentName string value.
    *  Included in exports so custom tunings travel with the layout. */
   customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>;
@@ -78,19 +111,14 @@ export interface V2Payload extends V1Payload {
 /** The payload type at the current schema version. Update this alias (and only
  *  this alias) when bumping to a new version — the rest of the app uses
  *  CurrentPayload and remains unaffected. */
-export type CurrentPayload = V2Payload;
+export type CurrentPayload = V3Payload;
 
 // ─── Storage envelope ─────────────────────────────────────────────────────────
 
-/** Every value written to localStorage is wrapped in this envelope.
- *  The "version" field is read before the payload is touched, enabling
- *  the migration chain to apply the correct sequence of transformations. */
 export interface VersionedScreenConfig {
   version: number;
   payload: unknown;
-  /** ISO-8601 timestamp written at save time. Informational only. */
   savedAt?: string;
-  /** "reference" | "practice" — records which page context saved this. Informational only. */
   context?: string;
 }
 
@@ -99,7 +127,6 @@ export interface VersionedScreenConfig {
 export interface NamedScreenConfig {
   name: string;
   description?: string;
-  /** ISO-8601 timestamp. */
   createdAt: string;
   config: VersionedScreenConfig;
 }
