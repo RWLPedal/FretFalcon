@@ -126,7 +126,9 @@
 }
 
 /* Checkbox */
-.config-compact .config-checkbox-label {
+.config-compact .config-checkbox-label,
+.layer-controls-row .config-checkbox-label,
+.layer-preset-strip .config-checkbox-label {
   font-size: 0.72rem;
   color: var(--text-muted);
   display: flex;
@@ -530,6 +532,13 @@
   flex-shrink: 0;
 }
 
+.layer-preset-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
 .layer-preset-btn {
   font-size: 0.72rem;
   padding: 2px 8px;
@@ -551,18 +560,24 @@
   color: var(--panel-bg);
 }
 
+/* Layer List — Controls row (customize arrow + inline overlays toggle) */
+.layer-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
 /* Layer List — Customize toggle */
 .layer-customize-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
   font-size: 0.71rem;
   color: var(--clr-text-subtle, #aaa);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 0;
-  margin-bottom: 4px;
+  padding: 2px 4px;
   transition: color 0.12s;
 }
 .layer-customize-toggle:hover {

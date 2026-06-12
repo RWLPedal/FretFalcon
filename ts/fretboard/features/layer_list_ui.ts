@@ -338,6 +338,13 @@ function buildLayerFields(
 
 // --- Main Component ---
 
+export interface InlineToggleConfig {
+  label: string;
+  defaultValue: boolean;
+  argName: string;
+  onChange: (checked: boolean) => void;
+}
+
 /**
  * Creates a layer list input with preset buttons and a collapsible custom layer editor.
  * Each row encodes one layer as a pipe-delimited string.
@@ -346,7 +353,8 @@ export function createLayerListInput(
   container: HTMLElement,
   arg: ConfigurationSchemaArg,
   currentValues: string[],
-  onChange?: () => void
+  onChange?: () => void,
+  inlineToggle?: InlineToggleConfig
 ): void {
   const data: LayerListComponentData = (arg.uiComponentData as LayerListComponentData) ?? {};
 
@@ -548,10 +556,33 @@ export function createLayerListInput(
   const presetStrip = document.createElement("div");
   presetStrip.classList.add("layer-preset-strip");
 
-  const presetLabel = document.createElement("span");
-  presetLabel.classList.add("layer-preset-label");
-  presetLabel.textContent = "Preset";
-  presetStrip.appendChild(presetLabel);
+  if (inlineToggle) {
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("config-checkbox-label");
+
+    const textSpan = document.createElement("span");
+    textSpan.textContent = inlineToggle.label;
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.dataset.argName = inlineToggle.argName;
+    cb.checked = inlineToggle.defaultValue;
+
+    const toggleLabel = document.createElement("label");
+    toggleLabel.classList.add("toggle-switch", "toggle-switch--sm");
+    const slider = document.createElement("span");
+    slider.classList.add("toggle-switch__slider");
+    toggleLabel.append(cb, slider);
+
+    wrapper.append(textSpan, toggleLabel);
+    presetStrip.appendChild(wrapper);
+
+    const sep = document.createElement("span");
+    sep.classList.add("layer-preset-sep");
+    presetStrip.appendChild(sep);
+
+    cb.addEventListener("change", () => inlineToggle.onChange(cb.checked));
+  }
 
   for (let i = 0; i < PRESETS.length; i++) {
     const preset = PRESETS[i];
@@ -585,7 +616,7 @@ export function createLayerListInput(
   const customizeToggle = document.createElement("button");
   customizeToggle.type = "button";
   customizeToggle.classList.add("layer-customize-toggle");
-  customizeToggle.textContent = customizeOpen ? "Customize ▲" : "Customize ▼";
+  customizeToggle.textContent = customizeOpen ? "▲" : "▼";
 
   const customizeSection = document.createElement("div");
   customizeSection.classList.add("layer-customize-section");
@@ -594,10 +625,15 @@ export function createLayerListInput(
   customizeToggle.addEventListener("click", () => {
     customizeOpen = !customizeOpen;
     customizeSection.hidden = !customizeOpen;
-    customizeToggle.textContent = customizeOpen ? "Customize ▲" : "Customize ▼";
+    customizeToggle.textContent = customizeOpen ? "▲" : "▼";
   });
 
-  container.appendChild(customizeToggle);
+  // --- Controls row (customize arrow only) ---
+  const controlsRow = document.createElement("div");
+  controlsRow.classList.add("layer-controls-row");
+  controlsRow.appendChild(customizeToggle);
+
+  container.appendChild(controlsRow);
   container.appendChild(customizeSection);
 
   // --- Layer list container (inside collapsible section) ---

@@ -1,5 +1,5 @@
 import { ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType, LabelValue } from "../feature";
-import { createLayerListInput, extractLayerListValues } from "../fretboard/features/layer_list_ui";
+import { createLayerListInput, extractLayerListValues, InlineToggleConfig } from "../fretboard/features/layer_list_ui";
 import { ChordEntryPanel, ChordEntry, entryDisplayLabel } from "../fretboard/features/chord_entry_panel";
 import { DiatonicMode } from "../fretboard/music_types";
 
@@ -16,6 +16,8 @@ export class ConfigView {
     private argValues: Map<number, string | string[] | null> = new Map();
     // Containers for layer_list args — values extracted from DOM at read time.
     private layerListContainers: Map<number, HTMLElement> = new Map();
+    // Inline toggles absorbed into layer list args (keyed by LayerList arg index).
+    private layerListInlineToggles: Map<number, InlineToggleConfig> = new Map();
     // Containers for chord_entry_widget args — values stored via hooks.
     private chordEntryContainers: Map<number, HTMLElement> = new Map();
     // Tracks whether any LayerList arg is currently in linked/driven state.
@@ -51,7 +53,8 @@ export class ConfigView {
                 const listEl = this.layerListContainers.get(argIndex);
                 if (listEl && layerValues.length > 0) {
                     listEl.innerHTML = '';
-                    createLayerListInput(listEl, arg, layerValues, () => this.notifyChange());
+                    const savedInlineToggle = this.layerListInlineToggles.get(argIndex);
+                    createLayerListInput(listEl, arg, layerValues, () => this.notifyChange(), savedInlineToggle);
                     if (this._isLinked) {
                         const fn = (listEl as any)._setLinked;
                         if (typeof fn === 'function') fn(true, false, this._hasNextSignals);
@@ -354,8 +357,27 @@ export class ConfigView {
 
         this.container.innerHTML = '';
 
-        this.schema.args.forEach((arg, index) => {
+        // Pre-pass: find Toggle args immediately preceding a LayerList arg so they
+        // can be rendered inline inside the LayerList instead of as a separate row.
+        const schema = this.schema;
+        const absorbedToggleIndices = new Set<number>();
+        const layerListAbsorbedToggle = new Map<number, { arg: ConfigurationSchemaArg; index: number }>();
+        schema.args.forEach((arg, index) => {
+            if (arg.uiComponentType !== UiComponentType.LayerList) return;
+            for (let j = index - 1; j >= 0; j--) {
+                const prev = schema.args[j];
+                if (prev.uiComponentType === UiComponentType.Ellipsis) continue;
+                if (prev.uiComponentType === UiComponentType.Toggle) {
+                    absorbedToggleIndices.add(j);
+                    layerListAbsorbedToggle.set(index, { arg: prev, index: j });
+                }
+                break;
+            }
+        });
+
+        schema.args.forEach((arg, index) => {
             if (arg.uiComponentType === UiComponentType.Ellipsis) return; // handled externally
+            if (absorbedToggleIndices.has(index)) return; // absorbed into following LayerList
 
             const field = document.createElement('div');
             field.classList.add('field');
@@ -377,7 +399,11 @@ export class ConfigView {
             control.classList.add('control');
             field.appendChild(control);
 
-            this.renderArg(control, arg, index);
+            if (arg.uiComponentType === UiComponentType.LayerList) {
+                this.renderLayerList(control, arg, index, layerListAbsorbedToggle.get(index));
+            } else {
+                this.renderArg(control, arg, index);
+            }
             this.container.appendChild(field);
         });
 
@@ -404,9 +430,29 @@ export class ConfigView {
         }
     }
 
-    private renderLayerList(parent: HTMLElement, arg: ConfigurationSchemaArg, index: number): void {
+    private renderLayerList(
+        parent: HTMLElement,
+        arg: ConfigurationSchemaArg,
+        index: number,
+        absorbedToggle?: { arg: ConfigurationSchemaArg; index: number }
+    ): void {
         this.layerListContainers.set(index, parent);
-        createLayerListInput(parent, arg, [], () => this.notifyChange());
+        let inlineToggle: InlineToggleConfig | undefined;
+        if (absorbedToggle) {
+            const defaultVal = absorbedToggle.arg.defaultValue === 'true';
+            this.argValues.set(absorbedToggle.index, defaultVal ? 'true' : 'false');
+            inlineToggle = {
+                label: absorbedToggle.arg.name,
+                defaultValue: defaultVal,
+                argName: absorbedToggle.arg.name,
+                onChange: (checked) => {
+                    this.argValues.set(absorbedToggle.index, checked ? 'true' : 'false');
+                    this.notifyChange();
+                },
+            };
+            this.layerListInlineToggles.set(index, inlineToggle);
+        }
+        createLayerListInput(parent, arg, [], () => this.notifyChange(), inlineToggle);
     }
 
     private renderCheckbox(parent: HTMLElement, arg: ConfigurationSchemaArg): void {

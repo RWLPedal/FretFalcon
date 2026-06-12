@@ -10,7 +10,7 @@ import { AnyFeature } from "./fretboard/features/any_feature";
 import { BackingTrackView } from "./views/backing_track_view";
 import { CapoView } from "./fretboard/views/capo_view";
 import { ConfigurableFeatureView } from "./views/configurable_feature_view";
-import { ColorLegendView } from "./fretboard/views/color_legend_view";
+import { LegendView } from "./fretboard/views/legend_view";
 import { MetronomeView } from "./fretboard/views/metronome_view";
 import { StrumView } from "./views/strum_view";
 import { CircleOfFifthsView } from "./views/circle_of_fifths_view";
@@ -120,13 +120,13 @@ export function registerBuiltins(): void {
 
   registerFloatingView({
     viewId: "instrument_color_legend",
-    displayName: "Color Legend",
+    displayName: "Legend",
     icon: "palette",
     refreshOnInstrumentChange: true,
     defaultWidth: 180,
     createView: (_initialState?: any, appSettings?: AppSettings) => {
       if (!appSettings) {
-        console.error("AppSettings not provided to ColorLegendView factory!");
+        console.error("AppSettings not provided to LegendView factory!");
         return {
           render: (c: HTMLElement) =>
             (c.textContent = "Error: Settings unavailable."),
@@ -135,7 +135,7 @@ export function registerBuiltins(): void {
           destroy() {},
         };
       }
-      return new ColorLegendView(appSettings);
+      return new LegendView(appSettings);
     },
   });
 
