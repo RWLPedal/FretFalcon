@@ -1,5 +1,5 @@
 import { MobileViewManager } from './mobile_view_manager';
-import { NAV_SECTIONS, Visibility, NavButton } from '../reference_page/nav_sections';
+import { getNavSectionGroups, NavEntry, Visibility } from '../reference_page/nav_registry';
 import { InstrumentName } from '../fretboard/fretboard';
 import { AppSettings } from '../settings';
 import { getViewIcon } from '../panels/panel_registry';
@@ -60,28 +60,28 @@ export class MobileAddPanel {
 
     private refresh(): void {
         const instrument = this.getSettings().instrumentSettings?.instrument ?? InstrumentName.Guitar;
-        const allButtons: NavButton[] = [];
+        const allEntries: NavEntry[] = [];
 
-        for (const section of NAV_SECTIONS) {
-            for (const btn of section.buttons) {
-                if (btn.visibility !== Visibility.DESKTOP &&
-                    (!btn.requiredInstruments || btn.requiredInstruments.includes(instrument))) {
-                    allButtons.push(btn);
+        for (const group of getNavSectionGroups()) {
+            for (const entry of group.entries) {
+                if (entry.visibility !== Visibility.Desktop &&
+                    (!entry.requiredInstruments || entry.requiredInstruments.includes(instrument as string))) {
+                    allEntries.push(entry);
                 }
             }
         }
 
         const openCount = this.viewManager.getAllViews().length;
-        this.countEl.textContent = `${openCount} of ${allButtons.length} OPEN`;
+        this.countEl.textContent = `${openCount} of ${allEntries.length} OPEN`;
 
         this.listEl.innerHTML = '';
-        for (const btn of allButtons) {
-            this.listEl.appendChild(this.buildCard(btn));
+        for (const entry of allEntries) {
+            this.listEl.appendChild(this.buildCard(entry));
         }
     }
 
-    private buildCard(btn: NavButton): HTMLElement {
-        const existingId = this.viewManager.isViewOpen(btn.viewId, btn.featureTypeName);
+    private buildCard(entry: NavEntry): HTMLElement {
+        const existingId = this.viewManager.isViewOpen(entry.viewId);
         const isOpen = !!existingId;
 
         const card = document.createElement('div');
@@ -89,12 +89,12 @@ export class MobileAddPanel {
 
         const iconBox = document.createElement('div');
         iconBox.className = 'mobile-add-card-icon';
-        iconBox.innerHTML = `<span class="material-icons">${getViewIcon(btn.viewId)}</span>`;
+        iconBox.innerHTML = `<span class="material-icons">${getViewIcon(entry.viewId)}</span>`;
 
         const info = document.createElement('div');
         info.className = 'mobile-add-card-info';
         info.innerHTML = `
-            <div class="mobile-add-card-name">${btn.label}</div>
+            <div class="mobile-add-card-name">${entry.label}</div>
         `;
 
         card.append(iconBox, info);
@@ -115,7 +115,7 @@ export class MobileAddPanel {
             if (existingId) {
                 this.viewManager.activateView(existingId);
             } else {
-                this.viewManager.openView(btn);
+                this.viewManager.openView({ viewId: entry.viewId });
             }
             this.close();
             this.onClose();

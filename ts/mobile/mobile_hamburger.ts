@@ -1,5 +1,5 @@
 import { MobileViewManager } from './mobile_view_manager';
-import { NAV_SECTIONS, Visibility, NavButton } from '../reference_page/nav_sections';
+import { getNavSectionGroups, NavEntry, Visibility } from '../reference_page/nav_registry';
 import { InstrumentName } from '../fretboard/fretboard';
 import { AppSettings } from '../settings';
 import { getViewIcon } from '../panels/panel_registry';
@@ -66,40 +66,40 @@ export class MobileHamburger {
 
         const instrument = this.getSettings().instrumentSettings?.instrument ?? InstrumentName.Guitar;
 
-        for (const section of NAV_SECTIONS) {
-            const visible = section.buttons.filter(
-                b => b.visibility !== Visibility.DESKTOP &&
-                     (!b.requiredInstruments || b.requiredInstruments.includes(instrument))
+        for (const group of getNavSectionGroups()) {
+            const visible = group.entries.filter(
+                e => e.visibility !== Visibility.Desktop &&
+                     (!e.requiredInstruments || e.requiredInstruments.includes(instrument as string))
             );
             if (visible.length === 0) continue;
 
             const label = document.createElement('div');
             label.className = 'mobile-menu-section-label';
-            label.textContent = section.label;
+            label.textContent = group.label;
             nav.appendChild(label);
 
-            for (const btn of visible) {
-                nav.appendChild(this.buildItem(btn));
+            for (const entry of visible) {
+                nav.appendChild(this.buildItem(entry));
             }
         }
     }
 
-    private buildItem(btn: NavButton): HTMLButtonElement {
-        const existingId = this.viewManager.isViewOpen(btn.viewId, btn.featureTypeName);
+    private buildItem(entry: NavEntry): HTMLButtonElement {
+        const existingId = this.viewManager.isViewOpen(entry.viewId);
         const isOpen = !!existingId;
 
         const item = document.createElement('button');
         item.className = 'mobile-menu-item' + (isOpen ? ' is-active' : '');
         item.innerHTML = `
-            <span class="material-icons">${getViewIcon(btn.viewId)}</span>
-            <span>${btn.label}</span>
+            <span class="material-icons">${getViewIcon(entry.viewId)}</span>
+            <span>${entry.label}</span>
             ${isOpen ? '<span class="mobile-menu-badge">OPEN</span>' : ''}
         `;
         item.addEventListener('click', () => {
             if (existingId) {
                 this.viewManager.activateView(existingId);
             } else {
-                this.viewManager.openView(btn);
+                this.viewManager.openView({ viewId: entry.viewId });
             }
             this.close();
             this.onClose();

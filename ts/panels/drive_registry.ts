@@ -43,8 +43,20 @@ const sourceDescriptors = new Map<string, DriveSourceDescriptor>();
 const targetSlots = new Map<string, DriveTargetSlot[]>();
 // Maps floating-view viewId → featureTypeName for standalone view targets.
 const viewIdToTargetFeatureTypeName = new Map<ViewId, string>();
+// The single viewId whose instances broadcast to all panels (Global Key).
+let _broadcastSourceViewId: ViewId | null = null;
 
 // ─── Registration functions ───────────────────────────────────────────────────
+
+/** Register a viewId whose instances broadcast signals to all other panels. */
+export function registerBroadcastSource(vid: ViewId): void {
+  _broadcastSourceViewId = vid;
+}
+
+/** Returns the registered broadcast-source viewId, or null if none. */
+export function getBroadcastSourceViewId(): ViewId | null {
+  return _broadcastSourceViewId;
+}
 
 export function registerDriveSource(descriptor: DriveSourceDescriptor): void {
   const key = descriptor.featureTypeName

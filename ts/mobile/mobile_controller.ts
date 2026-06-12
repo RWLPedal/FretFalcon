@@ -1,5 +1,4 @@
 import { AppSettings } from '../settings';
-import { NAV_SECTIONS } from '../reference_page/nav_sections';
 import { MobileViewManager } from './mobile_view_manager';
 import { MobileLayout } from './mobile_layout';
 import { MobileHamburger } from './mobile_hamburger';
@@ -99,7 +98,6 @@ export class MobileController {
         );
 
         // Step 5: restore previously open mobile views.
-        const allButtons = NAV_SECTIONS.flatMap(s => s.buttons);
-        this.viewManager.restoreState(allButtons);
+        this.viewManager.restoreState();
     }
 }

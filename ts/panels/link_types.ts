@@ -116,3 +116,16 @@ export interface StrumSignal extends BaseSignal {
 }
 
 export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal | StrumSignal;
+
+// ─── SignalSink ───────────────────────────────────────────────────────────────
+// Views that implement this interface receive drive signals via direct method
+// calls from LinkManager instead of DOM events. Register via
+// FloatingViewManager.registerSink(instanceId, sink).
+
+export interface SignalSink {
+  receiveSignals(
+    signals: DriveSignal[],
+    meta: { sourceInstanceId: string; linkId: string | null },
+  ): void;
+  setLinkStatus?(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean }): void;
+}

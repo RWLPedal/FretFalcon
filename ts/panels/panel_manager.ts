@@ -11,6 +11,7 @@ import { getFloatingViewDescriptor } from "./panel_registry";
 import { AppSettings } from "../settings"; // Needed for createView
 import { LinkManager } from "./link_manager";
 import { getFeatureTypeNameByViewId } from "./drive_registry";
+import { SignalSink } from "./link_types";
 import { ViewId, CORE_VIEW_IDS } from "../core/ids";
 import { ScreenConfigManager } from "../screen_config/screen_config_manager";
 import { CurrentPayload } from "../screen_config/screen_config_types";
@@ -55,6 +56,7 @@ export class FloatingViewManager {
   public appSettings: AppSettings;
   private screenConfigManager: ScreenConfigManager;
   private linkManager: LinkManager | null = null;
+  private sinks = new Map<string, SignalSink>();
 
   private _resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -165,6 +167,17 @@ export class FloatingViewManager {
 
   public getLinkManager(): LinkManager | null {
     return this.linkManager;
+  }
+
+  /** Register a SignalSink for the given panel instance. */
+  public registerSink(instanceId: string, sink: SignalSink): void {
+    this.sinks.set(instanceId, sink);
+    // Deliver any cached signals immediately (late-joining link support).
+    this.linkManager?.refreshForInstance(instanceId);
+  }
+
+  public getSink(instanceId: string): SignalSink | undefined {
+    return this.sinks.get(instanceId);
   }
 
   public getWrapperElement(instanceId: string): HTMLElement | null {
@@ -310,6 +323,12 @@ export class FloatingViewManager {
       );
 
       this.activeViews.set(instanceId, wrapper);
+
+      // Auto-register sink if the view implements SignalSink.
+      if (typeof (viewInstance as any).receiveSignals === 'function') {
+        this.sinks.set(instanceId, viewInstance as unknown as SignalSink);
+      }
+
       this.viewAreaElement.appendChild(wrapper.element);
       wrapper.notifyDefaultDimensions();
       this.linkManager?.onWindowSpawned(instanceId, wrapper.element);
@@ -326,6 +345,7 @@ export class FloatingViewManager {
     if (wrapper) {
       this.linkManager?.onWindowDestroyed(instanceId);
       this.activeViews.delete(instanceId);
+      this.sinks.delete(instanceId);
       this.saveState();
     }
   }
@@ -464,6 +484,12 @@ export class FloatingViewManager {
               : undefined,
           );
           this.activeViews.set(state.instanceId, wrapper);
+
+          // Auto-register sink if the view implements SignalSink.
+          if (typeof (viewInstance as any).receiveSignals === 'function') {
+            this.sinks.set(state.instanceId, viewInstance as unknown as SignalSink);
+          }
+
           viewArea.appendChild(wrapper.element);
           this.linkManager?.onWindowSpawned(state.instanceId, wrapper.element);
         } catch (e) {
@@ -545,6 +571,11 @@ export class FloatingViewManager {
         overriddenSettings,
       );
       wrapper.replaceViewContent(newViewInstance);
+      if (typeof (newViewInstance as any).receiveSignals === 'function') {
+        this.sinks.set(instanceId, newViewInstance as unknown as SignalSink);
+      } else {
+        this.sinks.delete(instanceId);
+      }
       this.linkManager?.refreshForInstance(instanceId);
     } catch (e) {
       console.error(
@@ -590,6 +621,11 @@ export class FloatingViewManager {
       );
       wrapper.replaceViewContent(newViewInstance);
       wrapper.updateZoomButtonState(state.zoomActive);
+      if (typeof (newViewInstance as any).receiveSignals === 'function') {
+        this.sinks.set(instanceId, newViewInstance as unknown as SignalSink);
+      } else {
+        this.sinks.delete(instanceId);
+      }
       this.linkManager?.refreshForInstance(instanceId);
     } catch (e) {
       console.error(
@@ -693,6 +729,14 @@ export class FloatingViewManager {
         // dimensions may differ). For a pure theme change, keep the current wrapper size
         // so it doesn't grow 12px per theme switch.
         wrapper.replaceViewContent(newViewInstance, guitarSettingsChanged);
+
+        // Re-register sink if the new view instance implements SignalSink.
+        if (typeof (newViewInstance as any).receiveSignals === 'function') {
+          this.sinks.set(instanceId, newViewInstance as unknown as SignalSink);
+        } else {
+          this.sinks.delete(instanceId);
+        }
+
         this.linkManager?.refreshForInstance(instanceId);
       } catch (e) {
         console.error(

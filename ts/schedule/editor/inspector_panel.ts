@@ -7,7 +7,7 @@ import {
 } from "./interval/interval_row_ui";
 import { GROUP_COLOR_PALETTE, refreshGroupStats } from "./interval/group_row_ui";
 import { IntervalSettings } from "./interval/types";
-import { NAV_SECTIONS } from "../../reference_page/nav_sections";
+import { getNavEntries } from "../../reference_page/nav_registry";
 import { InstrumentName } from "../../fretboard/fretboard";
 import { getViewIcon, getViewIconByFeatureType } from "../../panels/panel_registry";
 
@@ -47,23 +47,21 @@ interface ViewOption {
   availableForInstrument: boolean;
 }
 
-/** Builds an ordered list of view options from nav_sections, filtered for the current instrument. */
+/** Builds an ordered list of view options from nav registry, filtered for the current instrument. */
 function buildViewOptions(instrument: InstrumentName): ViewOption[] {
   const options: ViewOption[] = [];
-  for (const section of NAV_SECTIONS) {
-    for (const btn of section.buttons) {
-      if (EXCLUDED_VIEW_IDS.has(btn.viewId)) continue;
-      const featureTypeName = VIEW_ID_TO_FEATURE_TYPE[btn.viewId];
-      if (!featureTypeName) continue;
-      const availableForInstrument = !btn.requiredInstruments ||
-        btn.requiredInstruments.includes(instrument);
-      options.push({
-        featureTypeName,
-        label: btn.label,
-        icon: getViewIcon(btn.viewId),
-        availableForInstrument,
-      });
-    }
+  for (const entry of getNavEntries()) {
+    if (EXCLUDED_VIEW_IDS.has(entry.viewId)) continue;
+    const featureTypeName = VIEW_ID_TO_FEATURE_TYPE[entry.viewId];
+    if (!featureTypeName) continue;
+    const availableForInstrument = !entry.requiredInstruments ||
+      entry.requiredInstruments.includes(instrument as string);
+    options.push({
+      featureTypeName,
+      label: entry.label,
+      icon: getViewIcon(entry.viewId),
+      availableForInstrument,
+    });
   }
   return options;
 }

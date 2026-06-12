@@ -7,7 +7,7 @@ import { AppSettings } from '../settings';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
-import { NAV_SECTIONS } from './nav_sections';
+import { getNavSectionGroups } from './nav_registry';
 import { InstrumentName } from '../fretboard/fretboard';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 import { getViewIcon } from '../panels/panel_registry';
@@ -61,20 +61,20 @@ export class SidebarView {
             <nav class="sidebar-nav">
         `;
 
-        for (const section of NAV_SECTIONS) {
-            const visibleButtons = section.buttons.filter(
-                (b) => !b.requiredInstruments || b.requiredInstruments.includes(instrument)
+        for (const group of getNavSectionGroups()) {
+            const visibleEntries = group.entries.filter(
+                (e) => !e.requiredInstruments || e.requiredInstruments.includes(instrument as string)
             );
-            if (visibleButtons.length === 0) continue;
+            if (visibleEntries.length === 0) continue;
 
-            html += `<div class="sidebar-section-label">${section.label}</div>`;
-            for (const btn of visibleButtons) {
+            html += `<div class="sidebar-section-label">${group.label}</div>`;
+            for (const entry of visibleEntries) {
+                const btnId = `nav-btn-${entry.viewId}`;
                 html += `
-                    <button id="${btn.id}" class="sidebar-nav-btn"
-                        data-view-id="${btn.viewId}"
-                        data-feature-type-name="${btn.featureTypeName ?? ''}">
-                        <span class="material-icons">${getViewIcon(btn.viewId)}</span>
-                        <span>${btn.label}</span>
+                    <button id="${btnId}" class="sidebar-nav-btn"
+                        data-view-id="${entry.viewId}">
+                        <span class="material-icons">${getViewIcon(entry.viewId)}</span>
+                        <span>${entry.label}</span>
                     </button>
                 `;
             }
@@ -154,17 +154,13 @@ export class SidebarView {
         }
 
         // Wire nav buttons
-        for (const section of NAV_SECTIONS) {
-            for (const btn of section.buttons) {
-                const el = document.getElementById(btn.id);
+        for (const group of getNavSectionGroups()) {
+            for (const entry of group.entries) {
+                const el = document.getElementById(`nav-btn-${entry.viewId}`);
                 if (el) {
                     el.addEventListener('click', (e) => {
-                        const target = e.currentTarget as HTMLElement;
-                        const viewId = target.dataset.viewId;
-                        const featureTypeName = target.dataset.featureTypeName;
-                        if (viewId) {
-                            this.onFeatureClick(viewId, featureTypeName || undefined);
-                        }
+                        const viewId = (e.currentTarget as HTMLElement).dataset.viewId;
+                        if (viewId) this.onFeatureClick(viewId);
                     });
                 }
             }

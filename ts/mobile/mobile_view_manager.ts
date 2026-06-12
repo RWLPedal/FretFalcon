@@ -1,7 +1,10 @@
 import { View } from '../view';
 import { AppSettings } from '../settings';
 import { getFloatingViewDescriptor, getViewIcon } from '../panels/panel_registry';
-import { NavButton } from '../reference_page/nav_sections';
+interface OpenViewRequest {
+    viewId: string;
+    featureTypeName?: string;
+}
 import { MobileLinkManager } from './mobile_link_manager';
 
 const MOBILE_STATE_KEY = 'mobileViewState';
@@ -76,7 +79,7 @@ export class MobileViewManager {
         return this.openViews;
     }
 
-    public openView(btn: NavButton): string {
+    public openView(btn: OpenViewRequest): string {
         const existing = this.isViewOpen(btn.viewId, btn.featureTypeName);
         if (existing) {
             this.activateView(existing);
@@ -115,8 +118,8 @@ export class MobileViewManager {
             instanceId,
             viewId: btn.viewId,
             featureTypeName: btn.featureTypeName,
-            displayName: btn.label,
-            headerTitle: btn.label,
+            displayName: descriptor.displayName,
+            headerTitle: descriptor.displayName,
             icon: getViewIcon(btn.viewId),
             viewInstance,
             slotEl,
@@ -245,7 +248,7 @@ export class MobileViewManager {
         } catch (_) {}
     }
 
-    public restoreState(navButtons: NavButton[]): void {
+    public restoreState(): void {
         let payload: MobileStatePayload | null = null;
         try {
             const raw = localStorage.getItem(MOBILE_STATE_KEY);
@@ -254,22 +257,8 @@ export class MobileViewManager {
 
         if (!payload || !Array.isArray(payload.openViews) || payload.openViews.length === 0) return;
 
-        const buttonByKey = new Map<string, NavButton>();
-        for (const btn of navButtons) {
-            buttonByKey.set(`${btn.viewId}:${btn.featureTypeName ?? ''}`, btn);
-        }
-
         let firstInstanceId: string | null = null;
         for (const saved of payload.openViews) {
-            const key = `${saved.viewId}:${saved.featureTypeName ?? ''}`;
-            const btn = buttonByKey.get(key) ?? {
-                id: saved.instanceId,
-                icon: saved.icon,
-                label: saved.displayName,
-                viewId: saved.viewId,
-                featureTypeName: saved.featureTypeName,
-            };
-
             const descriptor = getFloatingViewDescriptor(saved.viewId);
             if (!descriptor) continue;
 

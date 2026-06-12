@@ -6,13 +6,43 @@ import { instrumentCategory } from "../fretboard/fretboard_category";
 import { TriadFeature } from "../fretboard/features/triad_feature";
 import { SettingsManager } from "../settings_manager";
 import { LinkManager } from '../panels/link_manager';
-import '../panels/drive_slots'; // registers all drive sources/targets as a side effect
-import { GLOBAL_KEY_VIEW_ID } from '../views/global_key_view';
-import { registerBuiltins } from '../app_bootstrap';
+import { registerCategory } from '../feature_registry';
+import { registerFloatingView } from '../panels/panel_registry';
+import { registerDriveSource, registerDriveTarget, registerBroadcastSource } from '../panels/drive_registry';
+import { VIEW_MODULES } from '../modules/manifest';
+import { ViewModule } from '../modules/module_types';
+import { registerNavEntry } from './nav_registry';
+import { FloatingViewDescriptor, FretboardFloatingViewDescriptor } from '../panels/panel_types';
 import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
 import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 import { MobileController } from '../mobile/mobile_controller';
+
+function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
+  const isFretboard = !!(mod.panel.capabilities?.rotate || mod.panel.capabilities?.zoom);
+  const base: FloatingViewDescriptor = {
+    viewId: mod.id,
+    displayName: mod.panel.displayName,
+    icon: mod.panel.icon,
+    defaultWidth: mod.panel.defaultSize?.width,
+    defaultHeight: mod.panel.defaultSize?.height,
+    minWidth: mod.panel.minSize?.width,
+    minHeight: mod.panel.minSize?.height,
+    showInMenu: mod.panel.showInMenu ?? true,
+    singleton: mod.panel.singleton,
+    refreshOnInstrumentChange: mod.panel.refreshOnInstrumentChange,
+    featureTypeName: mod.panel.featureTypeName,
+    supportsConfigToggle: mod.panel.capabilities?.configToggle,
+    createView: (state, appSettings) => mod.createView({ appSettings: appSettings! }, state),
+  };
+  if (!isFretboard) return base;
+  return {
+    ...base,
+    isFretboardView: true as const,
+    supportsRotate: !!mod.panel.capabilities?.rotate,
+    supportsZoom: !!mod.panel.capabilities?.zoom,
+  } as FretboardFloatingViewDescriptor;
+}
 
 class ReferencePage {
     private floatingViewManager: FloatingViewManager;
@@ -23,7 +53,28 @@ class ReferencePage {
     private mobileController: MobileController | null = null;
 
     constructor() {
-        registerBuiltins();
+        registerCategory(instrumentCategory);
+        for (const mod of VIEW_MODULES) {
+            registerFloatingView(moduleToDescriptor(mod));
+            if (mod.drive?.sources) {
+                for (const src of mod.drive.sources) registerDriveSource(src);
+            }
+            if (mod.drive?.targets) {
+                for (const tgt of mod.drive.targets) registerDriveTarget(tgt);
+            }
+            if (mod.drive?.broadcast) {
+                registerBroadcastSource(mod.id);
+            }
+            if (mod.nav) {
+                registerNavEntry({
+                    viewId: mod.id,
+                    label: mod.nav.label,
+                    section: mod.nav.section,
+                    visibility: mod.nav.visibility,
+                    requiredInstruments: mod.nav.requiredInstruments,
+                });
+            }
+        }
 
         this.settings = loadSettings();
         this.themeManager = new ThemeManager(this.settings.theme);
@@ -40,7 +91,7 @@ class ReferencePage {
                 (id) => this.floatingViewManager.getViewId(id),
                 (id) => this.floatingViewManager.getContentElement(id),
                 (id) => this.floatingViewManager.getFeatureTypeName(id),
-                GLOBAL_KEY_VIEW_ID
+                (id) => this.floatingViewManager.getSink(id),
             );
             this.floatingViewManager.setLinkManager(linkManager);
         }

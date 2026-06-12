@@ -1,11 +1,12 @@
 // ts/panels/link_manager.ts
-import { HandleSide, LinkRecord, DriveSignal, SignalKind, SignalState, GrooveSignal, PlaySignal, StrumSignal } from './link_types';
+import { HandleSide, LinkRecord, DriveSignal, SignalKind, SignalState, GrooveSignal, PlaySignal, StrumSignal, SignalSink } from './link_types';
 import { LinkOverlay } from './link_overlay';
 import { ArrowMeta } from './link_arrow';
 import {
   getDriveSourceDescriptor,
   getDriveTargetSlots,
   getFeatureTypeNameByViewId,
+  getBroadcastSourceViewId,
 } from './drive_registry';
 import { emitEvent, onEvent } from '../core/events';
 
@@ -20,6 +21,8 @@ export class LinkManager {
   private instanceIdToViewId: (id: string) => string | null;
   // Maps instanceId → featureTypeName (for drive target slot lookup)
   private instanceIdToFeatureTypeName: ((id: string) => string | null) | null;
+  // Returns the SignalSink registered for an instance, or undefined.
+  private readonly getSink: (instanceId: string) => SignalSink | undefined;
 
   // Caches the most recent signals from each source so new links get immediate delivery
   private lastSourceSignals = new Map<string, DriveSignal[]>();
@@ -27,9 +30,8 @@ export class LinkManager {
   // RAF handle for debounced redraws
   private redrawScheduled = false;
 
-  // The viewId whose instances act as global broadcast sources (e.g. 'global_key').
-  // When set, signals from that panel go to ALL instances and suppress competing kinds.
-  private readonly globalKeyViewId: string | null;
+  // The instanceId of the currently-open broadcast source (e.g. Global Key).
+  // Resolved lazily via getBroadcastSourceViewId() rather than a hard-coded viewId.
   private globalSourceInstanceId: string | null = null;
 
   constructor(
@@ -38,11 +40,11 @@ export class LinkManager {
     getViewId: (instanceId: string) => string | null,
     private getContentEl: (instanceId: string) => HTMLElement | null = () => null,
     getFeatureTypeName: ((instanceId: string) => string | null) | null = null,
-    globalKeyViewId: string | null = null
+    getSink: (instanceId: string) => SignalSink | undefined = () => undefined,
   ) {
     this.instanceIdToViewId = getViewId;
     this.instanceIdToFeatureTypeName = getFeatureTypeName;
-    this.globalKeyViewId = globalKeyViewId;
+    this.getSink = getSink;
     this.overlay = new LinkOverlay(viewAreaEl);
 
     this.overlay.onLinkCreated = (srcId, srcHandle, tgtId, tgtHandle) => {
@@ -182,7 +184,6 @@ export class LinkManager {
     this.scheduleRedraw();
     this.notifyAllLinkStatuses();
     // Replay any signals that sources emitted before links were established
-    // (e.g. a schedule prepared during render() before initialize() ran).
     for (const link of this.links) {
       const cached = this.lastSourceSignals.get(link.sourceInstanceId);
       if (cached?.length) this.routeSignalsToTarget(link, cached);
@@ -203,20 +204,24 @@ export class LinkManager {
       const cached = this.lastSourceSignals.get(link.sourceInstanceId);
       if (cached?.length) this.routeSignalsToTarget(link, cached);
     });
+    // Also deliver global broadcast signals if a global source is active.
+    if (this.globalSourceInstanceId !== null && instanceId !== this.globalSourceInstanceId) {
+      const cached = this.lastSourceSignals.get(this.globalSourceInstanceId);
+      if (cached?.length) this.deliverSignalsToInstance(instanceId, cached);
+    }
   }
 
   public onWindowSpawned(instanceId: string, wrapperEl: HTMLElement): void {
     this.wrapperToInstanceId.set(wrapperEl, instanceId);
     this.overlay.registerWrapper(instanceId, wrapperEl);
 
-    if (this.globalKeyViewId && this.instanceIdToViewId(instanceId) === this.globalKeyViewId) {
-      // This is the global source panel; mark it, then notify all existing panels so
-      // they switch to "Driven" mode before the initial broadcast arrives on the next rAF.
+    const vid = this.instanceIdToViewId(instanceId);
+    if (vid && getBroadcastSourceViewId() === vid) {
+      // This is the broadcast source panel — mark it and notify all existing panels.
       this.globalSourceInstanceId = instanceId;
       this.notifyAllLinkStatuses();
     } else if (this.globalSourceInstanceId !== null) {
-      // Deliver current cached global signals to the newly opened panel, and notify it
-      // that it has an incoming link so it switches to "Driven" mode first.
+      // Deliver current cached global signals to the newly opened panel.
       this.notifyLinkStatus(instanceId);
       const cached = this.lastSourceSignals.get(this.globalSourceInstanceId);
       if (cached?.length) this.deliverSignalsToInstance(instanceId, cached);
@@ -231,11 +236,9 @@ export class LinkManager {
     }
     if (instanceId === this.globalSourceInstanceId) {
       this.globalSourceInstanceId = null;
-      // Re-notify all panels so those without explicit links leave "Driven" mode.
       this.notifyAllLinkStatuses();
     }
     this.lastSourceSignals.delete(instanceId);
-    // Remove all links involving this instance
     const before = this.links.length;
     const affectedTargets = new Set<string>();
     this.links
@@ -245,7 +248,6 @@ export class LinkManager {
       l => l.sourceInstanceId !== instanceId && l.targetInstanceId !== instanceId
     );
     if (this.links.length !== before) {
-      // Notify remaining windows of updated link status
       affectedTargets.forEach(tgtId => this.notifyLinkStatus(tgtId));
       this.scheduleRedraw();
     }
@@ -274,7 +276,6 @@ export class LinkManager {
     targetId: string,
     targetHandle: HandleSide
   ): void {
-    // Prevent duplicate links between the same pair
     const exists = this.links.some(
       l => l.sourceInstanceId === sourceId && l.targetInstanceId === targetId
     );
@@ -289,7 +290,6 @@ export class LinkManager {
     };
     this.links.push(link);
     this.notifyLinkStatus(targetId);
-    // Immediately deliver cached signals from this source to the new target
     const cached = this.lastSourceSignals.get(sourceId);
     if (cached?.length) this.routeSignalsToTarget(link, cached);
     this.scheduleRedraw();
@@ -307,20 +307,16 @@ export class LinkManager {
 
   private routeSignals(sourceInstanceId: string, signals: DriveSignal[]): void {
     if (!signals.length) return;
-    // Merge into cache keyed by (kind, state) so current and next signals of the same
-    // kind coexist, and Groove config updates don't evict cached Chord/Key signals.
     const existing = this.lastSourceSignals.get(sourceInstanceId) ?? [];
     const newKeys = new Set(signals.map(s => `${s.kind}:${s.state ?? SignalState.Current}`));
     const merged = [...existing.filter(s => !newKeys.has(`${s.kind}:${s.state ?? SignalState.Current}`)), ...signals];
     this.lastSourceSignals.set(sourceInstanceId, merged);
 
     if (sourceInstanceId === this.globalSourceInstanceId) {
-      // Global source: broadcast to every registered panel.
       this.deliverToAll(sourceInstanceId, signals);
       return;
     }
 
-    // Non-global source: suppress any signal kinds that the global source already owns.
     let effectiveSignals = signals;
     if (this.globalSourceInstanceId !== null) {
       const globalCache = this.lastSourceSignals.get(this.globalSourceInstanceId) ?? [];
@@ -342,6 +338,11 @@ export class LinkManager {
   }
 
   private deliverSignalsToInstance(targetInstanceId: string, signals: DriveSignal[]): void {
+    const sink = this.getSink(targetInstanceId);
+    if (sink) {
+      sink.receiveSignals(signals, { sourceInstanceId: this.globalSourceInstanceId ?? '', linkId: null });
+      return;
+    }
     const targetEl = this.getContentEl(targetInstanceId) ?? this.getWrapperEl(targetInstanceId);
     if (!targetEl) return;
     signals.forEach(signal => {
@@ -349,21 +350,22 @@ export class LinkManager {
     });
   }
 
-  // Routes a per-beat groove tick without touching the signal cache, so cached
-  // chord/key/groove-config signals remain intact for newly connected targets.
   private routeBeatSignal(sourceInstanceId: string, signal: GrooveSignal): void {
     const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
     outgoing.forEach(link => this.routeSignalsToTarget(link, [signal]));
   }
 
-  // Routes any signal without caching — for real-time state (transport, beat ticks)
-  // where newly-linked targets should not inherit stale values.
   private routeUncachedSignal(sourceInstanceId: string, signal: DriveSignal): void {
     const outgoing = this.links.filter(l => l.sourceInstanceId === sourceInstanceId);
     outgoing.forEach(link => this.routeSignalsToTarget(link, [signal]));
   }
 
   private routeSignalsToTarget(link: LinkRecord, signals: DriveSignal[]): void {
+    const sink = this.getSink(link.targetInstanceId);
+    if (sink) {
+      sink.receiveSignals(signals, { sourceInstanceId: link.sourceInstanceId, linkId: link.id });
+      return;
+    }
     const targetEl = this.getContentEl(link.targetInstanceId) ?? this.getWrapperEl(link.targetInstanceId);
     if (!targetEl) return;
     signals.forEach(signal => {
@@ -374,12 +376,10 @@ export class LinkManager {
   // ─── Arrow metadata ────────────────────────────────────────────────────────
 
   private getArrowMeta(link: LinkRecord): ArrowMeta {
-    // Source descriptor
     const sourceViewId = this.instanceIdToViewId(link.sourceInstanceId) ?? '';
     const sourceFeatureTypeName = this.instanceIdToFeatureTypeName?.(link.sourceInstanceId) ?? undefined;
     const sourceDescriptor = getDriveSourceDescriptor(sourceViewId, sourceFeatureTypeName);
 
-    // Target slots — look up by featureTypeName (configurable) or by viewId (standalone)
     const targetViewId = this.instanceIdToViewId(link.targetInstanceId) ?? '';
     const targetFeatureTypeName =
       this.instanceIdToFeatureTypeName?.(link.targetInstanceId) ??
@@ -398,18 +398,23 @@ export class LinkManager {
   // ─── Link status notifications ─────────────────────────────────────────────
 
   private notifyLinkStatus(instanceId: string): void {
-    // Skip notifying the global source panel itself.
     if (instanceId === this.globalSourceInstanceId) return;
-    const targetEl = this.getContentEl(instanceId) ?? this.getWrapperEl(instanceId);
-    if (!targetEl) return;
     const incoming = this.links.filter(l => l.targetInstanceId === instanceId);
-    // A panel has "incoming links" if it has explicit links OR if the global source is open.
     const hasIncoming = incoming.length > 0 || this.globalSourceInstanceId !== null;
     const hasNextSignals = incoming.some(l => {
       const viewId = this.instanceIdToViewId(l.sourceInstanceId) ?? '';
       const ftName = this.instanceIdToFeatureTypeName?.(l.sourceInstanceId) ?? undefined;
       return getDriveSourceDescriptor(viewId, ftName)?.emitsNextSignals === true;
     });
+
+    const sink = this.getSink(instanceId);
+    if (sink?.setLinkStatus) {
+      sink.setLinkStatus({ hasIncomingLinks: hasIncoming, hasNextSignals });
+      return;
+    }
+
+    const targetEl = this.getContentEl(instanceId) ?? this.getWrapperEl(instanceId);
+    if (!targetEl) return;
     emitEvent(targetEl, 'link-status-changed', { hasIncomingLinks: hasIncoming, hasNextSignals });
   }
 
@@ -419,6 +424,10 @@ export class LinkManager {
       allInstances.add(l.sourceInstanceId);
       allInstances.add(l.targetInstanceId);
     });
+    // Also notify all registered wrappers (covers global broadcast case)
+    for (const [, instanceId] of this.wrapperToInstanceId) {
+      allInstances.add(instanceId);
+    }
     allInstances.forEach(id => this.notifyLinkStatus(id));
   }
 
@@ -440,7 +449,6 @@ export class LinkManager {
   // ─── Event routing helpers ─────────────────────────────────────────────────
 
   private resolveSourceInstanceId(event: Event): string | null {
-    // Walk the event path to find the first element that matches a known wrapper
     for (const node of event.composedPath()) {
       if (!(node instanceof HTMLElement)) continue;
       const id = this.wrapperToInstanceId.get(node);

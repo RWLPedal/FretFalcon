@@ -4,7 +4,7 @@ import { AudioController } from '../audio_controller';
 import { Feature } from '../feature';
 import { getFeatureTypeDescriptor } from '../feature_registry';
 import { instrumentCategory } from '../fretboard/fretboard_category';
-import { DriveSignal, SignalKind, FeatureSignal } from '../panels/link_types';
+import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../panels/link_types';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { setPendingRenderConstraints } from '../fretboard/fretboard_base';
 
@@ -14,8 +14,9 @@ const PLACEHOLDER_REST = '(Rest)';
 /**
  * A blank canvas floating view that displays the current schedule interval's
  * feature content when linked to a ScheduleFloatingView via the link system.
+ * Privileged: instantiates features directly from FeatureSignals.
  */
-export class AnyFloatingView extends BaseView {
+export class AnyFloatingView extends BaseView implements SignalSink {
   private appSettings: AppSettings;
   private audioController: AudioController;
   private currentFeature: Feature | null = null;
@@ -47,27 +48,28 @@ export class AnyFloatingView extends BaseView {
     this.featureContainer.classList.add('any-view-feature-container');
     container.appendChild(this.featureContainer);
 
-    this.listenEvent(container, 'drive-signal', ({ signal }) => {
-      if (signal.kind === SignalKind.Feature) {
-        this._handleFeatureSignal(signal as FeatureSignal);
-      }
-    });
-
-    this.listenEvent(container, 'link-status-changed', ({ hasIncomingLinks }) => {
-      this.isLinked = hasIncomingLinks;
-      if (!this.isLinked && !this.currentFeature) {
-        this._showPlaceholder(PLACEHOLDER_UNLINKED);
-      }
-    });
-
     this._showPlaceholder(PLACEHOLDER_UNLINKED);
   }
 
-  /** Choose orientation based on the container's aspect ratio. Falls back to
-   *  the global setting if the container has not been laid out yet (0×0).
-   *  IMPORTANT: only call this after the placeholder is hidden, otherwise the
-   *  featureContainer shares flex space with the placeholder (both flex:1) and
-   *  reports roughly half its true height — which flips the orientation. */
+  // ─── SignalSink implementation ────────────────────────────────────────────
+
+  receiveSignals(signals: DriveSignal[], _meta: { sourceInstanceId: string; linkId: string | null }): void {
+    for (const signal of signals) {
+      if (signal.kind === SignalKind.Feature) {
+        this._handleFeatureSignal(signal as FeatureSignal);
+      }
+    }
+  }
+
+  setLinkStatus(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean }): void {
+    this.isLinked = status.hasIncomingLinks;
+    if (!this.isLinked && !this.currentFeature) {
+      this._showPlaceholder(PLACEHOLDER_UNLINKED);
+    }
+  }
+
+  // ─── Feature display ──────────────────────────────────────────────────────
+
   private _autoOrientation(w: number, h: number): "vertical" | "horizontal" {
     if (w === 0 && h === 0) return this.appSettings.instrumentSettings?.orientation ?? "vertical";
     return w >= h ? "horizontal" : "vertical";
@@ -91,14 +93,8 @@ export class AnyFloatingView extends BaseView {
     try {
       const intervalSettings = instrumentCategory.getIntervalSettingsFactory()();
 
-      // Hide the placeholder BEFORE measuring. While it is visible it shares flex
-      // space with the featureContainer (both flex:1), so the featureContainer
-      // reports ~half its true height — which would flip the orientation and make
-      // single fretboards size to width instead of the constraining dimension.
       this._hidePlaceholder();
 
-      // Now the featureContainer fills the full content box; measure both axes
-      // from it so orientation and the height budget are mutually consistent.
       const availW = this.featureContainer?.clientWidth || this.container?.clientWidth || 0;
       const availH = this.featureContainer?.clientHeight || this.container?.clientHeight || 0;
       if (availW > 0) setPendingRenderConstraints({ maxWidth: availW });
@@ -134,7 +130,6 @@ export class AnyFloatingView extends BaseView {
         signal.categoryName
       );
 
-      // Placeholder already hidden above (before measuring).
       if (this.featureContainer) {
         this.currentFeature.render(this.featureContainer);
         this.currentFeature.views?.forEach(v => v.render(this.featureContainer!));

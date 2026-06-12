@@ -1,0 +1,38 @@
+import { ViewModule, ViewContext, viewId } from '../module_types';
+import { NotesFeature } from '../../fretboard/features/notes_feature';
+import { InstrumentIntervalSettings } from '../../fretboard/fretboard_interval_settings';
+
+const module: ViewModule = {
+  id: viewId('instrument_notes_reference'),
+  panel: {
+    displayName: 'Fretboard Notes',
+    icon: 'music_note',
+    defaultSize: { width: 340, height: 550 },
+    showInMenu: true,
+    refreshOnInstrumentChange: true,
+    capabilities: { rotate: true, zoom: true },
+  },
+  createView(ctx: ViewContext) {
+    const feature = NotesFeature.createFeature(
+      ['None'],
+      undefined,
+      ctx.appSettings,
+      new InstrumentIntervalSettings(),
+      650,
+      'Instrument',
+    );
+    return {
+      render(container: HTMLElement) {
+        feature.render(container);
+        if (feature.views) {
+          feature.views.forEach((v) => v.render(container));
+        }
+      },
+      start: () => feature.start?.(),
+      stop: () => feature.stop?.(),
+      destroy: () => feature.destroy?.(),
+    };
+  },
+};
+
+export default module;
