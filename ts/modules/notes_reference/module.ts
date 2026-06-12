@@ -1,6 +1,5 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NotesFeature } from '../../fretboard/features/notes_feature';
-import { InstrumentIntervalSettings } from '../../fretboard/fretboard_interval_settings';
 
 const module: ViewModule = {
   id: viewId('instrument_notes_reference'),
@@ -15,9 +14,7 @@ const module: ViewModule = {
   createView(ctx: ViewContext) {
     const feature = NotesFeature.createFeature(
       ['None'],
-      undefined,
       ctx.appSettings,
-      new InstrumentIntervalSettings(),
       650,
       'Instrument',
     );

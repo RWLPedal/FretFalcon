@@ -691,7 +691,7 @@ export class ConfigView {
             const initialEntries: ChordEntry[] = storedValues.map(val => ({
                 value: val,
                 display: entryDisplayLabel(val, diatonicOnly, rootNote, mode),
-                roman: null,
+                roman: null as string | null,
             }));
 
             const panel = new ChordEntryPanel(rootNote, mode, diatonicOnly);

@@ -9,9 +9,6 @@ import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
 import { emitEvent } from '../../core/events';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
-import { AudioController } from '../../audio_controller';
-import { IntervalSettings } from '../../schedule/editor/interval/types';
-import { InstrumentIntervalSettings } from '../fretboard_interval_settings';
 import { DiatonicMode, DIATONIC_MODE_LABELS } from '../music_types';
 import { InstrumentName, FretboardConfig } from '../fretboard';
 import { NoteRenderData, LineData } from '../fretboard';
@@ -223,12 +220,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     targetFret: number | null,
     targetString: number | null,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
     const availW = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.ntMode        = ntMode;
     this.progDegrees   = progDegrees;
     this.progChordKeys = progChordKeys;
@@ -1177,15 +1172,13 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     };
     return {
       description: `Config: ${this.typeName},RootNote,Mode,Display[,TargetFret][,TargetString][,ChordKey,...][,InstrumentSettings]`,
-      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, targetStringArg, chordEntryArg(false), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      args: [rootNoteArg(), modeArg(), displayArg, targetFretArg, targetStringArg, chordEntryArg(false)],
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
@@ -1246,8 +1239,6 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       targetFret,
       targetString,
       settings,
-      intervalSettings as InstrumentIntervalSettings,
-      audioController,
       maxCanvasHeight
     );
   }

@@ -1,13 +1,12 @@
 import { BaseView } from "../base_view";
 import { AppSettings } from "../settings";
-import { instrumentCategory } from "../fretboard/fretboard_category";
 import { Feature, FeatureTypeDescriptor } from "../feature";
 import { ConfigView } from "./config_view";
-import { InstrumentIntervalSettings } from "../fretboard/fretboard_interval_settings";
 import { getDriveTargetSlots } from "../panels/drive_registry";
 import { DriveSignal, SignalState, SignalSink } from "../panels/link_types";
 import { setPendingRenderConstraints } from "../fretboard/fretboard_base";
 import { emitEvent } from "../core/events";
+import { getFeatureTypeDescriptor } from "../feature_registry";
 
 export class ConfigurableFeatureView extends BaseView implements SignalSink {
     private appSettings: AppSettings;
@@ -57,7 +56,7 @@ export class ConfigurableFeatureView extends BaseView implements SignalSink {
         this.container.appendChild(this.configContainer);
         this.container.appendChild(this.featureContainer);
 
-        const FeatureClass = instrumentCategory.getFeatureTypes().get(this.featureTypeName);
+        const FeatureClass = getFeatureTypeDescriptor(this.categoryName, this.featureTypeName);
         if (!FeatureClass) {
             this.container.innerHTML = `Error: Feature '${this.featureTypeName}' not found in category.`;
             return;
@@ -292,12 +291,9 @@ export class ConfigurableFeatureView extends BaseView implements SignalSink {
         }
 
         try {
-            const intervalSettings = new InstrumentIntervalSettings();
             this.feature = this.featureClass.createFeature(
                 finalConfig,
-                undefined,
                 this.appSettings,
-                intervalSettings,
                 maxCanvasHeight,
                 this.categoryName
             );

@@ -1,9 +1,7 @@
 import { BaseView } from '../base_view';
 import { AppSettings } from '../settings';
-import { AudioController } from '../audio_controller';
 import { Feature } from '../feature';
 import { getFeatureTypeDescriptor } from '../feature_registry';
-import { instrumentCategory } from '../fretboard/fretboard_category';
 import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../panels/link_types';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { setPendingRenderConstraints } from '../fretboard/fretboard_base';
@@ -18,7 +16,6 @@ const PLACEHOLDER_REST = '(Rest)';
  */
 export class AnyFloatingView extends BaseView implements SignalSink {
   private appSettings: AppSettings;
-  private audioController: AudioController;
   private currentFeature: Feature | null = null;
   private featureContainer: HTMLElement | null = null;
   private placeholderEl: HTMLElement | null = null;
@@ -27,12 +24,6 @@ export class AnyFloatingView extends BaseView implements SignalSink {
   constructor(_initialState: any, appSettings: AppSettings) {
     super();
     this.appSettings = appSettings;
-    this.audioController = new AudioController(
-      document.querySelector('#intro-end-sound') as HTMLAudioElement | null,
-      document.querySelector('#interval-end-sound') as HTMLAudioElement | null,
-      document.querySelector('#metronome-sound') as HTMLAudioElement | null,
-      document.querySelector('#metronome-accent-sound') as HTMLAudioElement | null,
-    );
   }
 
   render(container: HTMLElement): void {
@@ -91,8 +82,6 @@ export class AnyFloatingView extends BaseView implements SignalSink {
     }
 
     try {
-      const intervalSettings = instrumentCategory.getIntervalSettingsFactory()();
-
       this._hidePlaceholder();
 
       const availW = this.featureContainer?.clientWidth || this.container?.clientWidth || 0;
@@ -101,17 +90,6 @@ export class AnyFloatingView extends BaseView implements SignalSink {
       const maxCanvasHeight = availH > 0 ? availH : undefined;
 
       const orientation = this._autoOrientation(availW, availH);
-      console.log('[AnyFloatingView] sizing', {
-        containerW: this.container?.clientWidth,
-        containerH: this.container?.clientHeight,
-        featureContainerW: this.featureContainer?.clientWidth,
-        featureContainerH: this.featureContainer?.clientHeight,
-        availW,
-        availH,
-        maxCanvasHeight,
-        orientation,
-        feature: signal.featureTypeName,
-      });
 
       const settingsForFeature: AppSettings = {
         ...this.appSettings,
@@ -123,9 +101,7 @@ export class AnyFloatingView extends BaseView implements SignalSink {
 
       this.currentFeature = descriptor.createFeature(
         signal.config,
-        this.audioController,
         settingsForFeature,
-        intervalSettings,
         maxCanvasHeight,
         signal.categoryName
       );

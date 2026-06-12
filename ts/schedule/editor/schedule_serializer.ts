@@ -1,5 +1,5 @@
 ﻿// ts/schedule/editor/schedule_serializer.ts
-import { instrumentCategory } from "../../fretboard/fretboard_category";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import {
   IntervalSettings,
   IntervalRowData,
@@ -9,7 +9,6 @@ import {
   IntervalDataJSON,
   ScheduleRowJSONData,
 } from "./interval/types";
-// --- REMOVED direct import of InstrumentIntervalSettings ---
 
 /** Defines the top-level structure of a saved schedule JSON document. */
 export interface ScheduleDocument {
@@ -88,14 +87,14 @@ export function parseScheduleJSON(jsonString: string): {
       let intervalSettings: IntervalSettings;
       const settingsData = item.intervalSettings;
       try {
-        intervalSettings = instrumentCategory.createIntervalSettingsFromJSON(settingsData);
+        intervalSettings = InstrumentIntervalSettings.fromJSON(settingsData);
       } catch (parseError: any) {
         console.error(
           `Error parsing interval settings for category "${categoryName}" at index ${index}:`,
           parseError,
           settingsData
         );
-        intervalSettings = instrumentCategory.getIntervalSettingsFactory()();
+        intervalSettings = new InstrumentIntervalSettings();
       }
       // ---- End IntervalSettings Instance Creation ----
 

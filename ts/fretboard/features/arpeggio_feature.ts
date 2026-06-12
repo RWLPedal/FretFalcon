@@ -6,10 +6,7 @@ import {
   UiComponentType,
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
-import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData } from "../fretboard";
 import {
   getKeyIndex,
@@ -91,12 +88,10 @@ export class ArpeggioFeature extends InstrumentFeature {
     visibleIntervals: Set<string> | null,
     headerText: string,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number,
   ) {
     const availW = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.keyIndex = keyIndex;
     this.chordIntervals = chordIntervals;
     this.visibleIntervals = visibleIntervals;
@@ -153,19 +148,14 @@ export class ArpeggioFeature extends InstrumentFeature {
       description: "Which interval tones to display. Leave empty to show all.",
     });
     return {
-      description: `Config: ${this.typeName},RootNote,Quality[,IntervalLabel...][,InstrumentSettings]`,
-      args: [
-        ...specificArgs,
-        InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG,
-      ],
+      description: `Config: ${this.typeName},RootNote,Quality[,IntervalLabel...]`,
+      args: specificArgs,
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
     _categoryName: string,
   ): Feature {
@@ -209,8 +199,6 @@ export class ArpeggioFeature extends InstrumentFeature {
       visibleIntervals,
       headerText,
       settings,
-      intervalSettings as InstrumentIntervalSettings,
-      audioController,
       maxCanvasHeight,
     );
   }

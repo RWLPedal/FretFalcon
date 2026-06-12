@@ -1,5 +1,5 @@
 import { AudioController } from "../../audio_controller";
-import { IDisplayController } from "../../display_controller";
+import { IDisplayController } from "../display_controller";
 import { Schedule } from "../schedule";
 import { AppSettings, LAST_RUN_SCHEDULE_JSON_KEY } from "../../settings";
 import {
@@ -24,7 +24,6 @@ import { DragDropManager } from "./drag_drop_manager";
 import { KeyboardShortcutManager } from "./keyboard_shortcut_manager";
 import { ScheduleBuilder } from "./schedule_builder";
 import { InspectorPanel } from "./inspector_panel";
-import { instrumentCategory } from "../../fretboard/fretboard_category";
 import { InstrumentName } from "../../fretboard/fretboard";
 import { refreshGroupStats } from "./interval/group_row_ui";
 
@@ -66,7 +65,7 @@ export class ScheduleEditor {
     this.audioController = audioController;
     this.appSettings = appSettings ?? null;
 
-    this.defaultCategoryName = instrumentCategory.getName();
+    this.defaultCategoryName = 'Instrument';
 
     this.uiManager = new EditorUIManager(this.containerEl);
     this._findNameEditElements();
@@ -236,10 +235,7 @@ export class ScheduleEditor {
     }
 
     if (!initialItems) {
-      if (typeof instrumentCategory.getDefaultIntervals === 'function') {
-        initialItems = instrumentCategory.getDefaultIntervals();
-      }
-      initialName = `${instrumentCategory.getDisplayName()} Default`;
+      initialName = 'Instrument Default';
 
       if (!initialItems || initialItems.length === 0) {
         initialItems = [];

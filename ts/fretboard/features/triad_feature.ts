@@ -15,10 +15,7 @@ import {
   GUITAR_8_STANDARD_TUNING,
   InstrumentName,
 } from "../fretboard";
-import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
@@ -164,8 +161,6 @@ export class TriadFeature extends InstrumentFeature {
     qualities: TriadQuality[],
     mainHeaderText: string,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number,
   ) {
     // Peek before super() consumes the pending constraint.
@@ -202,7 +197,7 @@ export class TriadFeature extends InstrumentFeature {
       15,
     );
 
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.fretboardConfig = featureFretboardConfig;
     this.mainHeaderText = mainHeaderText;
     this._qualities = [...qualities];
@@ -260,20 +255,15 @@ export class TriadFeature extends InstrumentFeature {
     ];
     return {
       description: `Config: ${this.typeName},RootNote,Quality1[,Quality2,...][,InstrumentSettings]`,
-      args: [
-        ...specificArgs,
-        InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG,
-      ],
+      args: specificArgs,
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
-    categoryName: string,
+    _categoryName: string,
   ): Feature {
     if (config.length < 2) {
       throw new Error(
@@ -295,8 +285,6 @@ export class TriadFeature extends InstrumentFeature {
     }
 
     const mainHeaderText = `${validRootName} Triad Shapes (${qualities.join(", ")})`;
-    const guitarIntervalSettings =
-      intervalSettings as InstrumentIntervalSettings;
 
     return new TriadFeature(
       config,
@@ -304,8 +292,6 @@ export class TriadFeature extends InstrumentFeature {
       qualities,
       mainHeaderText,
       settings,
-      guitarIntervalSettings,
-      audioController,
       maxCanvasHeight,
     );
   }

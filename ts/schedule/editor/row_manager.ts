@@ -9,7 +9,7 @@ import {
 import { buildGroupSidebarRow, GROUP_COLOR_PALETTE, refreshGroupStats, propagateGroupColors } from "./interval/group_row_ui";
 import { buildSidebarIntervalRow } from "./interval/interval_row_ui";
 import { SelectionManager } from "./selection_manager";
-import { instrumentCategory } from "../../fretboard/fretboard_category";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 
 // Cycles through GROUP_COLOR_PALETTE for auto-assignment
 let _groupColorIndex = 0;
@@ -35,11 +35,6 @@ export class RowManager {
 
   /** Creates the data structure for a new empty interval row. */
   public createEmptyIntervalUIData(categoryName: string): IntervalRowData | null {
-    const factory = instrumentCategory.getIntervalSettingsFactory();
-    if (!factory) {
-      console.error(`Cannot create empty row: No IntervalSettings factory for "${categoryName}".`);
-      return null;
-    }
     return {
       rowType: 'interval',
       duration: '3:00',
@@ -47,7 +42,7 @@ export class RowManager {
       categoryName,
       featureTypeName: '',
       featureArgsList: [],
-      intervalSettings: factory(),
+      intervalSettings: new InstrumentIntervalSettings(),
     };
   }
 
@@ -196,6 +191,6 @@ export class RowManager {
   }
 
   private _getDefaultCategoryName(): string {
-    return instrumentCategory.getName?.() ?? 'Guitar';
+    return 'Instrument';
   }
 }

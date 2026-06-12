@@ -11,10 +11,7 @@ import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { Scale, scales, scale_names } from "../scales";
-import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData, PolygonData, Tuning, InstrumentName, STANDARD_TUNING } from "../fretboard";
 import {
   getKeyIndex,
@@ -258,14 +255,11 @@ export class CagedFeature extends InstrumentFeature {
     scale: Scale,
     labelDisplay: LabelDisplayType,
     initialSelectedShapes: CagedShapeName[],
-
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
     const availW = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.keyIndex = keyIndex;
     this.rootNoteName = rootNoteName;
     this.scaleType = scaleType;
@@ -337,16 +331,14 @@ export class CagedFeature extends InstrumentFeature {
       },
     ];
     return {
-      description: `Config: ${this.typeName},Key,ScaleType,LabelDisplay[,InstrumentSettings]`,
-      args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},Key,ScaleType,LabelDisplay`,
+      args: specificArgs,
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
@@ -382,8 +374,6 @@ export class CagedFeature extends InstrumentFeature {
     const initialShapes = config.slice(3).filter(s => validShapeNames.has(s)) as CagedShapeName[];
     const featureSpecificConfig = [rootNoteName, scaleTypeName, validLabelDisplay, ...initialShapes];
 
-    const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
-
     return new CagedFeature(
       featureSpecificConfig,
       keyIndex,
@@ -393,8 +383,6 @@ export class CagedFeature extends InstrumentFeature {
       validLabelDisplay,
       initialShapes,
       settings,
-      guitarIntervalSettings,
-      audioController,
       maxCanvasHeight
     );
   }

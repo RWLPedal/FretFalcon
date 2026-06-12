@@ -1,6 +1,6 @@
 import { BaseView } from '../base_view';
 import { formatDuration, parseDurationString } from '../time_utils';
-import { Status } from '../display_controller';
+import { Status } from '../core/status';
 import { SignalKind, DriveSignal } from '../panels/link_types';
 import { emitEvent } from '../core/events';
 

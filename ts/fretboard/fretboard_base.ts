@@ -1,4 +1,4 @@
-﻿import { Feature, ConfigurationSchemaArg, ArgType, UiComponentType } from "../feature";
+import { Feature, ConfigurationSchemaArg } from "../feature";
 
 // --- Pending render constraints ---
 // Set by ConfigurableFeatureView immediately before createFeature(); consumed once by InstrumentFeature.
@@ -16,7 +16,6 @@ export function peekPendingCanvasWidth(): number | undefined {
 
 // --- End pending render constraints ---
 import { View } from "../view";
-import { MetronomeView } from "./views/metronome_view";
 import {
   FretboardConfig,
   INSTRUMENTS,
@@ -28,60 +27,38 @@ import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
 } from "./fretboard_settings";
-import { InstrumentIntervalSettings } from "./fretboard_interval_settings";
-import { AudioController } from "../audio_controller";
 import {
   clearAllChildren,
   addHeader,
   addCanvas,
   START_PX,
 } from "./fretboard_utils";
-import { IntervalSettings } from "../schedule/editor/interval/types";
 
 /**
  * Base class for all Guitar-related features.
- * Handles common setup like FretboardConfig and conditional MetronomeView creation based on interval settings.
+ * Handles common setup like FretboardConfig.
+ * MetronomeView creation (schedule-era) has been moved to ts/schedule/feature_adapter.ts.
  */
 export abstract class InstrumentFeature implements Feature {
   abstract readonly typeName: string;
   readonly config: ReadonlyArray<string>;
   protected settings: AppSettings;
-  protected audioController?: AudioController;
   protected fretboardConfig: FretboardConfig;
   readonly maxCanvasHeight?: number;
 
   protected _views: View[] = []; // Mutable array for internal use
   get views(): ReadonlyArray<View> {
-    // Expose as readonly externally
     return this._views;
   }
-  protected metronomeBpm: number = 0;
-
-  static readonly BASE_INSTRUMENT_SETTINGS_CONFIG_ARG: ConfigurationSchemaArg = {
-    name: "",
-    type: ArgType.Ellipsis,
-    uiComponentType: UiComponentType.Ellipsis,
-    description: "Configure interval-specific settings (e.g., Metronome).",
-    nestedSchema: [
-      {
-        name: "metronomeBpm",
-        type: ArgType.Number,
-        description: "Metronome BPM (0=off)",
-      },
-    ],
-  };
 
   constructor(
     config: ReadonlyArray<string>,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
     this.config = config;
     this.settings = settings;
     this.maxCanvasHeight = maxCanvasHeight;
-    this.audioController = audioController;
 
     const guitarGlobalSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
 
@@ -108,32 +85,6 @@ export abstract class InstrumentFeature implements Feature {
       maxCanvasWidth,
       guitarGlobalSettings.zoomMultiplier ?? 1.2
     );
-
-    // --- Metronome Handling ---
-    let metronomeViewInstance: MetronomeView | null = null;
-    this.metronomeBpm = intervalSettings?.metronomeBpm ?? 0;
-    if (this.metronomeBpm > 0) {
-      if (
-        this.audioController &&
-        this.audioController.metronomeAudioEl &&
-        this.audioController.accentMetronomeAudioEl
-      ) {
-        metronomeViewInstance = new MetronomeView(
-          this.metronomeBpm,
-          this.audioController
-        );
-      } else {
-        console.warn(
-          `Metronome requested (BPM: ${this.metronomeBpm}) but audio elements/controller missing. MetronomeView not created.`
-        );
-      }
-    }
-
-    // Subclasses add their views to this._views BEFORE calling super.
-    // Add the metronome view if created, ensuring it's last.
-    if (metronomeViewInstance) {
-      this._views.push(metronomeViewInstance);
-    }
   }
 
   // Abstract render method
@@ -173,9 +124,7 @@ export abstract class InstrumentFeature implements Feature {
       );
     }
     ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-    ctx.resetTransform(); // Use resetTransform for modern canvas state clearing
-    // Optional: Translate for sharper lines
-    // ctx.translate(0.5, 0.5);
+    ctx.resetTransform();
     return { canvas: canvasEl, ctx: ctx };
   }
 }

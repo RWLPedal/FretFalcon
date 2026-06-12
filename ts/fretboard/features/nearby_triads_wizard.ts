@@ -269,7 +269,7 @@ export class TriadsWizard {
     if (this.chords.length > 0) return;
     this.chords = initial
       .filter(c => c.chordKey)
-      .map(c => ({ ...c, rankedVoicings: [], selectedIndex: 0, seen: false }));
+      .map(c => ({ ...c, rankedVoicings: [] as RankedVoicing[], selectedIndex: 0, seen: false }));
     this._refreshKey();
   }
 
@@ -355,7 +355,7 @@ export class TriadsWizard {
           chordKey: e.value,
           display: e.display,
           roman: e.roman,
-          rankedVoicings: [],
+          rankedVoicings: [] as RankedVoicing[],
           selectedIndex: 0,
           seen: false,
         }));

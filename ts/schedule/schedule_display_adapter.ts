@@ -1,7 +1,7 @@
 import { Feature } from '../feature';
 import { Interval } from './schedule';
-import { IDisplayController, Status } from '../display_controller';
-import { SchedulePlaybackView } from '../views/schedule_playback_view';
+import { IDisplayController, Status } from './display_controller';
+import { SchedulePlaybackView } from './schedule_playback_view';
 import { SignalKind, SignalState, FeatureSignal } from '../panels/link_types';
 import { emitEvent } from '../core/events';
 

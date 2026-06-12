@@ -19,7 +19,6 @@ import {
   getAvailableChordTypes,
   findChordByRootAndType,
 } from "../chords";
-import { AudioController } from "../../audio_controller";
 import type { NoteName } from "../music_types";
 import { AppSettings } from "../../settings";
 import { ChordDiagramView } from "../views/chord_diagram_view";
@@ -30,9 +29,6 @@ import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 import { addHeader, clearAllChildren } from "../fretboard_utils";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS, ChordLabelDisplay } from "../fretboard_settings";
-// Import generic and specific interval settings types
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 
 /** A feature for displaying mulitple chord diagrams and a metronome. */
 export class ChordFeature extends InstrumentFeature {
@@ -55,25 +51,14 @@ export class ChordFeature extends InstrumentFeature {
   private readonly isMoveable: boolean;
 
   constructor(
-    config: ReadonlyArray<string>, // Chord keys specific to this feature
+    config: ReadonlyArray<string>,
     chords: ReadonlyArray<Chord>,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings, // Constructor still expects specific type from base class
-    audioController?: AudioController,
     maxCanvasHeight?: number,
     chordLabelDisplay: ChordLabelDisplay = "fingering"
   ) {
-    // Peek before super() consumes the pending constraint.
     const totalWidth = peekPendingCanvasWidth();
-
-    // Pass intervalSettings up to the base constructor
-    super(
-      config,
-      settings,
-      intervalSettings, // Pass specific type here
-      audioController,
-      maxCanvasHeight
-    );
+    super(config, settings, maxCanvasHeight);
 
     this.chords = chords;
     this.isMoveable = localStorage.getItem(ChordFeature.MOVEABLE_PREF_KEY) === "true";
@@ -152,17 +137,15 @@ export class ChordFeature extends InstrumentFeature {
     ];
     return {
       description: `Config: ${this.typeName},Root,Type[,InstrumentSettings]`,
-      args: [...specificArgs, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      args: specificArgs,
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
-    categoryName: string
+    _categoryName: string
   ): Feature {
     const lastVal = config.length > 0 ? config[config.length - 1] : null;
     const hasMode = lastVal === 'true' || lastVal === 'false';
@@ -222,7 +205,6 @@ export class ChordFeature extends InstrumentFeature {
       throw new Error(`[${this.typeName}] No valid chord found in config: ${config.join(",")}`);
     }
 
-    const guitarIntervalSettings = intervalSettings as InstrumentIntervalSettings;
     const VALID_DISPLAY = new Set(["fingering", "interval", "notes"]);
     const rawDisplay = isNewFormat ? effectiveConfig[2] : undefined;
     const chordLabelDisplay: ChordLabelDisplay =
@@ -232,8 +214,6 @@ export class ChordFeature extends InstrumentFeature {
       effectiveConfig,
       chords,
       settings,
-      guitarIntervalSettings,
-      audioController,
       maxCanvasHeight,
       chordLabelDisplay
     );

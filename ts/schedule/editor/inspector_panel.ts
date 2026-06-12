@@ -1,4 +1,4 @@
-import { instrumentCategory } from "../../fretboard/fretboard_category";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { parseDurationString, formatDuration } from "../../time_utils";
 import {
   updateArgsSection,
@@ -401,20 +401,15 @@ export class InspectorPanel {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function _deserializeSettings(jsonStr: string): IntervalSettings {
-  const factory = instrumentCategory.getIntervalSettingsFactory();
-  if (factory) {
-    const instance = factory();
-    if (jsonStr) {
-      try {
-        const data = JSON.parse(jsonStr);
-        return instrumentCategory.createIntervalSettingsFromJSON(data);
-      } catch {
-        // fall through to default
-      }
+  if (jsonStr) {
+    try {
+      const data = JSON.parse(jsonStr);
+      return InstrumentIntervalSettings.fromJSON(data);
+    } catch {
+      // fall through to default
     }
-    return instance;
   }
-  return { toJSON: () => undefined };
+  return new InstrumentIntervalSettings();
 }
 
 function _refreshAncestorGroupStats(rowEl: HTMLElement): void {

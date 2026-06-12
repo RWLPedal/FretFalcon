@@ -1,11 +1,6 @@
 ﻿// ts/instrument/fretboard_category.ts
 import { Category } from "../feature"; // Use Category from feature.ts
 import { FeatureTypeDescriptor, SettingsUISchemaItem } from "../feature";
-import {
-  IntervalSettings,
-  IntervalSettingsJSON,
-  ScheduleRowData,
-} from "../schedule/editor/interval/types";
 
 // Import Guitar Features
 import { NotesFeature } from "./features/notes_feature";
@@ -21,11 +16,6 @@ import {
   FretboardLabelDisplay,
   InstrumentSettings,
 } from "./fretboard_settings";
-import {
-  InstrumentIntervalSettings,
-  InstrumentIntervalSettingsJSON,
-} from "./fretboard_interval_settings";
-
 // Helper function imports (for settings UI schema)
 import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard";
 import type { CustomTuning } from "../settings";
@@ -228,21 +218,6 @@ export class InstrumentCategory implements Category {
     return { ...DEFAULT_INSTRUMENT_SETTINGS };
   }
 
-  getIntervalSettingsFactory(): () => InstrumentIntervalSettings {
-    // Return a function that creates a new default instance
-    return () => new InstrumentIntervalSettings();
-  }
-
-  createIntervalSettingsFromJSON(
-    json: IntervalSettingsJSON | undefined | null,
-  ): InstrumentIntervalSettings {
-    // Use the static method on the specific class
-    // Cast the input json; the registry ensures this method is called for the correct category.
-    return InstrumentIntervalSettings.fromJSON(
-      json as InstrumentIntervalSettingsJSON | undefined | null,
-    );
-  }
-
   updateCustomTunings(
     customTunings: Partial<Record<string, CustomTuning[]>> | undefined,
   ): void {
@@ -253,42 +228,6 @@ export class InstrumentCategory implements Category {
     return getInstrumentGlobalSettingsUISchema(this.customTunings);
   }
 
-  /** Returns a default set of intervals for a simple guitar schedule */
-  getDefaultIntervals(): ScheduleRowData[] | null {
-    // Use the factory to get default settings for these intervals
-    const defaultIntervalSettings = this.getIntervalSettingsFactory()();
-
-    return [
-      {
-        rowType: "interval",
-        duration: "5:00",
-        task: "Warmup",
-        categoryName: this.getName(), // Use own name
-        featureTypeName: "Notes",
-        featureArgsList: [],
-        intervalSettings: defaultIntervalSettings, // Assign instance
-      },
-      { rowType: "group", name: "Scale Practice" },
-      {
-        rowType: "interval",
-        duration: "3:00",
-        task: "C Major Scale",
-        categoryName: this.getName(),
-        featureTypeName: "Scale",
-        featureArgsList: ["Major", "C"],
-        intervalSettings: defaultIntervalSettings, // Assign instance
-      },
-      {
-        rowType: "interval",
-        duration: "3:00",
-        task: "G Major Scale",
-        categoryName: this.getName(),
-        featureTypeName: "Scale",
-        featureArgsList: ["Major", "G"],
-        intervalSettings: defaultIntervalSettings, // Assign instance
-      },
-    ];
-  }
 }
 
 export const instrumentCategory = new InstrumentCategory();

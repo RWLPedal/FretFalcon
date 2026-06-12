@@ -6,8 +6,6 @@ import {
 } from '../../feature';
 import { InstrumentFeature } from '../fretboard_base';
 import { AppSettings } from '../../settings';
-import { AudioController } from '../../audio_controller';
-import { InstrumentIntervalSettings } from '../fretboard_interval_settings';
 import { ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from '../music_types';
 import { NOTE_NAMES_FROM_A } from '../fretboard_utils';
 import { SignalKind, SignalState, ChordSignal } from '../../panels/link_types';
@@ -70,11 +68,9 @@ export abstract class ChordDegreeProgressionFeature extends InstrumentFeature {
   constructor(
     config: ReadonlyArray<string>,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
   }
 
   /**

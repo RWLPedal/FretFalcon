@@ -1,20 +1,19 @@
 import { Schedule, Interval, GroupInfo } from "../schedule";
-import { IDisplayController } from "../../display_controller";
+import { IDisplayController } from "../display_controller";
 import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
 import { Feature } from "../../feature";
-// Import registry functions for generic handling
 import { getFeatureTypeDescriptor } from "../../feature_registry";
-import { instrumentCategory } from "../../fretboard/fretboard_category";
 import { parseDurationString } from "../../time_utils";
 import { ErrorDisplay } from "./error_display";
 import {
   GroupDataJSON,
   IntervalDataJSON,
-  IntervalSettings, // Use generic base type
-  ScheduleRowJSONData, // Type returned by rowManager
+  ScheduleRowJSONData,
 } from "./interval/types";
 import { RowManager } from "./row_manager";
+import { createScheduleFeature } from "../feature_adapter";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 
 export class ScheduleBuilder {
   private rowManager: RowManager;
@@ -102,7 +101,6 @@ export class ScheduleBuilder {
 
         let durationSeconds = 0;
         let feature: Feature | null = null;
-        let intervalSettings: IntervalSettings | null = null;
 
         try {
           // 1. Parse Duration
@@ -118,12 +116,13 @@ export class ScheduleBuilder {
             );
           }
 
-          // 2. Instantiate Interval Settings
-          intervalSettings = instrumentCategory.createIntervalSettingsFromJSON(intervalData.intervalSettings);
+          // 2. Parse interval settings (schedule-internal: metronomeBpm etc.)
+          const intervalSettings = InstrumentIntervalSettings.fromJSON(
+            intervalData.intervalSettings as any
+          );
 
-          // 3. Create Feature if specified (Generically)
+          // 3. Create Feature if specified
           if (intervalData.featureTypeName) {
-            // Use categoryName string for lookup
             const descriptor = getFeatureTypeDescriptor(
               categoryName,
               intervalData.featureTypeName
@@ -133,22 +132,15 @@ export class ScheduleBuilder {
                 `Unknown feature type: "${intervalData.featureTypeName}" in category "${categoryName}"`
               );
             }
-            // --- Call createFeature with parsed intervalSettings and categoryName ---
-            if (intervalSettings) {
-              feature = descriptor.createFeature(
-                intervalData.featureArgsList,
-                audioController,
-                settings,
-                intervalSettings, // Pass the parsed settings object
-                maxCanvasHeight,
-                categoryName // Pass category name string
-              );
-            } else {
-              // This case should be less likely now due to fallback in step 2
-              throw new Error(
-                `Could not create feature "${descriptor.typeName}" due to missing interval settings.`
-              );
-            }
+            feature = createScheduleFeature(
+              descriptor,
+              intervalData.featureArgsList,
+              audioController,
+              settings,
+              intervalSettings,
+              maxCanvasHeight,
+              categoryName
+            );
           }
 
           // 4. Create Interval and add to Schedule

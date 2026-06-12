@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { ScheduleFloatingView } from '../../views/schedule_floating_view';
+import { createScheduleEditorView } from '../../schedule/api';
 import { SignalKind, FeatureSignal, SignalState } from '../../panels/link_types';
 
 const SCHEDULE_ID = viewId('schedule_floating_view');
@@ -38,7 +38,7 @@ const module: ViewModule = {
     ],
   },
   createView(ctx: ViewContext, state?: unknown) {
-    return new ScheduleFloatingView(state, ctx.appSettings);
+    return createScheduleEditorView(state, ctx.appSettings);
   },
 };
 

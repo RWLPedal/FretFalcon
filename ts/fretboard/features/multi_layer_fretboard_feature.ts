@@ -5,10 +5,7 @@ import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AppSettings } from "../../settings";
-import { AudioController } from "../../audio_controller";
 import { emitEvent } from "../../core/events";
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData } from "../fretboard";
 import {
   NOTE_NAMES_FROM_A,
@@ -161,12 +158,10 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     layers: LayerSpec[],
     showOverlays: boolean,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
     const availW = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.layers = layers;
     this.showOverlays = showOverlays;
 
@@ -288,16 +283,14 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     };
 
     return {
-      description: `Config: ${this.typeName}[,ShowOverlays][,layer1]...[,InstrumentSettings]`,
-      args: [showOverlaysArg, layersArg, InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName}[,ShowOverlays][,layer1]...`,
+      args: [showOverlaysArg, layersArg],
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
@@ -316,8 +309,6 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
       layers,
       showOverlays,
       settings,
-      intervalSettings as InstrumentIntervalSettings,
-      audioController,
       maxCanvasHeight
     );
   }

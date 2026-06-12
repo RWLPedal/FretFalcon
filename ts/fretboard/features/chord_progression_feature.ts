@@ -9,9 +9,6 @@ import { BaseView } from '../../base_view';
 import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../chords';
 import { AppSettings } from '../../settings';
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';
-import { AudioController } from '../../audio_controller';
-import { IntervalSettings } from '../../schedule/editor/interval/types';
-import { InstrumentIntervalSettings } from '../fretboard_interval_settings';
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
@@ -55,12 +52,10 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     rootNote: string,
     mode: DiatonicMode,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number
   ) {
     const totalWidth = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
 
     const rootNoteIndex  = getKeyIndex(rootNote);
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined) ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -160,16 +155,14 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
       ? undefined
       : getAvailableRoots(getChordLibraryForInstrument(instrument));
     return {
-      description: `Config: ${this.typeName},RootNote,Mode[,Deg0,...][,InstrumentSettings]`,
-      args: [rootNoteArg(roots), modeArg(), chordEntryArg(true), InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG],
+      description: `Config: ${this.typeName},RootNote,Mode[,Deg0,...]`,
+      args: [rootNoteArg(roots), modeArg(), chordEntryArg(true)],
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
     _categoryName: string
   ): Feature {
@@ -200,8 +193,6 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
       validRootName,
       mode,
       settings,
-      intervalSettings as InstrumentIntervalSettings,
-      audioController,
       maxCanvasHeight
     );
   }

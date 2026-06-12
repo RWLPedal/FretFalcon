@@ -1,6 +1,6 @@
 import { Feature } from "../feature";
 import { AudioController } from "../audio_controller";
-import { IDisplayController, Status } from "../display_controller";
+import { IDisplayController, Status } from "./display_controller";
 
 export interface GroupInfo {
   name: string;

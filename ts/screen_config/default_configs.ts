@@ -11,6 +11,7 @@
 //      than COMPACT_BREAKPOINT_COLS (≈1200px).
 
 import { CurrentPayload } from "./screen_config_types";
+import { A_MINOR_WORKOUT_SCHEDULE_JSON } from "../schedule/api";
 
 // ─── Built-in layouts ─────────────────────────────────────────────────────────
 
@@ -290,92 +291,9 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
 
 // ─── Practice layout schedule data ───────────────────────────────────────────
 
-// #floating-view-area covers the full page width; the sidebar occupies the
-// first 192px (16 grid units at GRID_UNIT=12). All views start at col ≥ 17.
-const _MINOR_WORKOUT_SCHEDULE = JSON.stringify(
-  {
-    name: "A Minor Workout",
-    items: [
-      { rowType: "group", level: 1, name: "Warmup", color: "--note-second" },
-      {
-        rowType: "interval",
-        duration: "3:00",
-        task: "Fretboard survey — no labels, find the notes by ear",
-        categoryName: "Instrument",
-        featureTypeName: "Notes",
-        featureArgsList: ["None"],
-        intervalSettings: {},
-      },
-      { rowType: "group", level: 1, name: "Scales", color: "--note-fifth" },
-      {
-        rowType: "interval",
-        duration: "4:00",
-        task: "Natural minor — all positions, ascending & descending",
-        categoryName: "Instrument",
-        featureTypeName: "Scale",
-        featureArgsList: ["Minor", "A"],
-        intervalSettings: {},
-      },
-      {
-        rowType: "interval",
-        duration: "4:00",
-        task: "Minor pentatonic — all five positions",
-        categoryName: "Instrument",
-        featureTypeName: "Scale",
-        featureArgsList: ["Minor Pentatonic", "A"],
-        intervalSettings: {},
-      },
-      {
-        rowType: "interval",
-        duration: "3:00",
-        task: "Minor blues — add the blue note to the pentatonic",
-        categoryName: "Instrument",
-        featureTypeName: "Scale",
-        featureArgsList: ["Minor Blues", "A"],
-        intervalSettings: {},
-      },
-      {
-        rowType: "interval",
-        duration: "3:00",
-        task: "Harmonic minor — raised 7th gives the classical sound",
-        categoryName: "Instrument",
-        featureTypeName: "Scale",
-        featureArgsList: ["Harmonic Minor", "A"],
-        intervalSettings: {},
-      },
-      { rowType: "group", level: 1, name: "Triads", color: "--note-seventh" },
-      {
-        rowType: "interval",
-        duration: "5:00",
-        task: "Minor triad shapes — root, 1st and 2nd inversion",
-        categoryName: "Instrument",
-        featureTypeName: "Triad Shapes",
-        featureArgsList: ["A", "Minor"],
-        intervalSettings: {},
-      },
-      {
-        rowType: "interval",
-        duration: "5:00",
-        task: "Relative major triads (C Major) — same notes, different root",
-        categoryName: "Instrument",
-        featureTypeName: "Triad Shapes",
-        featureArgsList: ["C", "Major"],
-        intervalSettings: {},
-      },
-      {
-        rowType: "interval",
-        duration: "4:00",
-        task: "Diminished triads (B°) — the tension chord of A minor",
-        categoryName: "Instrument",
-        featureTypeName: "Triad Shapes",
-        featureArgsList: ["B", "Diminished"],
-        intervalSettings: {},
-      },
-    ],
-  },
-  null,
-  2,
-);
+// The JSON lives in ts/schedule/presets/a_minor_workout.ts and is accessed via
+// the schedule public API so that screen_config does not import schedule internals.
+const _MINOR_WORKOUT_SCHEDULE = A_MINOR_WORKOUT_SCHEDULE_JSON;
 
 /** Practice layout: schedule (play mode) drives an Any view that renders the
  *  current interval's feature. A metronome below the Any view is also linked

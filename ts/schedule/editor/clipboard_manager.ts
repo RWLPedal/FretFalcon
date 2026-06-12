@@ -8,7 +8,7 @@ import {
   IntervalSettings,
 } from "./interval/types";
 import { SelectionManager } from "./selection_manager";
-import { instrumentCategory } from "../../fretboard/fretboard_category";
+import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { buildSidebarIntervalRow } from "./interval/interval_row_ui";
 
 export class ClipboardManager {
@@ -57,16 +57,16 @@ export class ClipboardManager {
           const id = rowDataJSON as IntervalDataJSON;
           const categoryName = id.categoryName;
 
-          if (categoryName !== instrumentCategory.getName()) {
+          if (categoryName !== 'Instrument') {
             console.warn(`Cannot paste interval: category "${categoryName}" not registered. Skipping.`);
             return;
           }
 
           let settingsInstance: IntervalSettings;
           try {
-            settingsInstance = instrumentCategory.createIntervalSettingsFromJSON(id.intervalSettings);
+            settingsInstance = InstrumentIntervalSettings.fromJSON(id.intervalSettings as any);
           } catch {
-            settingsInstance = instrumentCategory.getIntervalSettingsFactory()();
+            settingsInstance = new InstrumentIntervalSettings();
           }
 
           const uiData: IntervalRowData = {

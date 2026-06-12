@@ -7,10 +7,7 @@ import {
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
 import { Scale, scale_names, scales } from "../scales";
-import { AudioController } from "../../audio_controller";
 import { AppSettings } from "../../settings";
-import { IntervalSettings } from "../../schedule/editor/interval/types";
-import { InstrumentIntervalSettings } from "../fretboard_interval_settings";
 import { NoteRenderData } from "../fretboard";
 import {
   getKeyIndex,
@@ -54,12 +51,10 @@ export class ScaleFeature extends InstrumentFeature {
     highlightNotes: Set<string>,
     headerText: string,
     settings: AppSettings,
-    intervalSettings: InstrumentIntervalSettings,
-    audioController?: AudioController,
     maxCanvasHeight?: number,
   ) {
     const availW = peekPendingCanvasWidth();
-    super(config, settings, intervalSettings, audioController, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight);
     this.scale = scale;
     this.keyIndex = keyIndex;
     this.highlightNotes = highlightNotes;
@@ -120,21 +115,16 @@ export class ScaleFeature extends InstrumentFeature {
       },
     ];
     return {
-      description: `Config: ${this.typeName},ScaleName,RootNote[,HighlightNote...][,InstrumentSettings]`,
-      args: [
-        ...specificArgs,
-        InstrumentFeature.BASE_INSTRUMENT_SETTINGS_CONFIG_ARG,
-      ],
+      description: `Config: ${this.typeName},ScaleName,RootNote[,HighlightNote...]`,
+      args: specificArgs,
     };
   }
 
   static createFeature(
     config: ReadonlyArray<string>,
-    audioController: AudioController,
     settings: AppSettings,
-    intervalSettings: IntervalSettings,
     maxCanvasHeight: number | undefined,
-    categoryName: string,
+    _categoryName: string,
   ): Feature {
     if (config.length < 2) {
       throw new Error(
@@ -164,8 +154,6 @@ export class ScaleFeature extends InstrumentFeature {
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? rootNoteName;
 
     const headerText = `${validRootName} ${scale.name}`;
-    const guitarIntervalSettings =
-      intervalSettings as InstrumentIntervalSettings;
 
     return new ScaleFeature(
       config as string[],
@@ -174,8 +162,6 @@ export class ScaleFeature extends InstrumentFeature {
       highlightNotesSet,
       headerText,
       settings,
-      guitarIntervalSettings,
-      audioController,
       maxCanvasHeight,
     );
   }
