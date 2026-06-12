@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { StrumView } from '../../views/strum_view';
+import { StrumView } from './strum_view';
 import { AudioController } from '../../audio_controller';
 import { SignalKind, GrooveSignal } from '../../panels/link_types';
 

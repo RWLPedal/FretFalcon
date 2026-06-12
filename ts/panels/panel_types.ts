@@ -1,4 +1,4 @@
-﻿import { View } from "../view";
+﻿import { View } from "../core/view";
 import { AppSettings } from "../settings";
 import { LinkRecord } from "./link_types";
 import { ViewId } from "../core/ids";

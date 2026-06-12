@@ -1,4 +1,4 @@
-import { Theme, themeNames } from '../theme_manager';
+import { Theme, themeNames } from '../../theme_manager';
 
 export type ThemePickerSize = 'compact' | 'normal';
 

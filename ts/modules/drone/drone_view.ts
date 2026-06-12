@@ -1,8 +1,8 @@
-import { BaseView } from '../base_view';
-import { NoteName, NOTE_NAMES, SustainedNote, SustainedNoteOptions, getGuitarWave } from '../sounds/note_sounds';
-import { DriveSignal, SignalKind, StrumSignal } from '../panels/link_types';
-import { volumeManager } from '../sounds/volume_manager';
-import { emitEvent } from '../core/events';
+import { BaseView } from '../../core/base_view';
+import { NoteName, NOTE_NAMES, SustainedNote, SustainedNoteOptions, getGuitarWave } from '../../sounds/note_sounds';
+import { DriveSignal, SignalKind, StrumSignal } from '../../panels/link_types';
+import { volumeManager } from '../../sounds/volume_manager';
+import { emitEvent } from '../../core/events';
 
 type ChordMode = 'note' | 'fifth' | 'major' | 'minor';
 type EnvelopeMode = 'sustain' | 'slow' | 'fast';

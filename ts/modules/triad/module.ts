@@ -17,7 +17,7 @@ export default featurePanelModule({
   displayName: 'Triad Shapes',
   icon: 'change_history',
   featureTypeName: TriadFeature.typeName,
-  defaultSize: { width: 420, height: 600 },
+  defaultSize: { width: 415, height: 685 },
   nav: {
     section: NavSection.Fretboard,
     label: 'Triads',

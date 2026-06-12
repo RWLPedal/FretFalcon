@@ -1,4 +1,4 @@
-import { BaseView } from "../../base_view";
+import { BaseView } from "../../core/base_view";
 import { Chord, chordsAreEquivalent } from "../chords";
 import { FretboardConfig, InstrumentName } from "../fretboard";
 import { ChordDiagramView } from "./chord_diagram_view";

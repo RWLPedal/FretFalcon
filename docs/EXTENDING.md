@@ -46,12 +46,14 @@ export default featurePanelModule({
 });
 ```
 
-For standalone views (not fretboard features), build the `ViewModule` object directly:
+For standalone views (not fretboard features), build the `ViewModule` object directly
+and co-locate the view class inside the same module folder:
 
 ```ts
+// ts/modules/my_view/module.ts
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { MyView } from '../../views/my_view';
+import { MyView } from './my_view';             // co-located in ts/modules/my_view/
 
 const module: ViewModule = {
   id: viewId('my_view'),
@@ -74,8 +76,8 @@ export default module;
 ## 2. Implement the view (if needed)
 
 If you're wrapping an existing `ConfigurableFeatureView`-based feature, step 1 is
-all you need.  For a new standalone view, create `ts/views/my_view.ts` (or wherever
-it belongs) and implement the `View` interface:
+all you need.  For a new standalone view, create `ts/modules/my_view/my_view.ts`
+(co-located with `module.ts`) and implement the `View` interface:
 
 ```ts
 export interface View {
@@ -138,7 +140,9 @@ Module files may import from:
 - `../../panels/link_types` — signal types (`DriveSignal`, `SignalKind`, etc.)
 - `../../panels/drive_registry` — `DriveSourceDescriptor`, `DriveTargetSlot`
 - `../../fretboard/**` — feature classes, music types, scales
-- `../../views/**` — your view class (standalone views only; use `featurePanelModule` for feature panels)
+- `'./my_view'` — your co-located view class inside `ts/modules/<name>/` (standalone views only)
+- `../../core/base_view` — `BaseView` base class for views
+- `../../core/widgets/**` — shared UI widgets: `ValueSlider`, `VolumeControl`, `ThemeSwatchPicker`
 
 Do **not** import from `panel_manager`, `link_manager`, `panel_registry`, `reference_page/*`,
 or `mobile/*` — these are internal implementation details.

@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { CapoView } from '../../fretboard/views/capo_view';
+import { CapoView } from './capo_view';
 import { InstrumentName } from '../../fretboard/fretboard';
 
 const CAPO_ID = viewId('capo_view');

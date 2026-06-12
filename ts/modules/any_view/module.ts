@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { AnyFloatingView } from '../../views/any_floating_view';
+import { AnyFloatingView } from './any_floating_view';
 
 const module: ViewModule = {
   id: viewId('any_floating_view'),

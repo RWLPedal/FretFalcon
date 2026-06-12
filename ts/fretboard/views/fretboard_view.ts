@@ -1,4 +1,4 @@
-﻿import { BaseView } from "../../base_view";
+﻿import { BaseView } from "../../core/base_view";
 import {
   Fretboard,
   FretboardConfig,

@@ -8,10 +8,10 @@
  */
 import { Feature } from '../feature';
 import { FeatureTypeDescriptor } from '../feature';
-import { View } from '../view';
+import { View } from '../core/view';
 import { AppSettings } from '../settings';
 import { AudioController } from '../audio_controller';
-import { MetronomeView } from '../fretboard/views/metronome_view';
+import { MetronomeView } from '../modules/metronome/metronome_view';
 import { InstrumentIntervalSettings } from './fretboard_interval_settings';
 
 /**

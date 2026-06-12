@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { MetronomeView } from '../../fretboard/views/metronome_view';
+import { MetronomeView } from './metronome_view';
 import { AudioController } from '../../audio_controller';
 import { SignalKind, GrooveSignal } from '../../panels/link_types';
 

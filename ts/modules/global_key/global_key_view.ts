@@ -1,7 +1,6 @@
-// ts/views/global_key_view.ts
-import { BaseView } from '../base_view';
-import { NOTE_NAMES, DiatonicMode, DIATONIC_MODE_LABELS, ALL_DIATONIC_MODES } from '../fretboard/music_types';
-import { emitEvent } from '../core/events';
+import { BaseView } from '../../core/base_view';
+import { NOTE_NAMES, DiatonicMode, DIATONIC_MODE_LABELS, ALL_DIATONIC_MODES } from '../../fretboard/music_types';
+import { emitEvent } from '../../core/events';
 
 export const GLOBAL_KEY_VIEW_ID = 'global_key';
 

@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { CircleOfFifthsView } from '../../views/circle_of_fifths_view';
+import { CircleOfFifthsView } from './circle_of_fifths_view';
 import { SignalKind, KeySignal, ChordSignal, DiatonicMode, KeyType } from '../../panels/link_types';
 
 const COF_ID = viewId('circle_of_fifths');

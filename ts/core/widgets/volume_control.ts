@@ -1,17 +1,9 @@
-// ts/views/volume_control.ts
-// Reusable volume control: speaker icon button + floating window popup.
-// The popup is appended to document.body so it is never clipped by a
-// scrolling or overflow-hidden ancestor.
-
-import { volumeManager } from '../sounds/volume_manager';
+import { volumeManager } from '../../sounds/volume_manager';
 
 export class VolumeControl {
   /** The inline wrapper (just the icon button). Append this into your toolbar. */
   readonly el: HTMLElement;
 
-  /** The popup panel itself, appended to <body>. Cleaned up by the GC when the
-   *  control is garbage-collected (document listener keeps a weak reference via
-   *  closure). */
   private readonly popup: HTMLElement;
 
   constructor() {
@@ -21,7 +13,6 @@ export class VolumeControl {
   }
 
   private build(): { wrap: HTMLElement; popup: HTMLElement } {
-    // ── Inline wrapper (just the icon button) ───────────────────────────────
     const wrap = document.createElement('div');
     wrap.classList.add('vol-ctrl');
 
@@ -33,7 +24,6 @@ export class VolumeControl {
     btn.appendChild(icon);
     wrap.appendChild(btn);
 
-    // ── Floating window popup – mounted directly on <body> ──────────────────
     const popup = document.createElement('div');
     popup.classList.add('vol-ctrl-popup');
     popup.setAttribute('hidden', '');
@@ -63,7 +53,6 @@ export class VolumeControl {
     body.appendChild(pct);
     popup.appendChild(body);
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
     const updateIcon = (v: number) => {
       if (v === 0)      icon.textContent = 'volume_off';
       else if (v < 0.5) icon.textContent = 'volume_down';
@@ -71,7 +60,6 @@ export class VolumeControl {
     };
     updateIcon(volumeManager.getVolume());
 
-    /** Position the fixed popup just above the button. */
     const positionPopup = () => {
       const rect = btn.getBoundingClientRect();
       const pw   = popup.offsetWidth || 170;
@@ -81,7 +69,6 @@ export class VolumeControl {
       popup.style.bottom = `${window.innerHeight - rect.top + 6}px`;
     };
 
-    // Toggle popup
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (popup.hasAttribute('hidden')) {
@@ -92,19 +79,16 @@ export class VolumeControl {
       }
     });
 
-    // Slider drives volume
     slider.addEventListener('input', () => {
       volumeManager.setVolume(parseFloat(slider.value));
     });
 
-    // Stay in sync with external volume changes
     volumeManager.onChange((v) => {
       slider.value    = String(v);
       pct.textContent = `${Math.round(v * 100)}%`;
       updateIcon(v);
     });
 
-    // Close on outside click; don't bubble from inside the popup
     popup.addEventListener('click', (e) => e.stopPropagation());
     document.addEventListener('click', () => popup.setAttribute('hidden', ''));
 

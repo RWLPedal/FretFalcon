@@ -1,12 +1,12 @@
 ﻿export const SIDEBAR_CONTAINER_CLASS = 'side-bar-container';
 export const SIDEBAR_LAYOUT_PICKER_CLASS = 'sidebar-layout-picker';
 
-import { FloatingViewManager } from '../panels/panel_manager';
-import { VolumeControl } from '../views/volume_control';
+import { FloatingViewManager } from '../panels/panel_host';
+import { VolumeControl } from '../core/widgets/volume_control';
 import { AppSettings } from '../settings';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
-import { ThemeSwatchPicker } from '../views/theme_swatch_picker';
+import { ThemeSwatchPicker } from '../core/widgets/theme_swatch_picker';
 import { getNavSectionGroups } from './nav_registry';
 import { InstrumentName } from '../fretboard/fretboard';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';

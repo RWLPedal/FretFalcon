@@ -5,7 +5,7 @@ import {
 } from '../../feature';
 import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
-import { BaseView } from '../../base_view';
+import { BaseView } from '../../core/base_view';
 import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../chords';
 import { AppSettings } from '../../settings';
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';

@@ -1,9 +1,8 @@
-// ts/instrument/views/metronome_view.ts
-import { BaseView } from "../../base_view";
-import { AudioController } from "../../audio_controller";
-import { SignalKind, GrooveSignal } from "../../panels/link_types";
-import { ValueSlider } from "../../views/components/value_slider";
-import { emitEvent } from "../../core/events";
+import { BaseView } from '../../core/base_view';
+import { AudioController } from '../../audio_controller';
+import { SignalKind, GrooveSignal } from '../../panels/link_types';
+import { ValueSlider } from '../../core/widgets/value_slider';
+import { emitEvent } from '../../core/events';
 
 enum BeatState {
   Silent = 0,

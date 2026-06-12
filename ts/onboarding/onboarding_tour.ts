@@ -1,4 +1,4 @@
-import { FloatingViewManager } from "../panels/panel_manager";
+import { FloatingViewManager } from "../panels/panel_host";
 import {
   FLOATING_VIEW_WRAPPER_CLASS,
   FLOATING_VIEW_TITLEBAR_CLASS,

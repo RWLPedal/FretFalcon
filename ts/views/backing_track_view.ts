@@ -1,6 +1,6 @@
 // ts/views/backing_track_view.ts
-import { BaseView } from "../base_view";
-import { ValueSlider } from "./components/value_slider";
+import { BaseView } from "../core/base_view";
+import { ValueSlider } from "../core/widgets/value_slider";
 import { SignalKind, StrumSignal } from "../panels/link_types";
 import { emitEvent, FeatureStateChangedDetail } from "../core/events";
 import {

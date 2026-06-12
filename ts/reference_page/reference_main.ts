@@ -1,9 +1,8 @@
 import { SidebarView } from "./sidebar_view";
-import { FloatingViewManager } from '../panels/panel_manager';
+import { FloatingViewManager } from '../panels/panel_host';
 import { AppSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
 import { ThemeManager, Theme } from "../theme_manager";
 import { instrumentCategory } from "../fretboard/fretboard_category";
-import { TriadFeature } from "../fretboard/features/triad_feature";
 import { SettingsManager } from "../settings_manager";
 import { LinkManager } from '../panels/link_manager';
 import { registerCategory } from '../feature_registry';
@@ -140,12 +139,7 @@ class ReferencePage {
 
         const viewState = { featureTypeName };
 
-        // Feature-specific default window size (used only on first spawn; saved state takes precedence).
-        const size = featureTypeName === TriadFeature.typeName
-            ? { width: TriadFeature.defaultWidth, height: TriadFeature.defaultHeight }
-            : undefined;
-
-        this.floatingViewManager.spawnView(viewId, { viewState, title, size });
+        this.floatingViewManager.spawnView(viewId, { viewState, title });
     }
 
     private saveSettings(newSettings: AppSettings): void {

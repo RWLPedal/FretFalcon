@@ -26,16 +26,7 @@ const CONFIGURABLE_FEATURE_ALLOWED = new Set([
 // This allowlist covers modules not yet co-located (Phase 4.5) plus the privileged
 // modules (any_view, feature_panel). It may only SHRINK — never add a new module here.
 const EXTERNAL_VIEW_ALLOWED = new Set([
-  'timer',
-  'drone',
-  'capo',
-  'global_key',
-  'circle_of_fifths',
-  'metronome',
-  'strum',
   'backing_track',
-  // privileged:
-  'any_view',
   'feature_panel',
 ]);
 

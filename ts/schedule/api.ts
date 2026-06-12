@@ -6,7 +6,7 @@
  */
 export { A_MINOR_WORKOUT_SCHEDULE_JSON } from './presets/a_minor_workout';
 
-import { View } from '../view';
+import { View } from '../core/view';
 import { AppSettings } from '../settings';
 import { ScheduleFloatingView } from './schedule_floating_view';
 

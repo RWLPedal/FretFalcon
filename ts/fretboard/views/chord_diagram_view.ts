@@ -1,4 +1,4 @@
-﻿import { BaseView } from "../../base_view";
+﻿import { BaseView } from "../../core/base_view";
 import { Chord, ChordType } from "../chords";
 // Import Fretboard class and necessary types/enum from fretboard.ts
 import {

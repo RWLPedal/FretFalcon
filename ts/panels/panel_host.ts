@@ -2,7 +2,7 @@
 // Manages panel instances, coordinates layout strategies (FloatingLayout /
 // TabbedLayout), and owns the view lifecycle. Replaces panel_manager.ts.
 
-import { View } from '../view';
+import { View } from '../core/view';
 import { ViewId, CORE_VIEW_IDS } from '../core/ids';
 import { AppSettings } from '../settings';
 import { LinkManager } from './link_manager';

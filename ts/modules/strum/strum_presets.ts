@@ -1,4 +1,3 @@
-// ts/views/strum_presets.ts
 // Built-in strumming pattern presets for the StrumView.
 
 import { StrokeAction, StrumPreset } from './strum_types';

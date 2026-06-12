@@ -1,6 +1,6 @@
 import { Feature } from "../feature";
 import { Interval } from "./schedule";
-import { TimerView } from "../views/timer_view";
+import { TimerView } from "../modules/timer/timer_view";
 import { SchedulePlaybackView } from "./schedule_playback_view";
 
 export { Status } from '../core/status';

@@ -1,5 +1,3 @@
-// ts/views/components/value_slider.ts
-
 export interface ValueSliderOptions {
   min: number;
   max: number;

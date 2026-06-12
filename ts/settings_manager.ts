@@ -7,7 +7,7 @@ import {
   getAvailableTunings,
 } from "./fretboard/fretboard";
 import { TuningEditor } from "./fretboard/tuning_editor";
-import { ThemeSwatchPicker } from "./views/theme_swatch_picker";
+import { ThemeSwatchPicker } from "./core/widgets/theme_swatch_picker";
 import { Theme } from "./theme_manager";
 
 type SaveCallback = (newSettings: AppSettings) => void;

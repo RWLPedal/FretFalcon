@@ -1,12 +1,11 @@
-// ts/views/strum_view.ts
-import { BaseView } from '../base_view';
-import { SignalKind, GrooveSignal, DriveSignal, StrumAction } from '../panels/link_types';
-import { emitEvent, FeatureStateChangedDetail } from '../core/events';
-import { AudioController } from '../audio_controller';
+import { BaseView } from '../../core/base_view';
+import { SignalKind, GrooveSignal, DriveSignal, StrumAction } from '../../panels/link_types';
+import { emitEvent, FeatureStateChangedDetail } from '../../core/events';
+import { AudioController } from '../../audio_controller';
 import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
 import { StrokeAction, StrumPreset } from './strum_types';
-import { ValueSlider } from './components/value_slider';
+import { ValueSlider } from '../../core/widgets/value_slider';
 interface StrumViewState {
   _v: 1;
   subdivision: 'eighth' | 'sixteenth';

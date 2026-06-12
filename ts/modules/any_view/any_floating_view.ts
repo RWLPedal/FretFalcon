@@ -1,10 +1,10 @@
-import { BaseView } from '../base_view';
-import { AppSettings } from '../settings';
-import { Feature } from '../feature';
-import { getFeatureTypeDescriptor } from '../feature_registry';
-import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../panels/link_types';
-import { InstrumentSettings } from '../fretboard/fretboard_settings';
-import { setPendingRenderConstraints } from '../fretboard/fretboard_base';
+import { BaseView } from '../../core/base_view';
+import { AppSettings } from '../../settings';
+import { Feature } from '../../feature';
+import { getFeatureTypeDescriptor } from '../../feature_registry';
+import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../../panels/link_types';
+import { InstrumentSettings } from '../../fretboard/fretboard_settings';
+import { setPendingRenderConstraints } from '../../fretboard/fretboard_base';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
 const PLACEHOLDER_REST = '(Rest)';

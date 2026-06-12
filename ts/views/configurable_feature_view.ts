@@ -1,4 +1,4 @@
-import { BaseView } from "../base_view";
+import { BaseView } from "../core/base_view";
 import { AppSettings } from "../settings";
 import { Feature, FeatureTypeDescriptor } from "../feature";
 import { ConfigView } from "./config_view";

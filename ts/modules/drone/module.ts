@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId, Visibility } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { DroneView } from '../../views/drone_view';
+import { DroneView } from './drone_view';
 import { SignalKind } from '../../panels/link_types';
 
 const DRONE_ID = viewId('drone_view');

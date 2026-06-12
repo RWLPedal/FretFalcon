@@ -4,7 +4,7 @@
 
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { GlobalKeyView } from '../../views/global_key_view';
+import { GlobalKeyView } from './global_key_view';
 import { SignalKind, KeySignal, ChordSignal, DiatonicMode, KeyType } from '../../panels/link_types';
 import { scales } from '../../fretboard/scales';
 import { ChordQuality } from '../../fretboard/music_types';

@@ -5,7 +5,7 @@
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { BaseView } from "../../base_view";
+import { BaseView } from "../../core/base_view";
 import { InstrumentFeature } from "../fretboard_base";
 import {
   FretboardConfig,

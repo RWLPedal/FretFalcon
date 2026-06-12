@@ -1,11 +1,9 @@
-// ts/views/circle_of_fifths_view.ts
-
-import { BaseView } from '../base_view';
-import { DiatonicMode, KeyType, ChordQuality } from '../fretboard/music_types';
-import { scales } from '../fretboard/scales';
-import { DriveSignal, SignalKind } from '../panels/link_types';
-import { svgEl } from '../core/dom';
-import { emitEvent } from '../core/events';
+import { BaseView } from '../../core/base_view';
+import { DiatonicMode, KeyType, ChordQuality } from '../../fretboard/music_types';
+import { scales } from '../../fretboard/scales';
+import { DriveSignal, SignalKind } from '../../panels/link_types';
+import { svgEl } from '../../core/dom';
+import { emitEvent } from '../../core/events';
 
 // ─── Circle of Fifths order ───────────────────────────────────────────────────
 

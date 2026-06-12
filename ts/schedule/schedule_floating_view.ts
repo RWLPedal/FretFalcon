@@ -1,4 +1,4 @@
-import { BaseView } from '../base_view';
+import { BaseView } from '../core/base_view';
 import { AppSettings, LAST_RUN_SCHEDULE_JSON_KEY, RECENT_SCHEDULES_JSON_KEY, MAX_RECENT_SCHEDULES } from '../settings';
 import { AudioController } from '../audio_controller';
 import { Schedule } from './schedule';

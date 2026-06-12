@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { TimerView } from '../../views/timer_view';
+import { TimerView } from './timer_view';
 import { SignalKind } from '../../panels/link_types';
 import { registerDriveSource, registerDriveTarget } from '../../panels/drive_registry';
 

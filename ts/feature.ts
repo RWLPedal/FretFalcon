@@ -1,4 +1,4 @@
-import { View } from "./view";
+import { View } from "./core/view";
 import { AppSettings } from "./settings";
 
 /**

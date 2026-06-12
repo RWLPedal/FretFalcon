@@ -15,7 +15,7 @@ export function peekPendingCanvasWidth(): number | undefined {
 }
 
 // --- End pending render constraints ---
-import { View } from "../view";
+import { View } from "../core/view";
 import {
   FretboardConfig,
   INSTRUMENTS,

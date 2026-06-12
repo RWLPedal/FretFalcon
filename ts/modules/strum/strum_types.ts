@@ -1,4 +1,3 @@
-// ts/views/strum_types.ts
 // Shared types for strum_view.ts and strum_presets.ts.
 // Keep this file free of cross-imports to avoid circular dependencies.
 

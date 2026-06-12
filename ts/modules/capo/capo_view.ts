@@ -1,7 +1,7 @@
-import { BaseView } from '../../base_view';
+import { BaseView } from '../../core/base_view';
 import { AppSettings } from '../../settings';
-import { getChordLibraryForInstrument, Chord, ChordType } from '../chords';
-import { getKeyIndex, NOTE_NAMES_FROM_A } from '../fretboard_utils';
+import { getChordLibraryForInstrument, Chord, ChordType } from '../../fretboard/chords';
+import { getKeyIndex, NOTE_NAMES_FROM_A } from '../../fretboard/fretboard_utils';
 
 /**
  * A compact view that displays open MAJOR and MINOR chord shapes for the current

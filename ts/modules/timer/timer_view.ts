@@ -1,8 +1,8 @@
-import { BaseView } from '../base_view';
-import { formatDuration, parseDurationString } from '../time_utils';
-import { Status } from '../core/status';
-import { SignalKind, DriveSignal } from '../panels/link_types';
-import { emitEvent } from '../core/events';
+import { BaseView } from '../../core/base_view';
+import { formatDuration, parseDurationString } from '../../time_utils';
+import { Status } from '../../core/status';
+import { SignalKind, DriveSignal } from '../../panels/link_types';
+import { emitEvent } from '../../core/events';
 
 export class TimerView extends BaseView {
   private duration: number;
