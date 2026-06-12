@@ -607,26 +607,3 @@ export function getEasiestMoveableShape(
     getMoveableShapes(instrumentName, chordName, tuning, chordType)[0] ?? null
   );
 }
-
-/** @deprecated Use getMoveableShapes("Guitar", ...) */
-export function getMoveableGuitarShapes(
-  chordName: string,
-  tuning: Tuning,
-  chordType?: ChordType,
-): Chord[] {
-  return getMoveableShapes(InstrumentName.Guitar, chordName, tuning, chordType);
-}
-
-/** @deprecated Use getEasiestMoveableShape("Guitar", ...) */
-export function getEasiestMoveableGuitarShape(
-  chordName: string,
-  tuning: Tuning,
-  chordType?: ChordType,
-): Chord | null {
-  return getEasiestMoveableShape(
-    InstrumentName.Guitar,
-    chordName,
-    tuning,
-    chordType,
-  );
-}

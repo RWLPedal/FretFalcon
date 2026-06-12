@@ -523,21 +523,6 @@ registerDriveSource({
   },
 });
 
-// ─── AnyFeature as target ─────────────────────────────────────────────────────
-// AnyFeature renders inside a ConfigurableFeatureView and handles FeatureSignals
-// directly via its own drive-signal listener. The slot declaration here is only
-// for arrow-tooltip display (◈ icon); resolveValue always returns null so
-// ConfigurableFeatureView does not try to drive the State arg via the config system.
-
-registerDriveTarget({
-  featureTypeName: 'AnyFeature',
-  viewId: 'any_feature',
-  argName: '_feature',     // non-existent arg — keeps ConfigurableFeatureView from injecting "Driven"
-  label: 'Feature',
-  acceptedKinds: [SignalKind.Feature],
-  resolveValue(_signal: DriveSignal): string | null { return null; },
-});
-
 // ─── GlobalKeyView as source ──────────────────────────────────────────────────
 // Dispatches 'cof-key-selected' on mount and on every root/mode change.
 // Broadcasts to ALL panels via LinkManager's global-source mechanism.

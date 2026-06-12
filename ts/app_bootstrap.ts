@@ -6,7 +6,6 @@ import { TimerView } from "./views/timer_view";
 import { DroneView } from "./views/drone_view";
 import { ScheduleFloatingView } from "./views/schedule_floating_view";
 import { AnyFloatingView } from "./views/any_floating_view";
-import { AnyFeature } from "./fretboard/features/any_feature";
 import { BackingTrackView } from "./views/backing_track_view";
 import { CapoView } from "./fretboard/views/capo_view";
 import { ConfigurableFeatureView } from "./views/configurable_feature_view";
@@ -76,25 +75,6 @@ export function registerBuiltins(): void {
     showInMenu: false,
     createView: (initialState?: any, appSettings?: AppSettings) =>
       new AnyFloatingView(initialState, appSettings!),
-  });
-
-  registerFloatingView({
-    viewId: "any_feature",
-    displayName: "Any Feature",
-    icon: "smart_display",
-    defaultWidth: 420,
-    defaultHeight: 550,
-    showInMenu: false,
-    supportsConfigToggle: true,
-    createView: (initialState?: any, appSettings?: AppSettings) =>
-      new ConfigurableFeatureView(
-        {
-          categoryName: "Instrument",
-          featureTypeName: AnyFeature.typeName,
-          ...initialState,
-        },
-        appSettings!,
-      ),
   });
 
   registerFloatingView({

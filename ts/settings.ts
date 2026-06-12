@@ -1,12 +1,4 @@
 // ts/settings.ts
-import {
-  PracticeSettings,
-  DEFAULT_PRACTICE_SETTINGS,
-} from "./practice_settings";
-import {
-  ReferenceSettings,
-  DEFAULT_REFERENCE_SETTINGS,
-} from "./reference_settings";
 import { Theme } from "./theme_manager";
 import {
   InstrumentSettings,
@@ -23,8 +15,6 @@ export interface CustomTuning {
 /** Defines the structure for all application-level settings. */
 export interface AppSettings {
   theme: Theme;
-  practice: PracticeSettings;
-  reference: ReferenceSettings;
   instrumentSettings: InstrumentSettings;
   showGrid: boolean;
   customTunings?: Partial<Record<string, CustomTuning[]>>; // keyed by InstrumentName string value
@@ -39,8 +29,6 @@ export const MAX_RECENT_SCHEDULES = 5;
 export function loadSettings(): AppSettings {
   const defaults: AppSettings = {
     theme: Theme.WARM,
-    practice: { ...DEFAULT_PRACTICE_SETTINGS },
-    reference: { ...DEFAULT_REFERENCE_SETTINGS },
     instrumentSettings: { ...DEFAULT_INSTRUMENT_SETTINGS },
     showGrid: true,
   };
@@ -52,12 +40,6 @@ export function loadSettings(): AppSettings {
       return {
         ...defaults,
         ...(stored.theme ? { theme: stored.theme } : {}),
-        ...(stored.practice
-          ? { practice: { ...defaults.practice, ...stored.practice } }
-          : {}),
-        ...(stored.reference
-          ? { reference: { ...defaults.reference, ...stored.reference } }
-          : {}),
         instrumentSettings: {
           ...defaults.instrumentSettings,
           ...(stored.instrumentSettings ?? {}),

@@ -1,12 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2020",
     "removeComments": false,
     "outDir": "../js/",
     "module": "CommonJS",
     "preserveConstEnums": true,
     "sourceRoot": ".",
     "rootDir": ".",
-    "sourceMap": true
+    "sourceMap": true,
+    "alwaysStrict": true,
+    "noImplicitThis": true,
+    "strictBindCallApply": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true
   }
 }

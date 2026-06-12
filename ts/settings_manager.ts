@@ -1,7 +1,6 @@
 import { AppSettings } from "./settings";
 import { InstrumentCategory } from "./fretboard/fretboard_category";
 import { DEFAULT_INSTRUMENT_SETTINGS } from "./fretboard/fretboard_settings";
-import { DEFAULT_PRACTICE_SETTINGS } from "./practice_settings";
 import {
   INSTRUMENTS,
   InstrumentName,
@@ -11,7 +10,6 @@ import { TuningEditor } from "./fretboard/tuning_editor";
 import { ThemeSwatchPicker } from "./views/theme_swatch_picker";
 import { Theme } from "./theme_manager";
 
-type PageType = "practice" | "reference";
 type SaveCallback = (newSettings: AppSettings) => void;
 
 interface InstrumentVariant {
@@ -107,15 +105,13 @@ const MODAL_HTML = `
 
 export class SettingsManager {
   private settings: AppSettings;
-  private pageType: PageType;
   private modalEl: HTMLElement | null = null;
   private onSave: SaveCallback;
   private themePicker: ThemeSwatchPicker | null = null;
   private category: InstrumentCategory;
 
-  constructor(settings: AppSettings, pageType: PageType, onSave: SaveCallback) {
+  constructor(settings: AppSettings, onSave: SaveCallback) {
     this.settings = settings;
-    this.pageType = pageType;
     this.onSave = onSave;
     this.category = new InstrumentCategory();
     this.category.updateCustomTunings(settings.customTunings);
@@ -187,9 +183,6 @@ export class SettingsManager {
       theme: Theme.WARM,
       showGrid: true,
       instrumentSettings: { ...DEFAULT_INSTRUMENT_SETTINGS },
-      ...(this.pageType === "practice"
-        ? { practice: { ...DEFAULT_PRACTICE_SETTINGS } }
-        : {}),
     };
     this.onSave(this.settings);
     this._populate();
@@ -208,35 +201,9 @@ export class SettingsManager {
 
     let sectionNum = 1;
 
-    if (this.pageType === "practice") {
-      this._renderSessionSection(body, sectionNum++);
-    }
     this._renderAppearanceSection(body, sectionNum++);
     this._renderInstrumentSection(body, sectionNum++);
     this._renderFretboardSection(body, sectionNum++);
-  }
-
-  private _renderSessionSection(parent: HTMLElement, num: number): void {
-    const section = this._makeSection(num, "Session", "TIMING");
-
-    const warmupInput = document.createElement("input");
-    warmupInput.type = "number";
-    warmupInput.id = "settings-warmup";
-    warmupInput.className = "input";
-    warmupInput.min = "0";
-    warmupInput.step = "1";
-    warmupInput.value = String(this.settings.practice.warmupPeriod);
-    warmupInput.style.width = "90px";
-    warmupInput.addEventListener("change", () => {
-      const val = Math.max(0, parseInt(warmupInput.value, 10) || 0);
-      warmupInput.value = String(val);
-      this._applyChange({
-        practice: { ...this.settings.practice, warmupPeriod: val },
-      });
-    });
-
-    this._appendRow(section, "Warmup (sec)", "", warmupInput);
-    parent.appendChild(section);
   }
 
   private _renderAppearanceSection(parent: HTMLElement, num: number): void {

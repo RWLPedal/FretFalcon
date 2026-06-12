@@ -482,18 +482,13 @@ export function getTriadNotesAndLinesForGroup(
         const instanceNotesData: NoteRenderData[] = [];
         const instanceCoords: { x: number; y: number }[] = []; // Store coords temporarily for lines
         let isValidInstance = true;
-        // const absoluteFrets: number[] = [-1, -1, -1]; // Not needed to store
-
         for (let i = 0; i < 3; i++) {
-          // Iterate through the 3 strings in the shape's group
           const currentStringAbsoluteIndex = stringGroup[i];
           const currentStringTuning = tuning[currentStringAbsoluteIndex];
-          // Calculate the absolute fret for the current string based on the anchor fret and the relative shape
           const absFret =
             anchorFret +
             shape.relativeFrets[i] -
             shape.relativeFrets[shape.rootStringIndexInGroup];
-          // absoluteFrets[i] = absFret; // Not needed
 
           if (absFret < 0 || absFret > fretCount) {
             isValidInstance = false; // Note is outside the fretboard range

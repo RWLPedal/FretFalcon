@@ -33,7 +33,6 @@ import { FretboardColorScheme } from "./colors";
 import { ArpeggioFeature } from "./features/arpeggio_feature";
 import { CagedFeature } from "./features/caged_feature";
 import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
-import { AnyFeature } from "./features/any_feature";
 import { NearbyTriadsFeature } from "./features/nearby_triads_feature";
 
 export const COLOR_SCHEME_OPTIONS: {
@@ -201,7 +200,6 @@ export class InstrumentCategory implements Category {
         MultiLayerFretboardFeature.typeName,
         MultiLayerFretboardFeature as unknown as FeatureTypeDescriptor,
       ],
-      [AnyFeature.typeName, AnyFeature as unknown as FeatureTypeDescriptor],
       [
         NearbyTriadsFeature.typeName,
         NearbyTriadsFeature as unknown as FeatureTypeDescriptor,

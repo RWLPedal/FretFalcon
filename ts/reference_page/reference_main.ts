@@ -45,7 +45,7 @@ class ReferencePage {
             this.floatingViewManager.setLinkManager(linkManager);
         }
 
-        this.settingsManager = new SettingsManager(this.settings, 'reference', (newSettings) => {
+        this.settingsManager = new SettingsManager(this.settings, (newSettings) => {
             this.saveSettings(newSettings);
             this.applySettings();
         });

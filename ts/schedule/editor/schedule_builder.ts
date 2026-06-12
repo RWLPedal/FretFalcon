@@ -92,9 +92,6 @@ export class ScheduleBuilder {
             index + 1
           } due to data extraction error.`
         );
-        // Optionally report this as an error? For now, just skip.
-        // this.errorDisplay.showMessage(`Error reading data for row ${index + 1}.`);
-        // hasErrors = true;
         return;
       }
 
@@ -157,7 +154,7 @@ export class ScheduleBuilder {
           // 4. Create Interval and add to Schedule
           const interval = new Interval(
             durationSeconds,
-            settings.practice.warmupPeriod, // Use global warmup setting
+            0,
             intervalData.task ||
               intervalData.featureTypeName ||
               `Interval ${index + 1}`, // Task name fallback

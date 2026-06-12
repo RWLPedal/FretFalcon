@@ -420,23 +420,6 @@ export function resolveTuning(
   return all.find(t => t.name === tuningName) ?? INSTRUMENTS[instrument]?.defaultTuning ?? STANDARD_TUNING;
 }
 
-// Backward-compat aliases (used by chord_feature.ts and others still referencing old names)
-/** @deprecated Use INSTRUMENTS registry instead */
-export const INSTRUMENT_TUNINGS: Record<string, Record<string, Tuning>> = Object.fromEntries(
-  Object.values(INSTRUMENTS).map(inst => [
-    inst.name,
-    Object.fromEntries(inst.availableTunings.map(t => [t.name, t]))
-  ])
-);
-/** @deprecated Use getAvailableTunings instead */
-export const AVAILABLE_TUNINGS: Record<string, Tuning> = Object.assign(
-  {},
-  ...Object.values(INSTRUMENTS).map(inst =>
-    Object.fromEntries(inst.availableTunings.map(t => [t.name, t]))
-  )
-);
-export type TuningName = string;
-
 // --- Fretboard Class ---
 export class Fretboard {
   private notesToRender: NoteRenderData[] = [];
