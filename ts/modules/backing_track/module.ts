@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { BackingTrackView } from '../../views/backing_track_view';
+import { BackingTrackView } from './view';
 import { SignalKind, ChordSignal, KeySignal, GrooveSignal, DriveSignal, SignalState } from '../../panels/link_types';
 import { DiatonicMode, KeyType } from '../../panels/link_types';
 

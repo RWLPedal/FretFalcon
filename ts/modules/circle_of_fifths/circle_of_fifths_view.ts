@@ -5,7 +5,7 @@ import { DriveSignal, SignalKind } from '../../panels/link_types';
 import { svgEl } from '../../core/dom';
 import { emitEvent } from '../../core/events';
 
-// â”€â”€â”€ Circle of Fifths order â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Circle of Fifths order ───────────────────────────────────────────────────
 
 // Major keys in circle-of-fifths order (clockwise from top = C)
 const COF_ORDER = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
@@ -14,7 +14,7 @@ const COF_MINOR_LABELS = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'Ebm', 'Bbm', '
 // Chromatic root of each relative minor
 const COF_MINOR_ROOTS = ['A', 'E', 'B', 'F#', 'C#', 'G#', 'Eb', 'Bb', 'F', 'C', 'G', 'D'];
 
-// â”€â”€â”€ Chromatic note mapping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Chromatic note mapping ───────────────────────────────────────────────────
 
 const CHROMATIC_NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const CHROMATIC_INDEX: Record<string, number> = {};
@@ -22,7 +22,7 @@ CHROMATIC_NOTES.forEach((n, i) => { CHROMATIC_INDEX[n] = i; });
 // Enharmonic aliases
 Object.assign(CHROMATIC_INDEX, { Db: 1, 'D#': 3, Gb: 6, 'G#': 8, 'A#': 10, Cb: 11, 'B#': 0 });
 
-// Map from chromatic index â†’ COF position (0-11)
+// Map from chromatic index → COF position (0-11)
 const COF_CHROMA_TO_POS: Record<number, number> = {};
 COF_ORDER.forEach((note, i) => { COF_CHROMA_TO_POS[CHROMATIC_INDEX[note] ?? -1] = i; });
 
@@ -88,7 +88,7 @@ function keyEnharmonicMap(root: string, mode: DiatonicMode): Map<number, string>
   return result;
 }
 
-// â”€â”€â”€ Mode helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Mode helpers ─────────────────────────────────────────────────────────────
 
 const DIATONIC_MODE_CYCLE: DiatonicMode[] = [
   DiatonicMode.Ionian, DiatonicMode.Dorian, DiatonicMode.Phrygian,
@@ -118,7 +118,7 @@ const MODE_FULL: Record<DiatonicMode, string> = {
   [DiatonicMode.Locrian]:    'Locrian',
 };
 
-// â”€â”€â”€ SVG helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SVG helpers ──────────────────────────────────────────────────────────────
 
 const CX = 150, CY = 150;
 const R_OUTER = 140;  // outer edge of major-key ring
@@ -158,7 +158,7 @@ function svgText(x: number, y: number, cls: string, content = ''): SVGTextElemen
   return el;
 }
 
-// â”€â”€â”€ Music-theory helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Music-theory helpers ─────────────────────────────────────────────────────
 
 type ScaleInstance = typeof scales.MAJOR;
 
@@ -221,7 +221,7 @@ function progressionEntries(root: string, mode: DiatonicMode): ProgEntry[] {
   });
 }
 
-// â”€â”€â”€ View class â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── View class ───────────────────────────────────────────────────────────────
 
 export class CircleOfFifthsView extends BaseView {
   private selectedRoot: string;
@@ -316,7 +316,7 @@ export class CircleOfFifthsView extends BaseView {
       const e   = -90 + (i + 1) * 30 - GAP / 2;
       const mid = -90 + (i + 0.5) * 30;
 
-      // â”€â”€ Outer (major key) group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Outer (major key) group ──────────────────────────────────────────────
       const outerG = svgEl<SVGGElement>('g');
       outerG.classList.add('cof-wedge-group');
       outerG.style.cursor = 'pointer';
@@ -344,7 +344,7 @@ export class CircleOfFifthsView extends BaseView {
       svg.appendChild(outerG);
       this.wedgeGroups.push(outerG);
 
-      // â”€â”€ Inner (relative minor) group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ── Inner (relative minor) group ─────────────────────────────────────────
       const innerG = svgEl<SVGGElement>('g');
       innerG.classList.add('cof-inner-group');
       innerG.style.cursor = 'pointer';
@@ -481,7 +481,7 @@ export class CircleOfFifthsView extends BaseView {
 
     if (this.container) {
       emitEvent(this.container, 'feature-title-changed', {
-        title: `Circle of Fifths Â· ${this.selectedRoot} ${MODE_FULL[this.selectedMode]}`,
+        title: `Circle of Fifths · ${this.selectedRoot} ${MODE_FULL[this.selectedMode]}`,
       });
     }
   }

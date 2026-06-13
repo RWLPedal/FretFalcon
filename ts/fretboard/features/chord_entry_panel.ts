@@ -10,7 +10,7 @@ import {
 import { getRomansForMode, resolveAbsoluteChordKey } from '../../music/chord_key_resolver';
 
 export interface ChordEntry {
-  /** Degree index string "0"â€“"6" when diatonicOnly; absolute chord key "C_MAJ" otherwise. */
+  /** Degree index string "0"–"6" when diatonicOnly; absolute chord key "C_MAJ" otherwise. */
   value: string;
   display: string;       // human-readable label: Roman numeral (diatonic) or chord name (free)
   roman: string | null;  // Roman numeral, or null for out-of-key chords in free mode
@@ -21,7 +21,7 @@ export interface ChordEntry {
  *
  * When `diatonicOnly` is true:
  *   - Only in-key chords are offered in autocomplete
- *   - Values stored as 0-based degree indices ("0"â€“"6") â€” transposable with key changes
+ *   - Values stored as 0-based degree indices ("0"–"6") — transposable with key changes
  *
  * When `diatonicOnly` is false:
  *   - Any chord can be entered by name or Roman numeral
@@ -63,8 +63,8 @@ export class ChordEntryPanel {
     const hint = document.createElement('div');
     hint.style.cssText = 'font-size:0.78rem;color:var(--clr-text-subtle,#888);';
     hint.textContent = this.diatonicOnly
-      ? 'Type a Roman numeral (I, IV, Vâ€¦) or chord name. Duplicates allowed.'
-      : 'Type chord names (Am, G7â€¦) or Roman numerals (I, IV, viâ€¦). Duplicates allowed.';
+      ? 'Type a Roman numeral (I, IV, V…) or chord name. Duplicates allowed.'
+      : 'Type chord names (Am, G7…) or Roman numerals (I, IV, vi…). Duplicates allowed.';
     wrap.appendChild(hint);
 
     // Chip row + input
@@ -77,7 +77,7 @@ export class ChordEntryPanel {
 
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = this.diatonicOnly ? 'I, IV, Vâ€¦' : 'C, Am, G7, or I, IV, viâ€¦';
+    input.placeholder = this.diatonicOnly ? 'I, IV, V…' : 'C, Am, G7, or I, IV, vi…';
     input.style.cssText =
       'border:none;outline:none;background:transparent;font-size:0.85rem;' +
       'min-width:80px;flex:1;padding:2px;color:inherit;';
@@ -108,13 +108,13 @@ export class ChordEntryPanel {
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'button is-small';
-    cancelBtn.textContent = 'â† Cancel';
+    cancelBtn.textContent = '← Cancel';
     cancelBtn.addEventListener('click', onCancel);
     btnRow.appendChild(cancelBtn);
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'button is-small is-primary';
-    applyBtn.textContent = 'Apply âœ“';
+    applyBtn.textContent = 'Apply ✓';
     applyBtn.addEventListener('click', () => onApply([...this.entries]));
     btnRow.appendChild(applyBtn);
 
@@ -139,7 +139,7 @@ export class ChordEntryPanel {
       this.entries.push(entry);
       if (!this.diatonicOnly) this._refreshInferredKey();
       input.value = '';
-      input.placeholder = 'Add chordâ€¦';
+      input.placeholder = 'Add chord…';
       refresh();
       input.focus();
     };
@@ -159,11 +159,11 @@ export class ChordEntryPanel {
         const nameSpan = document.createElement('span');
         nameSpan.textContent = this.diatonicOnly
           ? e.display
-          : e.display + (e.roman && e.roman !== e.display ? ` Â· ${e.roman}` : '');
+          : e.display + (e.roman && e.roman !== e.display ? ` · ${e.roman}` : '');
         chip.appendChild(nameSpan);
 
         const del = document.createElement('button');
-        del.textContent = 'Ã—';
+        del.textContent = '×';
         del.style.cssText =
           'background:none;border:none;padding:0 1px;font-size:0.9rem;cursor:pointer;' +
           'opacity:0.5;color:inherit;line-height:1;';
@@ -216,16 +216,16 @@ export class ChordEntryPanel {
 
         const nameEl = document.createElement('span');
         nameEl.style.fontWeight = '500';
-        // In diatonic mode show "I â€” C" so the user sees both degree and name
+        // In diatonic mode show "I — C" so the user sees both degree and name
         nameEl.textContent = this.diatonicOnly && s.roman
-          ? `${s.roman} â€” ${s.display}`
+          ? `${s.roman} — ${s.display}`
           : s.display;
         item.appendChild(nameEl);
 
         if (!this.diatonicOnly && s.roman) {
           const meta = document.createElement('span');
           meta.style.cssText = 'font-size:0.78rem;color:var(--clr-text-subtle,#888);margin-left:8px;';
-          meta.textContent = `${s.roman} Â· in key`;
+          meta.textContent = `${s.roman} · in key`;
           item.appendChild(meta);
         }
 

@@ -1,5 +1,5 @@
 ﻿// ts/music/chord_key_resolver.ts
-// Pure utility â€” shared by BackingTrackView and drive_slots.ts
+// Pure utility — shared by BackingTrackView and drive_slots.ts
 
 import { ChordQuality, DiatonicMode, RomanEntry } from './music_types';
 import { scales } from './scales';
@@ -13,14 +13,14 @@ export function getRomansForMode(mode: DiatonicMode): RomanEntry[] {
   return scales[mode].generateRomanEntries(true);
 }
 
-// Computed constants for the two most common modes â€” kept for callers that
+// Computed constants for the two most common modes — kept for callers that
 // still reference MAJOR_ROMANS / MINOR_ROMANS by name.
 export const MAJOR_ROMANS: RomanEntry[] = getRomansForMode(DiatonicMode.Ionian);
 export const MINOR_ROMANS: RomanEntry[] = getRomansForMode(DiatonicMode.Aeolian);
 
 /**
  * Resolves a Roman numeral + mode context to an absolute chord_tones_library key.
- * e.g. resolveAbsoluteChordKey('IV', 'C', DiatonicMode.Ionian) â†’ 'F_MAJ'
+ * e.g. resolveAbsoluteChordKey('IV', 'C', DiatonicMode.Ionian) → 'F_MAJ'
  * Returns null if the roman numeral is not found or root note is unrecognised.
  */
 export function resolveAbsoluteChordKey(
@@ -38,7 +38,7 @@ export function resolveAbsoluteChordKey(
 
 /**
  * Returns the absolute root note name for a Roman numeral in the given mode.
- * e.g. resolveChordRootNote('IV', 'C', DiatonicMode.Ionian) â†’ 'F'
+ * e.g. resolveChordRootNote('IV', 'C', DiatonicMode.Ionian) → 'F'
  */
 export function resolveChordRootNote(
   roman: string,

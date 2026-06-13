@@ -1,6 +1,6 @@
 ﻿// Privileged: uses drive.broadcast = true (Global Key broadcast mechanism).
 // LinkManager reads the broadcast viewId from drive_registry instead of
-// a constructor-injected string â€” CORE_VIEW_IDS.GlobalKey can now be removed.
+// a constructor-injected string — CORE_VIEW_IDS.GlobalKey can now be removed.
 
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';

@@ -36,7 +36,7 @@ export function modeArg(controlsArgName = 'Chords'): ConfigurationSchemaArg {
  * Config arg for an ordered chord sequence rendered as a popup chord-entry widget.
  *
  * When `diatonicOnly` is true (default for ChordProgressionFeature):
- *   - Only in-key chords are offered; values stored as degree indices ("0"â€“"6")
+ *   - Only in-key chords are offered; values stored as degree indices ("0"–"6")
  *   - The progression transposes automatically when root or mode changes
  *
  * When `diatonicOnly` is false (NearbyTriadsFeature):
@@ -51,8 +51,8 @@ export function chordEntryArg(diatonicOnly = false): ConfigurationSchemaArg {
     uiComponentData: { diatonicOnly },
     isVariadic: true,
     description: diatonicOnly
-      ? 'Ordered chord degrees â€” stored relative to key, transposes automatically.'
-      : 'Ordered chord sequence â€” enter by name or Roman numeral. Repeats allowed.',
+      ? 'Ordered chord degrees — stored relative to key, transposes automatically.'
+      : 'Ordered chord sequence — enter by name or Roman numeral. Repeats allowed.',
   };
 }
 

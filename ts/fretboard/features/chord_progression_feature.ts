@@ -46,7 +46,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     InstrumentName.TenorGuitar, InstrumentName.TenorBanjo, InstrumentName.Charango,
   ] as const;
   static readonly description =
-    'Displays chord diagrams for a Roman numeral progression (e.g., Iâ€“IVâ€“V) in a specified key and mode.';
+    'Displays chord diagrams for a Roman numeral progression (e.g., I–IV–V) in a specified key and mode.';
 
   readonly typeName = ChordProgressionFeature.typeName;
 
@@ -71,7 +71,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     const modeLabel      = DIATONIC_MODE_LABELS[mode] ?? mode;
 
     const romanLabels = progDegrees.map(d => romans[d - 1]?.roman ?? String(d));
-    this.headerText = `${romanLabels.join(' â€“ ')} in ${rootNote} ${modeLabel}`;
+    this.headerText = `${romanLabels.join(' – ')} in ${rootNote} ${modeLabel}`;
 
     if (progDegrees.length > 0) {
       const { config: fc } = planChordDiagramGrid(
@@ -121,7 +121,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     if (this.chordSlots.length === 0) {
       const placeholder = document.createElement('div');
       placeholder.style.cssText = 'font-size:0.82rem;color:var(--clr-text-subtle,#888);text-align:center;padding:16px 0;';
-      placeholder.textContent = 'No chords configured â€” add chords in the settings above.';
+      placeholder.textContent = 'No chords configured — add chords in the settings above.';
       container.appendChild(placeholder);
       return;
     }
@@ -189,7 +189,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     if (keyIndex === -1) throw new Error(`[${this.typeName}] Unknown root note: "${rootNoteName}"`);
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? rootNoteName;
 
-    // Degree strings are single digits "0"â€“"6" (0-based index into the mode's Roman entries).
+    // Degree strings are single digits "0"–"6" (0-based index into the mode's Roman entries).
     // Legacy Roman strings are silently skipped by the filter.
     const degreeStrings = config.slice(2).filter(s => /^\d$/.test(s));
     const progDegrees   = degreeStrings.map(s => parseInt(s, 10) + 1);
@@ -225,7 +225,7 @@ class UnresolvableChordView extends BaseView {
     titleEl.classList.add('chord-diagram-title');
     titleEl.textContent = `${this.chordName} (${this.numeral})`;
     const warn = document.createElement('span');
-    warn.textContent = ' âš ';
+    warn.textContent = ' ⚠';
     warn.title = 'No chord shape found for this chord';
     warn.style.cssText = 'color:var(--clr-warning, #e6a817);font-size:0.9em;';
     titleEl.appendChild(warn);
@@ -240,7 +240,7 @@ class UnresolvableChordView extends BaseView {
   }
 }
 
-// â”€â”€â”€ FeatureSpec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── FeatureSpec ─────────────────────────────────────────────────────────────
 
 export interface ChordProgressionConfig {
   rootNote: string;

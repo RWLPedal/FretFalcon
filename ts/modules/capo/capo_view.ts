@@ -9,7 +9,7 @@ import { getKeyIndex, NOTE_NAMES_FROM_A } from '../../fretboard/fretboard_utils'
  *
  * Layout (each row is a rounded pill):
  *   Shape  |  Sounds Like
- *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ *   ──────────────────
  *   A             E
  *   Am            Em
  *   ...

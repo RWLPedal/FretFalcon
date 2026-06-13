@@ -36,7 +36,7 @@ import { ChordQuality } from "../../music/music_types";
 export type CagedShapeName = "C" | "A" | "G" | "E" | "D";
 type LabelDisplayType = "Note Name" | "Interval";
 
-// â”€â”€â”€ Typed config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Typed config ─────────────────────────────────────────────────────────────
 
 export interface CagedConfig {
   rootNote: string;
@@ -578,7 +578,7 @@ export class CagedFeature extends InstrumentFeature {
       return { ...renderData, opacity: active ? 1.0 : 0.25 };
     });
 
-    // Polygons: three emphasis levels â€”
+    // Polygons: three emphasis levels —
     //   default (no selection): slightly muted
     //   selected:               full emphasis
     //   unselected:             dimmed but still visible

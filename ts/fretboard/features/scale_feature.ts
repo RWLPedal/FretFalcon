@@ -30,7 +30,7 @@ import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
 
-// â”€â”€â”€ Typed config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Typed config ─────────────────────────────────────────────────────────────
 
 export interface ScaleConfig {
   scaleName: string;

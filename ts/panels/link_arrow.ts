@@ -15,7 +15,7 @@ export interface ArrowMeta {
   lastSignals: DriveSignal[];
 }
 
-// â”€â”€â”€ SVG helpers (module-private) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── SVG helpers (module-private) ────────────────────────────────────────────
 
 function controlPoint(pt: { x: number; y: number }, side: HandleSide): { x: number; y: number } {
   // The lower the offset, the straighter the curve.
@@ -83,7 +83,7 @@ function buildIconBadges(
   return g;
 }
 
-// â”€â”€â”€ Tooltip helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Tooltip helpers ──────────────────────────────────────────────────────────
 
 function signalValue(s: DriveSignal): string | null {
   if (s.kind === SignalKind.Groove) return `${Math.round(s.bpm)} BPM`;
@@ -99,7 +99,7 @@ function signalsByKind(signals: DriveSignal[], kind: SignalKind): { current: Dri
   return { current, next };
 }
 
-// â”€â”€â”€ LinkArrow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── LinkArrow ────────────────────────────────────────────────────────────────
 
 export class LinkArrow {
   readonly svgGroup: SVGGElement;
@@ -129,7 +129,7 @@ export class LinkArrow {
     this.mid   = bezierMidpoint(src, cp1, cp2, tgt);
     const d    = `M${src.x},${src.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tgt.x},${tgt.y}`;
 
-    // â”€â”€ SVG group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── SVG group ────────────────────────────────────────────────────────────
     const g = document.createElementNS(SVG_NS, 'g') as SVGGElement;
     g.dataset.linkId = link.id;
     g.setAttribute('class', 'link-arrow-group');
@@ -156,13 +156,13 @@ export class LinkArrow {
     this.svgGroup = g;
     svg.appendChild(g);
 
-    // â”€â”€ Tooltip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Tooltip ──────────────────────────────────────────────────────────────
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'link-signal-tooltip';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'link-signal-close-btn';
-    closeBtn.textContent = 'Ã—';
+    closeBtn.textContent = '×';
     closeBtn.title = 'Remove link';
     closeBtn.addEventListener('mousedown', (e) => {
       e.stopPropagation();
@@ -184,7 +184,7 @@ export class LinkArrow {
     this.tooltip.addEventListener('mouseleave', () => this.scheduleHide());
   }
 
-  // â”€â”€ Hide timer helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Hide timer helpers ────────────────────────────────────────────────────
 
   private scheduleHide(): void {
     this.hideTimer = setTimeout(() => {
@@ -197,7 +197,7 @@ export class LinkArrow {
     if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
   }
 
-  // â”€â”€ Tooltip rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Tooltip rendering ─────────────────────────────────────────────────────
 
   private showTooltip(): void {
     if (this.tooltip.classList.contains('is-visible')) return;
@@ -228,8 +228,8 @@ export class LinkArrow {
         row.className = 'link-signal-row link-signal-matched';
         const val = signalValue(current);
         row.textContent = val
-          ? `${SIGNAL_KIND_ICON[kind]} ${kind} â†’ ${val}`
-          : `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
         this.tooltipContent.appendChild(row);
       }
 
@@ -238,15 +238,15 @@ export class LinkArrow {
         row.className = 'link-signal-row link-signal-matched link-signal-next';
         const val = signalValue(next);
         row.textContent = val
-          ? `${SIGNAL_KIND_ICON[kind]} ${kind} â†’ ${val}`
-          : `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
         this.tooltipContent.appendChild(row);
       }
 
       if (!current && !next) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-matched';
-        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
         this.tooltipContent.appendChild(row);
       }
     }
@@ -255,13 +255,13 @@ export class LinkArrow {
       for (const kind of emittedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-emitted-only';
-        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
         this.tooltipContent.appendChild(row);
       }
       for (const kind of acceptedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-accepted-only';
-        row.textContent = `â†’ ${SIGNAL_KIND_ICON[kind]} ${kind}`;
+        row.textContent = `→ ${SIGNAL_KIND_ICON[kind]} ${kind}`;
         this.tooltipContent.appendChild(row);
       }
     }
@@ -274,7 +274,7 @@ export class LinkArrow {
     }
   }
 
-  // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Lifecycle ────────────────────────────────────────────────────────────
 
   destroy(): void {
     this.cancelHide();
