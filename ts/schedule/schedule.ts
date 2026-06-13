@@ -93,7 +93,8 @@ export class Schedule {
 
   onIntroEnd(): void {
     this.audio.playIntroEnd();
-    this.setDisplayTask(this.getCurrentInterval());
+    // intro plays before any interval ends, so the schedule is not finished here
+    this.setDisplayTask(this.getCurrentInterval()!);
     this.display.flashOverlay();
   }
 
@@ -109,7 +110,8 @@ export class Schedule {
 
     if (!this.isFinished()) {
       this._intervalStartAccumulated = this.accumulatedSeconds;
-      const nextInterval = this.getCurrentInterval();
+      // not finished → currentIntervalIndex < intervals.length, so non-null
+      const nextInterval = this.getCurrentInterval()!;
       this.setDisplayTask(nextInterval);
       this.display.setTimerDuration(nextInterval.getTotalDuration());
       this.updateUpcoming();
@@ -325,7 +327,8 @@ export class Schedule {
         this.updateUpcoming();
     } else {
         // Prepare and start the next interval
-        const nextInterval = this.getCurrentInterval();
+        // not finished → currentIntervalIndex < intervals.length, so non-null
+        const nextInterval = this.getCurrentInterval()!;
         this.setDisplayTask(nextInterval); // Set display for the new interval
         this.updateUpcoming();
         this._emitGroupContext();

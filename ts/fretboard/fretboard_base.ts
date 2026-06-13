@@ -1,20 +1,4 @@
 import { Feature, ConfigurationSchemaArg } from "../feature";
-
-// --- Pending render constraints ---
-// Set by ConfigurableFeatureView immediately before createFeature(); consumed once by InstrumentFeature.
-interface RenderConstraints { maxWidth?: number; }
-let _pendingConstraints: RenderConstraints = {};
-
-export function setPendingRenderConstraints(c: RenderConstraints): void {
-  _pendingConstraints = c;
-}
-
-/** Peek at the pending canvas width without consuming it (used by sub-features before super()). */
-export function peekPendingCanvasWidth(): number | undefined {
-  return _pendingConstraints.maxWidth;
-}
-
-// --- End pending render constraints ---
 import { View } from "../core/view";
 import {
   FretboardConfig,
@@ -54,7 +38,8 @@ export abstract class InstrumentFeature implements Feature {
   constructor(
     config: ReadonlyArray<string>,
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
     this.config = config;
     this.settings = settings;
@@ -68,9 +53,7 @@ export abstract class InstrumentFeature implements Feature {
     // Pass explicit widths for 6-string guitar to preserve existing appearance.
     const stringWidths = instrument === InstrumentName.Guitar ? [3, 3, 2, 2, 1, 1] : undefined;
 
-    // Consume the pending width constraint set by ConfigurableFeatureView before createFeature().
-    const maxCanvasWidth = _pendingConstraints.maxWidth;
-    _pendingConstraints = {};
+    const maxCanvasWidth = maxWidth;
 
     this.fretboardConfig = new FretboardConfig(
       tuning,

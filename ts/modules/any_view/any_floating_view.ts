@@ -1,10 +1,13 @@
 import { BaseView } from '../../core/base_view';
 import { AppSettings } from '../../settings';
-import { Feature } from '../../feature';
+import { Feature, FeatureContext } from '../../feature';
 import { getFeatureTypeDescriptor } from '../../feature_registry';
+import { getFeatureSpec } from '../../core/config/feature_spec_registry';
+import { legacyCodec } from '../../core/config/codec';
+import { resolveConfig } from '../../core/config/resolve';
+import { emptyDrivenState } from '../../core/config/spec';
 import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../../panels/link_types';
 import { InstrumentSettings } from '../../fretboard/fretboard_settings';
-import { setPendingRenderConstraints } from '../../fretboard/fretboard_base';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
 const PLACEHOLDER_REST = '(Rest)';
@@ -75,7 +78,8 @@ export class AnyFloatingView extends BaseView implements SignalSink {
     }
 
     const descriptor = getFeatureTypeDescriptor(signal.categoryName, signal.featureTypeName);
-    if (!descriptor) {
+    const spec = getFeatureSpec(signal.featureTypeName);
+    if (!descriptor && !spec) {
       console.warn(`[AnyFloatingView] Unknown feature: ${signal.categoryName}/${signal.featureTypeName}`);
       this._showPlaceholder(`Unknown feature: ${signal.featureTypeName}`);
       return;
@@ -86,8 +90,8 @@ export class AnyFloatingView extends BaseView implements SignalSink {
 
       const availW = this.featureContainer?.clientWidth || this.container?.clientWidth || 0;
       const availH = this.featureContainer?.clientHeight || this.container?.clientHeight || 0;
-      if (availW > 0) setPendingRenderConstraints({ maxWidth: availW });
       const maxCanvasHeight = availH > 0 ? availH : undefined;
+      const maxWidth = availW > 0 ? availW : undefined;
 
       const orientation = this._autoOrientation(availW, availH);
 
@@ -99,17 +103,33 @@ export class AnyFloatingView extends BaseView implements SignalSink {
         } as InstrumentSettings,
       };
 
-      this.currentFeature = descriptor.createFeature(
-        signal.config,
-        settingsForFeature,
-        maxCanvasHeight,
-        signal.categoryName
-      );
+      if (spec) {
+        const codec = (legacyCodec as any)(spec.configSpec, spec.legacyArgOrder, spec.legacyVariadicTail);
+        const drivenConfig = codec.decode(signal.config ?? []);
+        const resolved = resolveConfig(drivenConfig, emptyDrivenState());
+        if (resolved === null) {
+          this._showPlaceholder('Waiting for signal…');
+          return;
+        }
+        const ctx: FeatureContext = {
+          settings: settingsForFeature,
+          constraints: { maxWidth, maxHeight: maxCanvasHeight },
+        };
+        this.currentFeature = (spec as any).create(resolved, ctx);
+      } else {
+        this.currentFeature = descriptor!.createFeature(
+          signal.config,
+          settingsForFeature,
+          maxCanvasHeight,
+          signal.categoryName
+        );
+      }
 
-      if (this.featureContainer) {
-        this.currentFeature.render(this.featureContainer);
-        this.currentFeature.views?.forEach(v => v.render(this.featureContainer!));
-        this.currentFeature.start?.();
+      const feature = this.currentFeature;
+      if (this.featureContainer && feature) {
+        feature.render(this.featureContainer);
+        feature.views?.forEach(v => v.render(this.featureContainer!));
+        feature.start?.();
       }
     } catch (err) {
       console.error('[AnyFloatingView] Error creating feature:', err);

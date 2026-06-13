@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { CORE_VIEW_IDS } from '../../core/ids';
-import { ConfigurableFeatureView } from '../../views/configurable_feature_view';
+import { FeaturePanelController } from './feature_panel_controller';
 
 const module: ViewModule = {
   id: CORE_VIEW_IDS.ConfigurableFeature,
@@ -13,7 +13,7 @@ const module: ViewModule = {
     capabilities: { rotate: true, zoom: true, configToggle: true },
   },
   createView(ctx: ViewContext, state?: unknown) {
-    return new ConfigurableFeatureView(
+    return new FeaturePanelController(
       { categoryName: 'Instrument', ...(state as any) },
       ctx.appSettings,
     );

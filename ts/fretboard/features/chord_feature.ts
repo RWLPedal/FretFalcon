@@ -1,7 +1,8 @@
 ﻿// ts/instrument/features/chord_feature.ts
 import {
   Feature,
-  // FeatureCategoryName removed
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
@@ -25,10 +26,117 @@ import { ChordDiagramView } from "../views/chord_diagram_view";
 import { MoveableToggleView } from "../views/moveable_toggle_view";
 import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../moveable_shapes";
 import { resolveTuning, InstrumentName } from "../fretboard";
-import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planChordDiagramGrid } from "../fretboard_layout";
 import { addHeader, clearAllChildren } from "../fretboard_utils";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS, ChordLabelDisplay } from "../fretboard_settings";
+import { featureTypeId } from "../../core/ids";
+import { enumCodec } from "../../core/config/codecs";
+import type { ConfigSpec } from "../../core/config/spec";
+import { SignalKind, KeyType } from "../../panels/link_types";
+
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface ChordConfig {
+  root: string;
+  type: string;
+  display: ChordLabelDisplay;
+}
+
+const CHORD_ALL_TYPES_VALUE = 'All';
+const CHORD_REQUIRED_INSTRUMENTS = [
+  InstrumentName.Guitar, InstrumentName.Ukulele,
+  InstrumentName.Mandolin, InstrumentName.Mandola,
+  InstrumentName.TenorGuitar, InstrumentName.TenorBanjo,
+] as const;
+const CHORD_TYPE_OPTIONS = [CHORD_ALL_TYPES_VALUE, ...CHORD_TYPE_SORT_ORDER];
+const DISPLAY_OPTIONS: ChordLabelDisplay[] = ['fingering', 'interval', 'notes'];
+
+const chordConfigSpec: ConfigSpec<ChordConfig> = {
+  root: {
+    label: 'Root',
+    codec: enumCodec([...ALL_CHORD_ROOTS] as string[]),
+    ui: { kind: 'select', options: [...ALL_CHORD_ROOTS].map(v => ({ value: v as string })) },
+    defaultValue: 'G',
+    drivable: {
+      kinds: [SignalKind.Chord],
+      fromSignal: (s: any) => s.kind === SignalKind.Chord ? (s.rootNote ?? undefined) : undefined,
+    },
+  },
+  type: {
+    label: 'Type',
+    codec: enumCodec(CHORD_TYPE_OPTIONS),
+    ui: { kind: 'select', options: CHORD_TYPE_OPTIONS.map(v => ({ value: v })) },
+    defaultValue: ChordType.MAJOR,
+    drivable: {
+      kinds: [SignalKind.Chord],
+      fromSignal: (s: any) => {
+        if (s.kind !== SignalKind.Chord) return undefined;
+        if (s.chordKey) {
+          const sep = (s.chordKey as string).indexOf('_');
+          if (sep !== -1) {
+            const suffix = (s.chordKey as string).slice(sep + 1);
+            const suffixMap: Record<string, string> = {
+              MAJ: 'Major', MIN: 'Minor', DIM: 'Dim', DOM7: '7', MAJ7: 'Maj7', MIN7: 'Min7',
+            };
+            const resolved = suffixMap[suffix];
+            if (resolved) return resolved;
+          }
+        }
+        return s.keyType === KeyType.Major ? 'Major' : 'Minor';
+      },
+    },
+  },
+  display: {
+    label: 'Display',
+    codec: enumCodec(DISPLAY_OPTIONS),
+    ui: { kind: 'toggleButtons', options: [
+      { value: 'fingering', label: 'Fingering' },
+      { value: 'interval', label: 'Interval' },
+      { value: 'notes', label: 'Notes' },
+    ]},
+    defaultValue: 'fingering',
+  },
+};
+
+function buildChordsFromConfig(config: ChordConfig, settings: AppSettings): Chord[] {
+  const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
+  const library = getChordLibraryForInstrument(guitarSettings.instrument);
+  const chords: Chord[] = [];
+  const typesToFind = config.type === CHORD_ALL_TYPES_VALUE
+    ? CHORD_TYPE_SORT_ORDER
+    : [config.type as ChordType];
+
+  for (const t of typesToFind) {
+    let chord = findChordByRootAndType(library, config.root as NoteName, t);
+    if (!chord) {
+      const tuning = resolveTuning(guitarSettings.instrument as InstrumentName ?? InstrumentName.Guitar, guitarSettings.tuning);
+      const result = getEasiestMoveableShape(guitarSettings.instrument, `${config.root} ${t}`, tuning, t);
+      if (result) chord = result;
+    }
+    if (chord) chords.push(chord);
+  }
+  return chords;
+}
+
+export const ChordFeatureSpec: FeatureSpec<ChordConfig> = {
+  id: featureTypeId('Chord'),
+  displayName: 'Chord Diagram',
+  description: 'Displays one or more chord diagrams.',
+  requiredInstruments: [...CHORD_REQUIRED_INSTRUMENTS] as unknown as string[],
+  legacyArgOrder: ['root', 'type', 'display'],
+  configSpec: chordConfigSpec,
+  title: (config) => {
+    const root = config.root ?? 'G';
+    const type = config.type ?? 'Major';
+    if (type === CHORD_ALL_TYPES_VALUE) return `${root} Chords`;
+    return `${root} ${type}`;
+  },
+  create(config: ChordConfig, ctx: FeatureContext): Feature {
+    const chords = buildChordsFromConfig(config, ctx.settings);
+    if (chords.length === 0) throw new Error(`[ChordFeature] No chord found for ${config.root} ${config.type}`);
+    return new ChordFeature([], chords, ctx.settings, ctx.constraints.maxHeight, config.display, ctx.constraints.maxWidth);
+  },
+};
 
 /** A feature for displaying mulitple chord diagrams and a metronome. */
 export class ChordFeature extends InstrumentFeature {
@@ -55,10 +163,10 @@ export class ChordFeature extends InstrumentFeature {
     chords: ReadonlyArray<Chord>,
     settings: AppSettings,
     maxCanvasHeight?: number,
-    chordLabelDisplay: ChordLabelDisplay = "fingering"
+    chordLabelDisplay: ChordLabelDisplay = "fingering",
+    maxWidth?: number,
   ) {
-    const totalWidth = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
 
     this.chords = chords;
     this.isMoveable = localStorage.getItem(ChordFeature.MOVEABLE_PREF_KEY) === "true";
@@ -74,7 +182,7 @@ export class ChordFeature extends InstrumentFeature {
         diagramCount += moveableCount;
       }
       const { config } = planChordDiagramGrid(
-        this.fretboardConfig, totalWidth, maxCanvasHeight,
+        this.fretboardConfig, maxWidth, maxCanvasHeight,
         diagramCount, guitarSettings.zoomMultiplier ?? 1.2
       );
       this.fretboardConfig = config;

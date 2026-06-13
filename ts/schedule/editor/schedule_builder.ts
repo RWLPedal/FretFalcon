@@ -62,9 +62,10 @@ export class ScheduleBuilder {
     const groups: GroupInfo[] = [];
     let currentGroup: GroupInfo | null = null;
     let intervalIndex = 0;
-    rows.forEach((rowElement) => {
+    // for...of instead of forEach so TypeScript CFA tracks currentGroup across the loop boundary
+    for (const rowElement of Array.from(rows)) {
       const rowData = this.rowManager.getRowData(rowElement);
-      if (!rowData) return;
+      if (!rowData) continue;
       if (rowData.rowType === 'group') {
         if (currentGroup) {
           currentGroup.endIndex = intervalIndex - 1;
@@ -74,7 +75,7 @@ export class ScheduleBuilder {
       } else if (rowData.rowType === 'interval') {
         intervalIndex++;
       }
-    });
+    }
     if (currentGroup) {
       currentGroup.endIndex = intervalIndex - 1;
       if (currentGroup.startIndex <= currentGroup.endIndex) groups.push(currentGroup);

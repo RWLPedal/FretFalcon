@@ -2,12 +2,14 @@
 
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
   UiComponentType,
 } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
+import { InstrumentFeature } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { Scale, scales, scale_names } from "../scales";
@@ -23,10 +25,110 @@ import {
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
 import { getColor as getColorFromScheme, NOTE_COLORS } from "../colors";
+import { featureTypeId } from "../../core/ids";
+import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
+import type { FieldCodec, ConfigSpec } from "../../core/config/spec";
+import { SignalKind } from "../../panels/link_types";
+import { ChordQuality } from "../music_types";
 
 // --- CAGED Definitions ---
 export type CagedShapeName = "C" | "A" | "G" | "E" | "D";
 type LabelDisplayType = "Note Name" | "Interval";
+
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface CagedConfig {
+  rootNote: string;
+  scaleType: string;
+  labelDisplay: LabelDisplayType;
+  activeShapes: CagedShapeName[];
+}
+
+const CAGED_SCALE_OPTIONS = ['Major', 'Major Pentatonic', 'Minor', 'Minor Pentatonic'];
+const CAGED_LABEL_OPTIONS: LabelDisplayType[] = ['Interval', 'Note Name'];
+const CAGED_SHAPE_OPTIONS: CagedShapeName[] = ['C', 'A', 'G', 'E', 'D'];
+
+function cagedTonicIsMinor(scaleKey: string): boolean {
+  const scale = (scales as any)[scaleKey];
+  if (!scale || typeof scale.getChordQualityAt !== 'function') return false;
+  const q: ChordQuality = scale.getChordQualityAt(0);
+  return q === ChordQuality.Minor || q === ChordQuality.Diminished;
+}
+
+const cagedConfigSpec: ConfigSpec<CagedConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(NOTE_NAMES_FROM_A as string[]),
+    ui: { kind: 'select', options: (NOTE_NAMES_FROM_A as string[]).map(v => ({ value: v })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord, SignalKind.Key],
+      fromSignal: (s: any) => (s.kind === SignalKind.Chord || s.kind === SignalKind.Key) ? (s.rootNote ?? undefined) : undefined,
+    },
+  },
+  scaleType: {
+    label: 'Scale Type',
+    codec: enumCodec(CAGED_SCALE_OPTIONS),
+    ui: { kind: 'select', options: CAGED_SCALE_OPTIONS.map(v => ({ value: v })) },
+    defaultValue: 'Major',
+    drivable: {
+      kinds: [SignalKind.Key],
+      fromSignal: (s: any) => s.kind === SignalKind.Key ? (cagedTonicIsMinor(s.scaleKey) ? 'Minor' : 'Major') : undefined,
+    },
+  },
+  labelDisplay: {
+    label: 'Label Display',
+    codec: enumCodec(CAGED_LABEL_OPTIONS),
+    ui: { kind: 'toggleButtons', options: CAGED_LABEL_OPTIONS.map(v => ({ value: v, label: v })) },
+    defaultValue: 'Interval',
+  },
+  activeShapes: {
+    label: 'Active Shapes',
+    codec: stringArrayCodec as FieldCodec<CagedShapeName[]>,
+    ui: { kind: 'toggleButtons', options: CAGED_SHAPE_OPTIONS.map(v => ({ value: v, label: v })) },
+    defaultValue: [],
+  },
+};
+
+export const CagedFeatureSpec: FeatureSpec<CagedConfig> = {
+  id: featureTypeId('CAGED'),
+  displayName: 'CAGED Scale Shapes',
+  description: 'Displays scale notes in a given key with semi-transparent overlays showing the five CAGED shape regions.',
+  requiredInstruments: [InstrumentName.Guitar] as unknown as string[],
+  isCompatibleWithTuning: (_instrument: string, tuningName: string) => tuningName === STANDARD_TUNING.name,
+  legacyArgOrder: ['rootNote', 'scaleType', 'labelDisplay', 'activeShapes'],
+  legacyVariadicTail: 'activeShapes',
+  configSpec: cagedConfigSpec,
+  title: (config) => {
+    const root = config.rootNote ?? 'C';
+    const scale = config.scaleType ?? 'Major';
+    return `${root} ${scale} (CAGED)`;
+  },
+  create(config: CagedConfig, ctx: FeatureContext): Feature {
+    const keyIndex = getKeyIndex(config.rootNote);
+    if (keyIndex === -1) throw new Error(`[CagedFeature] Unknown key: "${config.rootNote}"`);
+    const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
+
+    let scaleKey = scale_names[config.scaleType as keyof typeof scale_names];
+    if (!scaleKey) scaleKey = config.scaleType.toUpperCase().replace(/ /g, '_');
+    const scale = scales[scaleKey as keyof typeof scales];
+    if (!scale) throw new Error(`[CagedFeature] Unknown scale type: "${config.scaleType}"`);
+
+    const validLabel: LabelDisplayType = config.labelDisplay === 'Note Name' ? 'Note Name' : 'Interval';
+    return new CagedFeature(
+      [],
+      keyIndex,
+      validRootName,
+      config.scaleType,
+      scale,
+      validLabel,
+      config.activeShapes,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};
 
 const CAGED_SHAPE_ORDER: CagedShapeName[] = ["C", "A", "G", "E", "D"];
 
@@ -256,10 +358,10 @@ export class CagedFeature extends InstrumentFeature {
     labelDisplay: LabelDisplayType,
     initialSelectedShapes: CagedShapeName[],
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.keyIndex = keyIndex;
     this.rootNoteName = rootNoteName;
     this.scaleType = scaleType;
@@ -270,7 +372,7 @@ export class CagedFeature extends InstrumentFeature {
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
-      this.fretboardConfig, availW, maxCanvasHeight,
+      this.fretboardConfig, maxWidth, maxCanvasHeight,
       guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
     );
 

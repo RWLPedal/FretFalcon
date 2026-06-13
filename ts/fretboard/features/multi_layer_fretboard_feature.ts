@@ -1,7 +1,11 @@
 ﻿// ts/fretboard/features/multi_layer_fretboard_feature.ts
 
-import { Feature, ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
+import { Feature, FeatureSpec, FeatureContext, ConfigurationSchema, ConfigurationSchemaArg, ArgType, UiComponentType } from "../../feature";
+import { featureTypeId } from "../../core/ids";
+import { ConfigSpec, FieldCodec } from "../../core/config/spec";
+import { booleanCodec, stringArrayCodec } from "../../core/config/codecs";
+import { createLayerListInput, extractLayerListValues } from "./layer_list_ui";
+import { InstrumentFeature } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AppSettings } from "../../settings";
@@ -158,17 +162,17 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     layers: LayerSpec[],
     showOverlays: boolean,
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.layers = layers;
     this.showOverlays = showOverlays;
 
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
-      this.fretboardConfig, availW, maxCanvasHeight,
+      this.fretboardConfig, maxWidth, maxCanvasHeight,
       guitarSettings.zoomMultiplier ?? 1.2, this.fretCount
     );
 
@@ -636,3 +640,89 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   }
 
 }
+
+// ─── FeatureSpec ─────────────────────────────────────────────────────────────
+
+export interface MultiLayerConfig {
+  showOverlays: boolean;
+  layers: string[];
+}
+
+const multiLayerConfigSpec: ConfigSpec<MultiLayerConfig> = {
+  showOverlays: {
+    label: 'Show Overlays',
+    codec: booleanCodec,
+    ui: { kind: 'toggle' },
+    defaultValue: false,
+  },
+  layers: {
+    label: 'Layers',
+    codec: stringArrayCodec as FieldCodec<string[]>,
+    ui: {
+      kind: 'custom',
+      render: (container, ctx) => {
+        const availableScaleNames = Object.keys(scale_names).sort();
+        const rootNoteOptions = NOTE_NAMES_FROM_A as string[];
+        const chordEntries = Object.entries(chord_tones_library).map(([key, entry]) => ({
+          key,
+          label: entry.name,
+        }));
+        const noteNames = NOTE_NAMES_FROM_A as string[];
+
+        const fakeArg = {
+          name: 'Layers',
+          type: ArgType.String,
+          isVariadic: true,
+          uiComponentType: UiComponentType.LayerList,
+          uiComponentData: { scaleNames: availableScaleNames, rootNoteOptions, chordEntries, noteNames },
+        } as ConfigurationSchemaArg;
+
+        let currentValues: string[] = [];
+
+        const rebuild = (values: string[]): void => {
+          container.innerHTML = '';
+          createLayerListInput(container, fakeArg, values, ctx.onChange);
+        };
+
+        rebuild([]);
+
+        return {
+          getValue: () => extractLayerListValues(container),
+          setValue: (v: string[]) => {
+            currentValues = [...v];
+            rebuild(currentValues);
+          },
+          setLinkStatus: (hasLinks: boolean, _autoSelect: boolean, hasNext: boolean) => {
+            const fn = (container as any)._setLinked;
+            if (typeof fn === 'function') fn(hasLinks, hasLinks, hasNext);
+          },
+        };
+      },
+    },
+    defaultValue: [],
+  },
+};
+
+export const MultiLayerFeatureSpec: FeatureSpec<MultiLayerConfig> = {
+  id: featureTypeId(MultiLayerFretboardFeature.typeName),
+  displayName: MultiLayerFretboardFeature.displayName,
+  description: MultiLayerFretboardFeature.description,
+  configSpec: multiLayerConfigSpec,
+  legacyArgOrder: ['showOverlays', 'layers'],
+  legacyVariadicTail: 'layers',
+  create(config: MultiLayerConfig, ctx: FeatureContext): Feature {
+    const layers: LayerSpec[] = [];
+    for (const layerStr of config.layers) {
+      const parsed = parseLayerString(layerStr);
+      if (parsed) layers.push(parsed);
+    }
+    return new MultiLayerFretboardFeature(
+      [],
+      layers,
+      config.showOverlays,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};

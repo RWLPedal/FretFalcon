@@ -1,9 +1,16 @@
 // ts/fretboard/features/chord_progression_feature.ts
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
 } from '../../feature';
-import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
+import { featureTypeId } from '../../core/ids';
+import { ConfigSpec, FieldCodec } from '../../core/config/spec';
+import { enumCodec, stringArrayCodec } from '../../core/config/codecs';
+import { SignalKind, KeySignal, ChordSignal } from '../../panels/link_types';
+import { buildChordEntryWidget } from './chord_entry_widget';
+import { InstrumentFeature } from '../fretboard_base';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { BaseView } from '../../core/base_view';
 import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../chords';
@@ -52,10 +59,10 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     rootNote: string,
     mode: DiatonicMode,
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const totalWidth = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
 
     const rootNoteIndex  = getKeyIndex(rootNote);
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined) ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -68,7 +75,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
 
     if (progDegrees.length > 0) {
       const { config: fc } = planChordDiagramGrid(
-        this.fretboardConfig, totalWidth, maxCanvasHeight,
+        this.fretboardConfig, maxWidth, maxCanvasHeight,
         progDegrees.length, guitarSettings.zoomMultiplier ?? 1.2
       );
       this.fretboardConfig = fc;
@@ -232,3 +239,89 @@ class UnresolvableChordView extends BaseView {
     container.appendChild(wrapper);
   }
 }
+
+// ─── FeatureSpec ─────────────────────────────────────────────────────────────
+
+export interface ChordProgressionConfig {
+  rootNote: string;
+  mode: DiatonicMode;
+  chords: string[];
+}
+
+const ALL_DIATONIC_MODES_CP = Object.values(DiatonicMode) as DiatonicMode[];
+
+const chordProgressionConfigSpec: ConfigSpec<ChordProgressionConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(NOTE_NAMES_FROM_A as readonly string[]) as FieldCodec<string>,
+    ui: { kind: 'select', options: (NOTE_NAMES_FROM_A as string[]).map(n => ({ value: n })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord, SignalKind.Key],
+      fromSignal: (s) => (s as ChordSignal).rootNote ?? (s as KeySignal).rootNote ?? undefined,
+    },
+  },
+  mode: {
+    label: 'Mode',
+    codec: enumCodec(ALL_DIATONIC_MODES_CP),
+    ui: {
+      kind: 'select',
+      options: ALL_DIATONIC_MODES_CP.map(m => ({ value: m, label: DIATONIC_MODE_LABELS[m] ?? m })),
+    },
+    defaultValue: DiatonicMode.Ionian,
+    controls: 'chords',
+    drivable: {
+      kinds: [SignalKind.Key],
+      fromSignal: (s) => {
+        const ks = s as KeySignal;
+        return (ALL_DIATONIC_MODES_CP as string[]).includes(ks.scaleKey)
+          ? (ks.scaleKey as DiatonicMode) : undefined;
+      },
+    },
+  },
+  chords: {
+    label: 'Chords',
+    codec: stringArrayCodec as FieldCodec<string[]>,
+    ui: {
+      kind: 'custom',
+      render: (container, ctx) => buildChordEntryWidget(container, ctx, true),
+    },
+    defaultValue: [],
+  },
+};
+
+export const ChordProgressionFeatureSpec: FeatureSpec<ChordProgressionConfig> = {
+  id: featureTypeId(ChordProgressionFeature.typeName),
+  displayName: ChordProgressionFeature.displayName,
+  description: ChordProgressionFeature.description,
+  requiredInstruments: ChordProgressionFeature.requiredInstruments as unknown as string[],
+  configSpec: chordProgressionConfigSpec,
+  legacyArgOrder: ['rootNote', 'mode', 'chords'],
+  legacyVariadicTail: 'chords',
+  create(config: ChordProgressionConfig, ctx: FeatureContext): Feature {
+    const legacyMap: Record<string, DiatonicMode> = {
+      Major: DiatonicMode.Ionian, Minor: DiatonicMode.Aeolian,
+    };
+    const mode = (ALL_DIATONIC_MODES_CP as string[]).includes(config.mode)
+      ? config.mode
+      : (legacyMap[config.mode] ?? DiatonicMode.Ionian);
+
+    const keyIndex = getKeyIndex(config.rootNote);
+    const validRoot = keyIndex !== -1
+      ? (NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote)
+      : config.rootNote;
+
+    const degreeStrings = config.chords.filter(s => /^\d$/.test(s));
+    const progDegrees = degreeStrings.map(s => parseInt(s, 10) + 1);
+
+    return new ChordProgressionFeature(
+      [],
+      progDegrees,
+      validRoot,
+      mode,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};

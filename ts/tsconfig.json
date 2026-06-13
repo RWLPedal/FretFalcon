@@ -8,12 +8,9 @@
     "sourceRoot": ".",
     "rootDir": ".",
     "sourceMap": true,
-    "alwaysStrict": true,
-    "noImplicitThis": true,
-    "strictBindCallApply": true,
+    "strict": true,
     "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
-    "noImplicitAny": true
+    "forceConsistentCasingInFileNames": true
   },
   "exclude": ["../tests/**/*"]
 }

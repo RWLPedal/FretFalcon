@@ -68,9 +68,10 @@ export abstract class ChordDegreeProgressionFeature extends InstrumentFeature {
   constructor(
     config: ReadonlyArray<string>,
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
   }
 
   /**

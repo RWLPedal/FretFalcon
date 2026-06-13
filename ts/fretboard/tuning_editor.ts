@@ -30,9 +30,10 @@ export class TuningEditor {
   private selectedTuningName: string;
   private callbacks: TuningEditorCallbacks;
 
-  private pillsContainer: HTMLElement;
-  private saveSection: HTMLElement;
-  private customNameInput: HTMLInputElement;
+  // assigned in _build(), called from constructor before any other use
+  private pillsContainer!: HTMLElement;
+  private saveSection!: HTMLElement;
+  private customNameInput!: HTMLInputElement;
 
   constructor(
     instrument: Instrument,

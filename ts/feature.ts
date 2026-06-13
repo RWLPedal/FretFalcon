@@ -1,5 +1,7 @@
 import { View } from "./core/view";
 import { AppSettings } from "./settings";
+import type { ConfigSpec, DrivenConfig } from "./core/config/spec";
+import type { FeatureTypeId } from "./core/ids";
 
 /**
  * Represents a category of features (e.g., Guitar, Piano).
@@ -164,4 +166,33 @@ export interface SettingsUISchemaItem {
   min?: number;
   max?: number;
   step?: number;
+}
+
+// ─── FeatureSpec (typed replacement for FeatureTypeDescriptor) ────────────────
+
+/** Passed to FeatureSpec.create() instead of the legacy (config, settings, maxCanvasHeight) tuple. */
+export interface FeatureContext {
+  settings: AppSettings;
+  constraints: { maxWidth?: number; maxHeight?: number };
+}
+
+/**
+ * Typed feature descriptor.  Replaces FeatureTypeDescriptor; the two coexist
+ * during Phase B migration (feature_panel_controller handles both).
+ */
+export interface FeatureSpec<C> {
+  readonly id: FeatureTypeId;
+  readonly displayName: string;
+  readonly description: string;
+  readonly requiredInstruments?: ReadonlyArray<string>;
+  isCompatibleWithTuning?(instrument: string, tuningName: string): boolean;
+  readonly defaultConfigCollapsed?: boolean;
+  /** Ordered keys matching the legacy positional string array (for legacyCodec). */
+  readonly legacyArgOrder: (keyof C)[];
+  /** Optional last key whose codec value is string[] (variadic tail). */
+  readonly legacyVariadicTail?: keyof C;
+  readonly configSpec: ConfigSpec<C>;
+  /** Optional: derive the panel title from a (possibly partial) resolved config. */
+  title?(config: Partial<C>): string | null;
+  create(config: C, ctx: FeatureContext): Feature;
 }

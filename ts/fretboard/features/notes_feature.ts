@@ -2,11 +2,13 @@
 
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
 } from "../../feature";
-import { InstrumentFeature, peekPendingCanvasWidth } from "../fretboard_base";
+import { InstrumentFeature } from "../fretboard_base";
 import { AppSettings } from "../../settings";
 import { NoteRenderData, FretboardConfig } from "../fretboard";
 import {
@@ -21,6 +23,46 @@ import { FretboardColorScheme } from "../colors";
 import { FretboardView } from "../views/fretboard_view";
 import { planSingleFretboard } from "../fretboard_layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
+import { featureTypeId } from "../../core/ids";
+import { stringCodec, enumCodec } from "../../core/config/codecs";
+import type { ConfigSpec } from "../../core/config/spec";
+
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface NotesConfig {
+  rootNote: string;
+}
+
+const ROOT_NOTE_OPTIONS = ['None', ...NOTE_NAMES_FROM_A as string[]];
+
+const notesConfigSpec: ConfigSpec<NotesConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(ROOT_NOTE_OPTIONS),
+    ui: { kind: 'select', options: ROOT_NOTE_OPTIONS.map(v => ({ value: v })) },
+    defaultValue: 'None',
+  },
+};
+
+export const NotesFeatureSpec: FeatureSpec<NotesConfig> = {
+  id: featureTypeId('Notes'),
+  displayName: 'Fretboard Notes',
+  description: "Displays all notes on the fretboard. Select 'None' for note-based colors, or a root note for interval-based colors.",
+  defaultConfigCollapsed: true,
+  legacyArgOrder: ['rootNote'],
+  configSpec: notesConfigSpec,
+  title: (config) => {
+    const root = config.rootNote;
+    if (!root || root === 'None') return 'Notes (Note Name Colors)';
+    return `Notes (Interval Colors Relative to ${root})`;
+  },
+  create(config: NotesConfig, ctx: FeatureContext): Feature {
+    const rootNoteName = (!config.rootNote || config.rootNote === 'None') ? null : config.rootNote;
+    return new NotesFeature([], ctx.settings, rootNoteName, ctx.constraints.maxHeight, ctx.constraints.maxWidth);
+  },
+};
+
+// ─── Feature class ────────────────────────────────────────────────────────────
 
 /** A guitar feature for displaying all notes on the fretboard using FretboardView. */
 export class NotesFeature extends InstrumentFeature {
@@ -38,17 +80,17 @@ export class NotesFeature extends InstrumentFeature {
     config: ReadonlyArray<string>,
     settings: AppSettings,
     rootNoteName: string | null,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.rootNoteName = rootNoteName;
     const fretCount = 18;
 
     const guitarSettings = (settings.instrumentSettings as InstrumentSettings | undefined)
       ?? DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
-      this.fretboardConfig, availW, maxCanvasHeight,
+      this.fretboardConfig, maxWidth, maxCanvasHeight,
       guitarSettings.zoomMultiplier ?? 1.2, fretCount
     );
 
@@ -57,6 +99,8 @@ export class NotesFeature extends InstrumentFeature {
 
     this.calculateAndSetNotes(fretCount);
   }
+
+  // ─── Legacy compat (kept for schedule/feature_adapter.ts until step 6) ──────
 
   static getConfigurationSchema(): ConfigurationSchema {
     const availableKeys = ["None", ...NOTE_NAMES_FROM_A];
@@ -83,7 +127,6 @@ export class NotesFeature extends InstrumentFeature {
     _categoryName: string
   ): Feature {
     let rootNoteName: string | null = null;
-
     if (config.length > 0 && config[0]) {
       const potentialRoot = config[0];
       if (potentialRoot.toLowerCase() === "none") {
@@ -91,15 +134,14 @@ export class NotesFeature extends InstrumentFeature {
       } else if (getKeyIndex(potentialRoot) !== -1) {
         rootNoteName = potentialRoot;
       } else {
-        console.warn(
-          `[${this.typeName}] Invalid RootNote value "${potentialRoot}", using note-based coloring.`
-        );
+        console.warn(`[${this.typeName}] Invalid RootNote "${potentialRoot}", using note-based coloring.`);
         rootNoteName = null;
       }
     }
-
     return new NotesFeature([], settings, rootNoteName, maxCanvasHeight);
   }
+
+  // ─── Private ─────────────────────────────────────────────────────────────────
 
   private calculateAndSetNotes(fretCount: number): void {
     const notesData: NoteRenderData[] = [];

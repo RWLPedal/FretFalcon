@@ -6,13 +6,16 @@
  *
  * Nothing outside ts/schedule/ should import this file.
  */
-import { Feature } from '../feature';
-import { FeatureTypeDescriptor } from '../feature';
+import { Feature, FeatureContext, FeatureTypeDescriptor } from '../feature';
 import { View } from '../core/view';
 import { AppSettings } from '../settings';
 import { AudioController } from '../audio_controller';
 import { MetronomeView } from '../modules/metronome/metronome_view';
 import { InstrumentIntervalSettings } from './fretboard_interval_settings';
+import { getFeatureSpec } from '../core/config/feature_spec_registry';
+import { legacyCodec } from '../core/config/codec';
+import { resolveConfig } from '../core/config/resolve';
+import { emptyDrivenState } from '../core/config/spec';
 
 /**
  * A thin wrapper that attaches a MetronomeView to the feature's view list
@@ -55,7 +58,19 @@ export function createScheduleFeature(
   maxCanvasHeight: number | undefined,
   categoryName: string
 ): Feature {
-  const feature = descriptor.createFeature(config, settings, maxCanvasHeight, categoryName);
+  const spec = getFeatureSpec(descriptor.typeName);
+  let feature: Feature;
+  if (spec) {
+    const codec = (legacyCodec as any)(spec.configSpec, spec.legacyArgOrder, spec.legacyVariadicTail);
+    const drivenConfig = codec.decode(config);
+    const resolved = resolveConfig(drivenConfig, emptyDrivenState());
+    const ctx: FeatureContext = { settings, constraints: { maxHeight: maxCanvasHeight } };
+    feature = resolved !== null
+      ? (spec as any).create(resolved, ctx)
+      : descriptor.createFeature(config, settings, maxCanvasHeight, categoryName);
+  } else {
+    feature = descriptor.createFeature(config, settings, maxCanvasHeight, categoryName);
+  }
 
   if (intervalSettings.metronomeBpm > 0
     && audioController.metronomeAudioEl

@@ -295,10 +295,7 @@ export class ChordEntryPanel {
   }
 }
 
-/**
- * Converts a stored entry value back to a human-readable display label.
- * Used by config_view to render the read-only chip summary.
- */
+/** Converts a stored entry value back to a human-readable display label. */
 export function entryDisplayLabel(
   value: string,
   diatonicOnly: boolean,

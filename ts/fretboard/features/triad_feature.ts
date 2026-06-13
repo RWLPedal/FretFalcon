@@ -1,5 +1,7 @@
 ﻿import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
@@ -22,7 +24,6 @@ import {
   addHeader,
   clearAllChildren,
 } from "../fretboard_utils";
-import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planMultiFretboardGrid } from "../fretboard_layout";
 import { TriadQuality, getTriadNotesAndLinesForGroup } from "../triads";
 import { FretboardView } from "../views/fretboard_view";
@@ -30,6 +31,90 @@ import {
   DEFAULT_INSTRUMENT_SETTINGS,
   InstrumentSettings,
 } from "../fretboard_settings";
+import { featureTypeId } from "../../core/ids";
+import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
+import type { FieldCodec } from "../../core/config/spec";
+import type { ConfigSpec } from "../../core/config/spec";
+import { SignalKind, KeyType } from "../../panels/link_types";
+import { ChordQuality } from "../music_types";
+import { scales } from "../scales";
+
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface TriadConfig {
+  rootNote: string;
+  qualities: TriadQuality[];
+}
+
+const TRIAD_QUALITIES: TriadQuality[] = ['Major', 'Minor', 'Diminished', 'Augmented'];
+const TRIAD_REQUIRED_INSTRUMENTS = [
+  InstrumentName.Guitar, InstrumentName.SevenStrGuitar, InstrumentName.EightStrGuitar,
+] as const;
+
+function tonicIsMinorFromScale(scaleKey: string): boolean {
+  const scale = (scales as any)[scaleKey];
+  if (!scale || typeof scale.getChordQualityAt !== 'function') return false;
+  const q: ChordQuality = scale.getChordQualityAt(0);
+  return q === ChordQuality.Minor || q === ChordQuality.Diminished;
+}
+
+const triadConfigSpec: ConfigSpec<TriadConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(NOTE_NAMES_FROM_A as string[]),
+    ui: { kind: 'select', options: (NOTE_NAMES_FROM_A as string[]).map(v => ({ value: v })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord, SignalKind.Key],
+      fromSignal: (s: any) => (s.kind === SignalKind.Chord || s.kind === SignalKind.Key) ? (s.rootNote ?? undefined) : undefined,
+    },
+  },
+  qualities: {
+    label: 'Qualities',
+    codec: stringArrayCodec as FieldCodec<TriadQuality[]>,
+    ui: { kind: 'toggleButtons', options: TRIAD_QUALITIES.map(v => ({ value: v, label: v })) },
+    defaultValue: ['Major', 'Minor'],
+    drivable: {
+      kinds: [SignalKind.Key, SignalKind.Chord],
+      transparent: true,
+      fromSignal: (s: any): TriadQuality[] | undefined => {
+        if (s.kind === SignalKind.Key) return [tonicIsMinorFromScale(s.scaleKey) ? 'Minor' : 'Major'];
+        if (s.kind === SignalKind.Chord) return [s.keyType === KeyType.Major ? 'Major' : 'Minor'];
+        return undefined;
+      },
+    },
+  },
+};
+
+export const TriadFeatureSpec: FeatureSpec<TriadConfig> = {
+  id: featureTypeId('Triad Shapes'),
+  displayName: 'Triad Shapes (3-String Sets)',
+  description: 'Displays triad shapes for selected qualities across all positions for each 3-string set.',
+  requiredInstruments: [...TRIAD_REQUIRED_INSTRUMENTS] as unknown as string[],
+  isCompatibleWithTuning: TriadFeatureCompatCheck,
+  legacyArgOrder: ['rootNote', 'qualities'],
+  legacyVariadicTail: 'qualities',
+  configSpec: triadConfigSpec,
+  title: (config) => {
+    const root = config.rootNote ?? 'C';
+    const qs = config.qualities ?? [];
+    const base = `${root} Triad Shapes`;
+    return qs.length > 0 ? `${base} (${qs.join(', ')})` : base;
+  },
+  create(config: TriadConfig, ctx: FeatureContext): Feature {
+    const keyIndex = getKeyIndex(config.rootNote);
+    if (keyIndex === -1) throw new Error(`[TriadFeature] Unknown key: "${config.rootNote}"`);
+    const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
+    const mainHeaderText = `${validRootName} Triad Shapes (${config.qualities.join(', ')})`;
+    return new TriadFeature([], validRootName, config.qualities, mainHeaderText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth);
+  },
+};
+
+function TriadFeatureCompatCheck(instrument: string, tuningName: string): boolean {
+  if (instrument === InstrumentName.SevenStrGuitar) return tuningName === GUITAR_7_STANDARD_TUNING.name;
+  if (instrument === InstrumentName.EightStrGuitar) return tuningName === GUITAR_8_STANDARD_TUNING.name;
+  return true;
+}
 
 /** Returns all consecutive 3-string groups for a given string count. */
 function getStringGroups(stringCount: number): [number, number, number][] {
@@ -162,10 +247,8 @@ export class TriadFeature extends InstrumentFeature {
     mainHeaderText: string,
     settings: AppSettings,
     maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    // Peek before super() consumes the pending constraint.
-    const totalWidth = peekPendingCanvasWidth();
-
     const guitarGlobalSettings =
       (settings.instrumentSettings as InstrumentSettings | undefined) ??
       DEFAULT_INSTRUMENT_SETTINGS;
@@ -189,7 +272,7 @@ export class TriadFeature extends InstrumentFeature {
 
     const { config: featureFretboardConfig } = planMultiFretboardGrid(
       baseFretboardConfig,
-      totalWidth,
+      maxWidth,
       maxCanvasHeight,
       baseFretboardConfig.stringCount - 2,
       qualities.length,
@@ -197,7 +280,7 @@ export class TriadFeature extends InstrumentFeature {
       15,
     );
 
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.fretboardConfig = featureFretboardConfig;
     this.mainHeaderText = mainHeaderText;
     this._qualities = [...qualities];
@@ -205,7 +288,7 @@ export class TriadFeature extends InstrumentFeature {
     this._zoomMultiplier = guitarGlobalSettings.zoomMultiplier ?? 1.2;
 
     // Build views immediately when dimensions were available; otherwise defer to render().
-    if (totalWidth && maxCanvasHeight) {
+    if (maxWidth && maxCanvasHeight) {
       this._buildRowViews(this.fretboardConfig);
     }
   }

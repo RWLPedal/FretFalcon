@@ -1,5 +1,7 @@
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
@@ -18,12 +20,102 @@ import {
   clearAllChildren,
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
-import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
 } from "../fretboard_settings";
+import { featureTypeId } from "../../core/ids";
+import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
+import type { ConfigSpec } from "../../core/config/spec";
+import { SignalKind, KeyType } from "../../panels/link_types";
+
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface ScaleConfig {
+  scaleName: string;
+  rootNote: string;
+  highlightNotes: string[];
+}
+
+const SCALE_NAME_OPTIONS = Object.keys(scale_names).sort();
+const ROOT_NOTE_OPTIONS = NOTE_NAMES_FROM_A as string[];
+const HIGHLIGHT_NOTE_OPTIONS = NOTE_NAMES_FROM_A as string[];
+
+function scaleNameFromSignal(signal: { kind: SignalKind; scaleKey?: string; keyType?: KeyType }): string | undefined {
+  if (signal.kind === SignalKind.Key) {
+    const scaleKey = signal.scaleKey ?? '';
+    return (scales as any)[scaleKey]?.name ?? 'Major';
+  }
+  if (signal.kind === SignalKind.Chord) {
+    return signal.keyType === KeyType.Major ? 'Major' : 'Natural Minor';
+  }
+  return undefined;
+}
+
+const scaleConfigSpec: ConfigSpec<ScaleConfig> = {
+  scaleName: {
+    label: 'Scale Name',
+    codec: enumCodec(SCALE_NAME_OPTIONS),
+    ui: { kind: 'select', options: SCALE_NAME_OPTIONS.map(v => ({ value: v })) },
+    defaultValue: 'Major',
+    drivable: {
+      kinds: [SignalKind.Key, SignalKind.Chord],
+      fromSignal: (s) => scaleNameFromSignal(s as any),
+    },
+  },
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(ROOT_NOTE_OPTIONS),
+    ui: { kind: 'select', options: ROOT_NOTE_OPTIONS.map(v => ({ value: v })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Key, SignalKind.Chord],
+      fromSignal: (s: any) => (s.kind === SignalKind.Key || s.kind === SignalKind.Chord) ? s.rootNote ?? undefined : undefined,
+    },
+  },
+  highlightNotes: {
+    label: 'Highlight Notes',
+    codec: stringArrayCodec,
+    ui: { kind: 'toggleButtons', options: HIGHLIGHT_NOTE_OPTIONS.map(v => ({ value: v, label: v })) },
+    defaultValue: [],
+  },
+};
+
+export const ScaleFeatureSpec: FeatureSpec<ScaleConfig> = {
+  id: featureTypeId('Scale'),
+  displayName: 'Scale Diagram',
+  description: 'Displays a specified scale on the fretboard in a given key. Optionally highlight specific notes (highlighted notes outside the scale get a red border).',
+  legacyArgOrder: ['scaleName', 'rootNote', 'highlightNotes'],
+  legacyVariadicTail: 'highlightNotes',
+  configSpec: scaleConfigSpec,
+  title: (config) => {
+    const root = config.rootNote ?? 'C';
+    const name = config.scaleName ?? 'Major';
+    return `${root} ${name}`;
+  },
+  create(config: ScaleConfig, ctx: FeatureContext): Feature {
+    const scaleKey =
+      scale_names[config.scaleName as keyof typeof scale_names] ??
+      config.scaleName.toUpperCase().replace(/ /g, '_');
+    const scale = scales[scaleKey as keyof typeof scales];
+    if (!scale) throw new Error(`[ScaleFeature] Unknown scale: "${config.scaleName}"`);
+    const keyIndex = getKeyIndex(config.rootNote);
+    if (keyIndex === -1) throw new Error(`[ScaleFeature] Unknown key: "${config.rootNote}"`);
+    const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
+    const headerText = `${validRootName} ${scale.name}`;
+    return new ScaleFeature(
+      [],
+      scale,
+      keyIndex,
+      new Set(config.highlightNotes),
+      headerText,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};
 
 const NON_HIGHLIGHTED_SCALE_COLOR = "#CCCCCC";
 const OUT_OF_SCALE_HIGHLIGHT_STROKE = "#C0392B";
@@ -52,9 +144,9 @@ export class ScaleFeature extends InstrumentFeature {
     headerText: string,
     settings: AppSettings,
     maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.scale = scale;
     this.keyIndex = keyIndex;
     this.highlightNotes = highlightNotes;
@@ -66,7 +158,7 @@ export class ScaleFeature extends InstrumentFeature {
       DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
       this.fretboardConfig,
-      availW,
+      maxWidth,
       maxCanvasHeight,
       guitarSettings.zoomMultiplier ?? 1.2,
       this.fretCount,

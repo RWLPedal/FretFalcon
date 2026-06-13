@@ -30,16 +30,15 @@ export default featurePanelModule({
     // requiredInstruments: ['Guitar'],   // optional — omit to show for all
   },
   drive: {
+    // drive.targets declares which inputs are visible in the link panel UI.
+    // Signal resolution is handled by FeatureSpec.configSpec[field].drivable — see step 2.
     targets: [
       {
         featureTypeName: MyFeature.typeName,
-        argName: 'Root Note',             // must match the feature's config key
+        argName: 'rootNote',
         label: 'Root note (from linked source)',
         acceptedKinds: [SignalKind.Chord, SignalKind.Key],
-        resolveValue(signal) {
-          if (signal.kind !== SignalKind.Chord && signal.kind !== SignalKind.Key) return null;
-          return signal.rootNote || null;
-        },
+        resolveValue: () => null,  // resolution lives in FeatureSpec.configSpec
       },
     ],
   },
@@ -73,10 +72,111 @@ export default module;
 
 ---
 
-## 2. Implement the view (if needed)
+## 2. Implement a fretboard feature with FeatureSpec
 
-If you're wrapping an existing `ConfigurableFeatureView`-based feature, step 1 is
-all you need.  For a new standalone view, create `ts/modules/my_view/my_view.ts`
+For fretboard features, implement both the `Feature` class and a `FeatureSpec<C>` in
+the same file.  `FeatureSpec` replaces the old `ConfigurationSchema`/`ArgType`
+approach — it gives you typed config, a generated config UI, and drive-signal wiring
+all in one declaration.
+
+### 2a. Define a typed config interface and `ConfigSpec<C>`
+
+```ts
+// ts/fretboard/features/my_feature.ts
+import { FeatureSpec, FeatureContext } from '../../feature';
+import { featureTypeId, ConfigSpec } from '../../core/config/spec';
+import { enumCodec } from '../../core/config/codecs';
+import { SignalKind } from '../../panels/link_types';
+
+export interface MyFeatureConfig {
+  rootNote: string;
+  scale: string;
+}
+
+const myFeatureConfigSpec: ConfigSpec<MyFeatureConfig> = {
+  rootNote: {
+    label: 'Root note',
+    ui: { kind: 'select', options: ROOT_NOTE_OPTIONS },
+    codec: enumCodec(ROOT_NOTE_OPTIONS.map(o => o.value)),
+    default: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord, SignalKind.Key],
+      fromSignal(signal) {
+        if (signal.kind === SignalKind.Chord || signal.kind === SignalKind.Key) {
+          return signal.rootNote;
+        }
+      },
+    },
+  },
+  scale: {
+    label: 'Scale',
+    ui: { kind: 'select', options: SCALE_OPTIONS },
+    codec: enumCodec(SCALE_OPTIONS.map(o => o.value)),
+    default: 'major',
+  },
+};
+```
+
+### 2b. Implement the `Feature` class
+
+```ts
+export class MyFeature implements Feature {
+  static readonly typeName = 'MyFeature';
+  readonly typeName = MyFeature.typeName;
+  readonly config: ReadonlyArray<string> = [];
+  views?: View[];
+
+  constructor(
+    private readonly rootNote: string,
+    private readonly scale: string,
+    private readonly settings: AppSettings,
+    private readonly maxCanvasHeight?: number,
+    private readonly maxWidth?: number,
+  ) {}
+
+  render(container: HTMLElement): void { /* ... */ }
+}
+```
+
+### 2c. Declare the `FeatureSpec<C>`
+
+```ts
+export const MyFeatureSpec: FeatureSpec<MyFeatureConfig> = {
+  featureTypeId: featureTypeId(MyFeature.typeName),
+  configSpec: myFeatureConfigSpec,
+  legacyArgOrder: ['rootNote', 'scale'],
+  create(config: MyFeatureConfig, ctx: FeatureContext): Feature {
+    return new MyFeature(
+      config.rootNote,
+      config.scale,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};
+```
+
+`legacyArgOrder` lists config keys in the same order as the old positional `string[]`
+config array, so saved schedule configs deserialise correctly.  If the last field is a
+variable-length array (e.g. a chord list), also set `legacyVariadicTail: 'fieldName'`.
+
+### 2d. Register the spec
+
+In `ts/fretboard/fretboard_category.ts`, import the spec and call
+`registerFeatureSpec` inside the `InstrumentCategory` constructor:
+
+```ts
+import { MyFeatureSpec } from './features/my_feature';
+// inside constructor:
+registerFeatureSpec(MyFeatureSpec as any);
+```
+
+---
+
+## 3. Implement a standalone view (if needed)
+
+For non-fretboard views, create `ts/modules/my_view/my_view.ts`
 (co-located with `module.ts`) and implement the `View` interface:
 
 ```ts
@@ -90,7 +190,7 @@ export interface View {
 
 ---
 
-## 3. Build
+## 4. Build
 
 ```
 node build.js
@@ -124,10 +224,34 @@ registered automatically.
 | `nav.visibility` | no | `desktop`, `mobile`, or `both` (default `both`) |
 | `nav.requiredInstruments` | no | Instrument names that show the button |
 | `drive.sources` | no | Drive source descriptors — signals this view can emit |
-| `drive.targets` | no | Drive target slots — config args that can be driven |
+| `drive.targets` | no | Drive target slots — declares inputs for the link panel UI |
 | `drive.broadcast` | no | `true` to broadcast signals to all panels (Global Key pattern) |
 | `state.decode` | no | Decodes persisted state for type-safe `createView` |
 | `createView` | yes | Factory: `(ctx: ViewContext, state?) => View` |
+
+---
+
+## FeatureSpec / ConfigSpec field reference
+
+Each key in `ConfigSpec<C>` is a `FieldSpec<T>` with these properties:
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `label` | yes | Label shown above the field in the config UI |
+| `codec` | yes | `FieldCodec<T>` — serialise/deserialise to/from `string` |
+| `default` | yes | Default value when no saved config exists |
+| `ui` | yes | UI widget: `select`, `toggle`, `number`, `toggle-buttons`, or `custom` |
+| `drivable` | no | Declares which signal kinds can drive this field and how to resolve them |
+| `controls` | no | `'chords'` — hides sibling chord fields when this field changes |
+
+Built-in codecs (from `ts/core/config/codecs.ts`):
+
+| Codec | Type | Notes |
+|-------|------|-------|
+| `enumCodec(values)` | `string` | Validates against a fixed list |
+| `numberCodec` | `number` | `Number()` parse |
+| `booleanCodec` | `boolean` | `'true'` / `'false'` |
+| `stringArrayCodec` | `string[]` | Only valid as `legacyVariadicTail` |
 
 ---
 

@@ -6,7 +6,7 @@ import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
 import { StrokeAction, StrumPreset } from './strum_types';
 import { ValueSlider } from '../../core/widgets/value_slider';
-interface StrumViewState {
+export interface StrumViewState {
   _v: 1;
   subdivision: 'eighth' | 'sixteenth';
   timeSig: { beats: number; division: number };

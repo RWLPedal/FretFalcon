@@ -124,6 +124,7 @@ export class SettingsManager {
     container.innerHTML = MODAL_HTML;
     document.body.appendChild(container);
     this.modalEl = document.getElementById("settings-modal");
+    if (!this.modalEl) return;
 
     this.modalEl
       .querySelector("#settings-modal-close")

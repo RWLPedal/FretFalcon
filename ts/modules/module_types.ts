@@ -6,7 +6,7 @@ import { View } from '../core/view';
 import { AppSettings } from '../settings';
 import { ViewId, NavSectionId, viewId as _viewId } from '../core/ids';
 import { DriveSourceDescriptor, DriveTargetSlot } from '../panels/drive_registry';
-import { ConfigurableFeatureView } from '../views/configurable_feature_view'; // privileged import
+import { FeaturePanelController } from './feature_panel/feature_panel_controller';
 
 export { viewId } from '../core/ids';
 
@@ -76,8 +76,7 @@ export interface ViewModule<S = unknown> {
 
 // ─── featurePanelModule ───────────────────────────────────────────────────────
 // Helper used by the 9+ instrument feature modules. Each feature module calls
-// featurePanelModule() and default-exports the result — this is an "ordinary"
-// extension pattern despite internally using the privileged ConfigurableFeatureView.
+// featurePanelModule() and default-exports the result.
 
 export interface FeaturePanelModuleOpts {
   id: ViewId;
@@ -107,7 +106,7 @@ export function featurePanelModule(opts: FeaturePanelModuleOpts): ViewModule {
     nav: opts.nav,
     drive: opts.drive,
     createView(ctx: ViewContext, state?: unknown): View {
-      return new ConfigurableFeatureView(
+      return new FeaturePanelController(
         {
           ...(state as any),
           categoryName: 'Instrument',

@@ -1,6 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
-import { StrumView } from './strum_view';
+import { StrumView, StrumViewState } from './strum_view';
 import { AudioController } from '../../audio_controller';
 import { SignalKind, GrooveSignal } from '../../panels/link_types';
 
@@ -61,7 +61,7 @@ const module: ViewModule = {
       document.querySelector('#metronome-sound') as HTMLAudioElement,
       document.querySelector('#metronome-accent-sound') as HTMLAudioElement,
     );
-    return new StrumView(state, audioController);
+    return new StrumView(state as Partial<StrumViewState> | undefined, audioController);
   },
 };
 

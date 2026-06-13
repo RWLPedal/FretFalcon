@@ -237,7 +237,7 @@ export class ScheduleEditor {
     if (!initialItems) {
       initialName = 'Instrument Default';
 
-      if (!initialItems || initialItems.length === 0) {
+      {
         initialItems = [];
         if (this.defaultCategoryName) {
           const emptyRowData = this.rowManager.createEmptyIntervalUIData(this.defaultCategoryName);

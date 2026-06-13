@@ -1,13 +1,15 @@
 ﻿// ts/instrument/fretboard_category.ts
 import { Category } from "../feature"; // Use Category from feature.ts
 import { FeatureTypeDescriptor, SettingsUISchemaItem } from "../feature";
+import { registerFeatureSpec } from "../core/config/feature_spec_registry";
 
 // Import Guitar Features
-import { NotesFeature } from "./features/notes_feature";
-import { ScaleFeature } from "./features/scale_feature";
-import { ChordFeature } from "./features/chord_feature";
-import { ChordProgressionFeature } from "./features/chord_progression_feature";
-import { TriadFeature } from "./features/triad_feature";
+import { NotesFeature, NotesFeatureSpec } from "./features/notes_feature";
+import { ScaleFeature, ScaleFeatureSpec } from "./features/scale_feature";
+import { ChordFeature, ChordFeatureSpec } from "./features/chord_feature";
+import { ChordProgressionFeature, ChordProgressionFeatureSpec } from "./features/chord_progression_feature";
+import { TriadFeature, TriadFeatureSpec } from "./features/triad_feature";
+import { CagedFeature, CagedFeatureSpec } from "./features/caged_feature";
 import { MetronomeFeature } from "./features/metronome_feature";
 
 // Import Guitar Settings related items
@@ -20,10 +22,9 @@ import {
 import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard";
 import type { CustomTuning } from "../settings";
 import { FretboardColorScheme } from "./colors";
-import { ArpeggioFeature } from "./features/arpeggio_feature";
-import { CagedFeature } from "./features/caged_feature";
-import { MultiLayerFretboardFeature } from "./features/multi_layer_fretboard_feature";
-import { NearbyTriadsFeature } from "./features/nearby_triads_feature";
+import { ArpeggioFeature, ArpeggioFeatureSpec } from "./features/arpeggio_feature";
+import { MultiLayerFretboardFeature, MultiLayerFeatureSpec } from "./features/multi_layer_fretboard_feature";
+import { NearbyTriadsFeature, NearbyTriadsFeatureSpec } from "./features/nearby_triads_feature";
 
 export const COLOR_SCHEME_OPTIONS: {
   value: FretboardColorScheme;
@@ -199,6 +200,17 @@ export class InstrumentCategory implements Category {
         ArpeggioFeature as unknown as FeatureTypeDescriptor,
       ],
     ]);
+
+    // Register FeatureSpecs for migrated features (Phase B).
+    registerFeatureSpec(NotesFeatureSpec as any);
+    registerFeatureSpec(ScaleFeatureSpec as any);
+    registerFeatureSpec(ChordFeatureSpec as any);
+    registerFeatureSpec(TriadFeatureSpec as any);
+    registerFeatureSpec(CagedFeatureSpec as any);
+    registerFeatureSpec(ArpeggioFeatureSpec as any);
+    registerFeatureSpec(ChordProgressionFeatureSpec as any);
+    registerFeatureSpec(NearbyTriadsFeatureSpec as any);
+    registerFeatureSpec(MultiLayerFeatureSpec as any);
   }
 
   getName(): string {

@@ -1,11 +1,17 @@
 // ts/fretboard/features/nearby_triads_feature.ts
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
 } from '../../feature';
-import { InstrumentFeature, peekPendingCanvasWidth } from '../fretboard_base';
+import { featureTypeId } from '../../core/ids';
+import { ConfigSpec, FieldCodec } from '../../core/config/spec';
+import { enumCodec, stringArrayCodec } from '../../core/config/codecs';
+import { buildChordEntryWidget } from './chord_entry_widget';
+import { InstrumentFeature } from '../fretboard_base';
 import { emitEvent } from '../../core/events';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
@@ -220,10 +226,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     targetFret: number | null,
     targetString: number | null,
     settings: AppSettings,
-    maxCanvasHeight?: number
+    maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.ntMode        = ntMode;
     this.progDegrees   = progDegrees;
     this.progChordKeys = progChordKeys;
@@ -239,7 +245,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this._zoomMultiplier = zoom;
 
     // Single-fretboard config (compact + driven modes).
-    this.fretboardConfig = planSingleFretboard(this.fretboardConfig, availW, maxCanvasHeight, zoom, 15);
+    this.fretboardConfig = planSingleFretboard(this.fretboardConfig, maxWidth, maxCanvasHeight, zoom, 15);
 
     if (ntMode === 'reference') {
       const N = Math.max(this.progDegrees.length, this.progChordKeys.length);
@@ -247,18 +253,18 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const slotPad = 8;  // col's padding:4px left + 4px right
       const overhead = 42;       // label + 2×gap(2px) + nav controls + 2×vpad(2px) per slot row
       const rowMargin = 8;       // slotsRow margin-top (fixed, not per-row)
-      if (availW && maxCanvasHeight) {
+      if (maxWidth && maxCanvasHeight) {
         this.slotFretboardConfig = NearbyTriadsFeature.bestSlotConfig(
-          this.fretboardConfig, N, availW, maxCanvasHeight - rowMargin, zoom, gap, slotPad, overhead
+          this.fretboardConfig, N, maxWidth, maxCanvasHeight - rowMargin, zoom, gap, slotPad, overhead
         );
       } else {
-        const perSlotW = availW ? (availW - (N - 1) * gap - N * slotPad) / N : undefined;
+        const perSlotW = maxWidth ? (maxWidth - (N - 1) * gap - N * slotPad) / N : undefined;
         this.slotFretboardConfig = planSingleFretboard(
           this.fretboardConfig, perSlotW, undefined, zoom, 15
         );
       }
-      // If availW was unknown at construction, defer slot sizing to renderReference().
-      this._slotsNeedLayout = !availW;
+      // If maxWidth was unknown at construction, defer slot sizing to renderReference().
+      this._slotsNeedLayout = !maxWidth;
     } else {
       this.slotFretboardConfig = this.fretboardConfig;
     }
@@ -608,7 +614,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   // ─── Reference mode ──────────────────────────────────────────────────────────
 
   private renderReference(container: HTMLElement): void {
-    // Lazy layout: if availW was unknown at construction, compute correct slot dims
+    // Lazy layout: if maxWidth was unknown at construction, compute correct slot dims
     // from the actual container width now that the DOM is available.
     // If the container is not yet in the DOM (clientWidth === 0, which happens when
     // FloatingViewWrapper calls render() before appendChild), fall back to 420px —
@@ -1109,7 +1115,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private static bestSlotConfig(
     base: FretboardConfig,
     N: number,
-    availW: number,
+    maxWidth: number,
     availH: number,
     zoom: number,
     gap: number,
@@ -1122,7 +1128,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     let bestH = 0;
     for (let cols = 1; cols <= N; cols++) {
       const rows = Math.ceil(N / cols);
-      const bW = (availW - (cols - 1) * gap) / cols - slotPad;
+      const bW = (maxWidth - (cols - 1) * gap) / cols - slotPad;
       const bH = (availH - (rows - 1) * gap) / rows - overhead;
       if (bW <= 0 || bH <= 0) continue;
       let eW: number, eH: number;
@@ -1243,3 +1249,148 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     );
   }
 }
+
+// ─── FeatureSpec ─────────────────────────────────────────────────────────────
+
+export interface NearbyTriadsConfig {
+  rootNote: string;
+  mode: DiatonicMode;
+  display: string;
+  targetFret: string;
+  targetString: string;
+  chords: string[];
+}
+
+const ALL_DIATONIC_MODES_NT = Object.values(DiatonicMode) as DiatonicMode[];
+const NT_FRET_NUMS = Array.from({ length: 15 }, (_, i) => i + 1);
+const NT_STRING_NUMS = Array.from({ length: 8 }, (_, i) => i + 1);
+
+const nearbyTriadsConfigSpec: ConfigSpec<NearbyTriadsConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(NOTE_NAMES_FROM_A as readonly string[]) as FieldCodec<string>,
+    ui: { kind: 'select', options: (NOTE_NAMES_FROM_A as string[]).map(n => ({ value: n })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord, SignalKind.Key],
+      fromSignal: (s) => (s as ChordSignal).rootNote ?? (s as KeySignal).rootNote ?? undefined,
+    },
+  },
+  mode: {
+    label: 'Mode',
+    codec: enumCodec(ALL_DIATONIC_MODES_NT),
+    ui: {
+      kind: 'select',
+      options: ALL_DIATONIC_MODES_NT.map(m => ({ value: m, label: DIATONIC_MODE_LABELS[m] ?? m })),
+    },
+    defaultValue: DiatonicMode.Ionian,
+    controls: 'chords',
+    drivable: {
+      kinds: [SignalKind.Key],
+      fromSignal: (s) => {
+        const ks = s as KeySignal;
+        return (ALL_DIATONIC_MODES_NT as string[]).includes(ks.scaleKey)
+          ? (ks.scaleKey as DiatonicMode) : undefined;
+      },
+    },
+  },
+  display: {
+    label: 'Display',
+    codec: enumCodec(['compact', 'reference'] as const),
+    ui: { kind: 'select', options: [{ value: 'compact', label: 'Compact' }, { value: 'reference', label: 'Reference' }] },
+    defaultValue: 'compact',
+  },
+  targetFret: {
+    label: 'Target Fret',
+    codec: enumCodec(['none', ...NT_FRET_NUMS.map(n => `fret:${n}`)] as const),
+    ui: {
+      kind: 'select',
+      options: [
+        { value: 'none', label: 'None' },
+        ...NT_FRET_NUMS.map(n => ({ value: `fret:${n}`, label: String(n) })),
+      ],
+    },
+    defaultValue: 'none',
+  },
+  targetString: {
+    label: 'Target String',
+    codec: enumCodec(['none', ...NT_STRING_NUMS.map(n => `string:${n}`)] as const),
+    ui: {
+      kind: 'select',
+      options: [
+        { value: 'none', label: 'None' },
+        ...NT_STRING_NUMS.map(n => ({ value: `string:${n}`, label: String(n) })),
+      ],
+    },
+    defaultValue: 'none',
+  },
+  chords: {
+    label: 'Chords',
+    codec: stringArrayCodec as FieldCodec<string[]>,
+    ui: {
+      kind: 'custom',
+      render: (container, ctx) => buildChordEntryWidget(container, ctx, false),
+    },
+    defaultValue: [],
+  },
+};
+
+export const NearbyTriadsFeatureSpec: FeatureSpec<NearbyTriadsConfig> = {
+  id: featureTypeId(NearbyTriadsFeature.typeName),
+  displayName: 'Nearby Triads',
+  description: NearbyTriadsFeature.description ?? 'Visualize nearby triad voicings for chord progressions.',
+  configSpec: nearbyTriadsConfigSpec,
+  legacyArgOrder: ['rootNote', 'mode', 'display', 'targetFret', 'targetString', 'chords'],
+  legacyVariadicTail: 'chords',
+  create(config: NearbyTriadsConfig, ctx: FeatureContext): Feature {
+    const legacyMap: Record<string, DiatonicMode> = {
+      Major: DiatonicMode.Ionian, Minor: DiatonicMode.Aeolian,
+    };
+    const mode = (ALL_DIATONIC_MODES_NT as string[]).includes(config.mode)
+      ? config.mode
+      : (legacyMap[config.mode] ?? DiatonicMode.Ionian);
+
+    const keyIndex = getKeyIndex(config.rootNote);
+    const validRoot = keyIndex !== -1
+      ? (NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote)
+      : config.rootNote;
+
+    const ntMode = config.display === 'compact' ? 'compact' : 'reference';
+
+    const targetFretStr = config.targetFret;
+    const targetFret = /^fret:\d+$/.test(targetFretStr)
+      ? parseInt(targetFretStr.slice(5), 10) : null;
+
+    const targetStringStr = config.targetString;
+    const targetString = /^string:\d+$/.test(targetStringStr)
+      ? parseInt(targetStringStr.slice(7), 10) - 1 : null;
+
+    const chordKeyStrings = config.chords.filter(s => /^[A-G][b#]?_[A-Z0-9]+$/.test(s));
+    const degreeStrings = config.chords.filter(s => /^\d$/.test(s));
+
+    let progChordKeys: string[];
+    let progDegrees: number[];
+    if (chordKeyStrings.length > 0) {
+      progChordKeys = chordKeyStrings;
+      progDegrees = [];
+    } else {
+      progChordKeys = [];
+      progDegrees = degreeStrings.map(s => parseInt(s, 10) + 1);
+    }
+
+    return new NearbyTriadsFeature(
+      [],
+      ntMode as NearbyTriadsMode,
+      progDegrees,
+      progChordKeys,
+      validRoot,
+      mode,
+      4,
+      targetFret,
+      targetString,
+      ctx.settings,
+      ctx.constraints.maxHeight,
+      ctx.constraints.maxWidth,
+    );
+  },
+};

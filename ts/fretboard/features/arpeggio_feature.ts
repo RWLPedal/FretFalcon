@@ -1,5 +1,7 @@
 import {
   Feature,
+  FeatureSpec,
+  FeatureContext,
   ConfigurationSchema,
   ConfigurationSchemaArg,
   ArgType,
@@ -17,12 +19,15 @@ import {
   clearAllChildren,
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
-import { peekPendingCanvasWidth } from "../fretboard_base";
 import { planSingleFretboard } from "../fretboard_layout";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
 } from "../fretboard_settings";
+import { featureTypeId } from "../../core/ids";
+import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
+import type { ConfigSpec } from "../../core/config/spec";
+import { SignalKind } from "../../panels/link_types";
 
 const DEFAULT_STROKE = "rgba(50, 50, 50, 0.7)";
 const ROOT_STROKE = "#333333";
@@ -66,6 +71,76 @@ const INTERVAL_TOGGLE_LABELS = [
   "7",
 ];
 
+// ─── Typed config ─────────────────────────────────────────────────────────────
+
+export interface ArpeggioConfig {
+  rootNote: string;
+  quality: string;
+  showIntervals: string[];
+}
+
+const arpeggioConfigSpec: ConfigSpec<ArpeggioConfig> = {
+  rootNote: {
+    label: 'Root Note',
+    codec: enumCodec(NOTE_NAMES_FROM_A as string[]),
+    ui: { kind: 'select', options: (NOTE_NAMES_FROM_A as string[]).map(v => ({ value: v })) },
+    defaultValue: 'C',
+    drivable: {
+      kinds: [SignalKind.Chord],
+      fromSignal: (s: any) => s.kind === SignalKind.Chord ? (s.rootNote ?? undefined) : undefined,
+    },
+  },
+  quality: {
+    label: 'Quality',
+    codec: enumCodec(ARPEGGIO_TYPE_NAMES),
+    ui: { kind: 'select', options: ARPEGGIO_TYPE_NAMES.map(v => ({ value: v })) },
+    defaultValue: 'Major',
+    drivable: {
+      kinds: [SignalKind.Chord],
+      fromSignal: (s: any) => {
+        if (s.kind !== SignalKind.Chord || !s.chordKey) return undefined;
+        const suffix = (s.chordKey as string).slice((s.chordKey as string).indexOf('_') + 1);
+        const suffixMap: Record<string, string> = {
+          MAJ: 'Major', MIN: 'Minor', DOM7: 'Dom 7', MAJ7: 'Maj 7', MIN7: 'Min 7', DIM: 'Dim', AUG: 'Aug',
+        };
+        return suffixMap[suffix];
+      },
+    },
+  },
+  showIntervals: {
+    label: 'Show Intervals',
+    codec: stringArrayCodec,
+    ui: { kind: 'toggleButtons', options: INTERVAL_TOGGLE_LABELS.map(v => ({ value: v, label: v })) },
+    defaultValue: [],
+  },
+};
+
+export const ArpeggioFeatureSpec: FeatureSpec<ArpeggioConfig> = {
+  id: featureTypeId('Arpeggio'),
+  displayName: 'Arpeggio Map',
+  description: 'Shows all chord tones across the full neck, colored by interval role.',
+  legacyArgOrder: ['rootNote', 'quality', 'showIntervals'],
+  legacyVariadicTail: 'showIntervals',
+  configSpec: arpeggioConfigSpec,
+  title: (config) => {
+    const root = config.rootNote ?? 'C';
+    const quality = config.quality ?? 'Major';
+    return `${root} ${quality} Arpeggio`;
+  },
+  create(config: ArpeggioConfig, ctx: FeatureContext): Feature {
+    const keyIndex = getKeyIndex(config.rootNote);
+    if (keyIndex === -1) throw new Error(`[ArpeggioFeature] Unknown root note: "${config.rootNote}"`);
+    const typeKey = ARPEGGIO_TYPE_KEYS.find(k => ARPEGGIO_TYPES[k]!.name === config.quality || k === config.quality);
+    if (!typeKey) throw new Error(`[ArpeggioFeature] Unknown quality: "${config.quality}"`);
+    const spec = ARPEGGIO_TYPES[typeKey]!;
+    const intervals = new Set(spec.intervals);
+    const visibleIntervals: Set<string> | null = config.showIntervals.length > 0 ? new Set(config.showIntervals) : null;
+    const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
+    const headerText = `${validRootName} ${spec.name} Arpeggio`;
+    return new ArpeggioFeature([], keyIndex, intervals, visibleIntervals, headerText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth);
+  },
+};
+
 /** Displays all chord tones of an arpeggio across the full fretboard. */
 export class ArpeggioFeature extends InstrumentFeature {
   static readonly typeName = "Arpeggio";
@@ -89,9 +164,9 @@ export class ArpeggioFeature extends InstrumentFeature {
     headerText: string,
     settings: AppSettings,
     maxCanvasHeight?: number,
+    maxWidth?: number,
   ) {
-    const availW = peekPendingCanvasWidth();
-    super(config, settings, maxCanvasHeight);
+    super(config, settings, maxCanvasHeight, maxWidth);
     this.keyIndex = keyIndex;
     this.chordIntervals = chordIntervals;
     this.visibleIntervals = visibleIntervals;
@@ -103,7 +178,7 @@ export class ArpeggioFeature extends InstrumentFeature {
       DEFAULT_INSTRUMENT_SETTINGS;
     this.fretboardConfig = planSingleFretboard(
       this.fretboardConfig,
-      availW,
+      maxWidth,
       maxCanvasHeight,
       guitarSettings.zoomMultiplier ?? 1.2,
       this.fretCount,
