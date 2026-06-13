@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getChordInKey } from '../../../ts/fretboard/progressions'
-import { ChordQuality, DiatonicMode } from '../../../ts/fretboard/music_types'
+import { getChordInKey } from '../../../ts/music/progressions'
+import { ChordQuality, DiatonicMode } from '../../../ts/music/music_types'
 
 // Pass an empty chord library so tests only assert on chordName and quality,
 // not on the organic chord_library key format (which is fragile).

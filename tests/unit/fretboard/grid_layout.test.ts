@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findBestGridLayout } from '../../../ts/fretboard/fretboard_layout'
+import { findBestGridLayout } from '../../../ts/fretboard/layout'
 
 // Helper: uniform canvas budget — every column count gets the same per-element size.
 function uniform(w: number, h: number) {

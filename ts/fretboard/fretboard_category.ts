@@ -19,7 +19,7 @@ import {
   InstrumentSettings,
 } from "./fretboard_settings";
 // Helper function imports (for settings UI schema)
-import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./fretboard";
+import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./instruments";
 import type { CustomTuning } from "../settings";
 import { FretboardColorScheme } from "./colors";
 import { ArpeggioFeature, ArpeggioFeatureSpec } from "./features/arpeggio_feature";

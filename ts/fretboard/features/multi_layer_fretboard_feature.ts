@@ -6,11 +6,11 @@ import { ConfigSpec, FieldCodec } from "../../core/config/spec";
 import { booleanCodec, stringArrayCodec } from "../../core/config/codecs";
 import { createLayerListInput, extractLayerListValues } from "./layer_list_ui";
 import { InstrumentFeature } from "../fretboard_base";
-import { planSingleFretboard } from "../fretboard_layout";
+import { planSingleFretboard } from "../layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { AppSettings } from "../../settings";
 import { emitEvent } from "../../core/events";
-import { NoteRenderData } from "../fretboard";
+import { NoteRenderData } from "../renderer";
 import {
   NOTE_NAMES_FROM_A,
   NOTE_FLAT_ALIAS_FROM_A,
@@ -21,8 +21,8 @@ import {
   clearAllChildren,
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
-import { scale_names, scales } from "../scales";
-import { chord_tones_library } from "../chords";
+import { scale_names, scales } from "../../music/scales";
+import { chord_tones_library } from "../../music/chords";
 import { NOTE_COLORS } from "../colors";
 import {
   buildCagedLookup,
@@ -36,7 +36,7 @@ import {
   toRenderAnnotation,
   chordToneNamesToSemitones,
   scaleSemitonesFromDegrees,
-} from "../note_semantics";
+} from "../../music/note_semantics";
 
 // --- Layer Spec Types ---
 // rootNote / chordKey may be the sentinel "driven" — resolved at runtime from the incoming signal.
@@ -726,3 +726,4 @@ export const MultiLayerFeatureSpec: FeatureSpec<MultiLayerConfig> = {
     );
   },
 };
+

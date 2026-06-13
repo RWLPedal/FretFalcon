@@ -1,4 +1,4 @@
-// ts/fretboard/features/chord_degree_base.ts
+﻿// ts/fretboard/features/chord_degree_base.ts
 import {
   ArgType,
   ConfigurationSchemaArg,
@@ -6,7 +6,7 @@ import {
 } from '../../feature';
 import { InstrumentFeature } from '../fretboard_base';
 import { AppSettings } from '../../settings';
-import { ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from '../music_types';
+import { ALL_DIATONIC_MODES, DIATONIC_MODE_LABELS } from '../../music/music_types';
 import { NOTE_NAMES_FROM_A } from '../fretboard_utils';
 import { SignalKind, SignalState, ChordSignal } from '../../panels/link_types';
 
@@ -36,7 +36,7 @@ export function modeArg(controlsArgName = 'Chords'): ConfigurationSchemaArg {
  * Config arg for an ordered chord sequence rendered as a popup chord-entry widget.
  *
  * When `diatonicOnly` is true (default for ChordProgressionFeature):
- *   - Only in-key chords are offered; values stored as degree indices ("0"–"6")
+ *   - Only in-key chords are offered; values stored as degree indices ("0"â€“"6")
  *   - The progression transposes automatically when root or mode changes
  *
  * When `diatonicOnly` is false (NearbyTriadsFeature):
@@ -51,8 +51,8 @@ export function chordEntryArg(diatonicOnly = false): ConfigurationSchemaArg {
     uiComponentData: { diatonicOnly },
     isVariadic: true,
     description: diatonicOnly
-      ? 'Ordered chord degrees — stored relative to key, transposes automatically.'
-      : 'Ordered chord sequence — enter by name or Roman numeral. Repeats allowed.',
+      ? 'Ordered chord degrees â€” stored relative to key, transposes automatically.'
+      : 'Ordered chord sequence â€” enter by name or Roman numeral. Repeats allowed.',
   };
 }
 
@@ -115,3 +115,4 @@ export abstract class ChordDegreeProgressionFeature extends InstrumentFeature {
     super.destroy?.();
   }
 }
+

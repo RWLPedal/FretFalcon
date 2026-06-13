@@ -1,8 +1,9 @@
 import { BaseView } from "../../core/base_view";
-import { Chord, chordsAreEquivalent } from "../chords";
-import { FretboardConfig, InstrumentName } from "../fretboard";
+import { Chord, chordsAreEquivalent } from "../../music/chords";
+import { FretboardConfig } from "../fretboard_config";
+import { InstrumentName } from "../instruments";
 import { ChordDiagramView } from "./chord_diagram_view";
-import { getMoveableShapes } from "../moveable_shapes";
+import { getMoveableShapes } from "../../music/moveable_shapes";
 import { clearAllChildren } from "../fretboard_utils";
 import { ChordLabelDisplay } from "../fretboard_settings";
 

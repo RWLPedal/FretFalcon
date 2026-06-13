@@ -1,6 +1,6 @@
-import { BaseView } from '../../core/base_view';
+﻿import { BaseView } from '../../core/base_view';
 import { AppSettings } from '../../settings';
-import { getChordLibraryForInstrument, Chord, ChordType } from '../../fretboard/chords';
+import { getChordLibraryForInstrument, Chord, ChordType } from '../../music/chords';
 import { getKeyIndex, NOTE_NAMES_FROM_A } from '../../fretboard/fretboard_utils';
 
 /**
@@ -9,7 +9,7 @@ import { getKeyIndex, NOTE_NAMES_FROM_A } from '../../fretboard/fretboard_utils'
  *
  * Layout (each row is a rounded pill):
  *   Shape  |  Sounds Like
- *   ──────────────────
+ *   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
  *   A             E
  *   Am            Em
  *   ...
@@ -146,3 +146,4 @@ export class CapoView extends BaseView {
     }
   }
 }
+

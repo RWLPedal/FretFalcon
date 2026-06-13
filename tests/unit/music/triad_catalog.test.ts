@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { TRIAD_SHAPE_CATALOG } from "../../../ts/fretboard/triads";
-import { STANDARD_TUNING } from "../../../ts/fretboard/fretboard";
+import { TRIAD_SHAPE_CATALOG } from "../../../ts/music/triads";
+import { STANDARD_TUNING } from "../../../ts/fretboard/instruments";
 
 // Standard guitar tuning [E,A,D,G,B,E] in A-indexed semitones (0=A).
 const GUITAR_TUNING = STANDARD_TUNING.notes; // [7, 0, 5, 10, 2, 7]

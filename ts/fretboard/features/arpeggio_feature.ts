@@ -9,7 +9,7 @@ import {
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
 import { AppSettings } from "../../settings";
-import { NoteRenderData } from "../fretboard";
+import { NoteRenderData } from "../renderer";
 import {
   getKeyIndex,
   NOTE_NAMES_FROM_A,
@@ -19,7 +19,7 @@ import {
   clearAllChildren,
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
-import { planSingleFretboard } from "../fretboard_layout";
+import { planSingleFretboard } from "../layout";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,

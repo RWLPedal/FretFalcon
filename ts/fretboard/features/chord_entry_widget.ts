@@ -1,16 +1,16 @@
-// ts/fretboard/features/chord_entry_widget.ts
+﻿// ts/fretboard/features/chord_entry_widget.ts
 // Reusable CustomFieldController<string[]> wrapping ChordEntryPanel.
 // Used by ChordProgressionFeatureSpec and NearbyTriadsFeatureSpec.
 
 import type { CustomFieldController, CustomRenderContext } from '../../core/config/spec';
 import { ChordEntryPanel, ChordEntry, entryDisplayLabel } from './chord_entry_panel';
-import { DiatonicMode } from '../music_types';
+import { DiatonicMode } from '../../music/music_types';
 
 /**
  * Builds a custom field controller for chord sequence entry.
  *
- * @param diatonicOnly  true → values are degree index strings "0"–"6" (transposable);
- *                      false → values are absolute chord keys "C_MAJ" (free entry)
+ * @param diatonicOnly  true â†’ values are degree index strings "0"â€“"6" (transposable);
+ *                      false â†’ values are absolute chord keys "C_MAJ" (free entry)
  */
 export function buildChordEntryWidget(
   container: HTMLElement,
@@ -25,7 +25,7 @@ export function buildChordEntryWidget(
   const editBtn = document.createElement('button');
   editBtn.className = 'config-toggle-btn';
   editBtn.style.cssText = 'font-size:0.75rem;padding:1px 7px;';
-  editBtn.textContent = '✎ Edit';
+  editBtn.textContent = 'âœŽ Edit';
 
   container.appendChild(readonlyRow);
   container.appendChild(editBtn);
@@ -145,3 +145,4 @@ export function buildChordEntryWidget(
     },
   };
 }
+

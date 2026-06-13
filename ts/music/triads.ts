@@ -1,11 +1,11 @@
-﻿import { FretboardConfig, Fretboard } from "./fretboard";
+﻿import { FretboardConfig } from "../fretboard/fretboard_config";
+import { Fretboard, NoteRenderData, LineData } from "../fretboard/renderer";
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
   getIntervalLabel,
   START_PX,
-} from "./fretboard_utils";
-import { NoteRenderData, LineData } from "./fretboard";
+} from "../fretboard/fretboard_utils";
 
 export type TriadQuality = "Major" | "Minor" | "Diminished" | "Augmented";
 export type TriadInversion = "Root" | "1st" | "2nd";
@@ -574,3 +574,4 @@ export function getTriadNotesAndLinesForGroup(
 
   return { notes: allNotesForGroup, lines: allLinesForGroup };
 }
+

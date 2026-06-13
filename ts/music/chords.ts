@@ -783,7 +783,7 @@ export const mandola_chord_library: Record<string, Chord> = {
   G7: new Chord("G7", [2, 0, 3, 2], [2, 0, 3, 1], undefined, CT.DOM7, N.G),
 };
 
-import { InstrumentName } from "./fretboard";
+import { InstrumentName } from "../fretboard/instruments";
 
 export const CHORD_LIBRARIES: Partial<
   Record<InstrumentName, Record<string, Chord>>
@@ -895,3 +895,4 @@ export const chord_tones_library: Record<string, ChordToneEntry> = (() => {
   }
   return lib;
 })();
+

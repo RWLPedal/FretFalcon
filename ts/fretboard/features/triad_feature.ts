@@ -9,14 +9,14 @@
 } from "../../feature";
 import { BaseView } from "../../core/base_view";
 import { InstrumentFeature } from "../fretboard_base";
+import { FretboardConfig } from "../fretboard_config";
 import {
-  FretboardConfig,
   resolveTuning,
   STANDARD_TUNING,
   GUITAR_7_STANDARD_TUNING,
   GUITAR_8_STANDARD_TUNING,
   InstrumentName,
-} from "../fretboard";
+} from "../instruments";
 import { AppSettings } from "../../settings";
 import {
   NOTE_NAMES_FROM_A,
@@ -24,8 +24,8 @@ import {
   addHeader,
   clearAllChildren,
 } from "../fretboard_utils";
-import { planMultiFretboardGrid } from "../fretboard_layout";
-import { TriadQuality, getTriadNotesAndLinesForGroup } from "../triads";
+import { planMultiFretboardGrid } from "../layout";
+import { TriadQuality, getTriadNotesAndLinesForGroup } from "../../music/triads";
 import { FretboardView } from "../views/fretboard_view";
 import {
   DEFAULT_INSTRUMENT_SETTINGS,
@@ -36,8 +36,8 @@ import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { FieldCodec } from "../../core/config/spec";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
-import { ChordQuality } from "../music_types";
-import { scales } from "../scales";
+import { ChordQuality } from "../../music/music_types";
+import { scales } from "../../music/scales";
 
 // ─── Typed config ─────────────────────────────────────────────────────────────
 
@@ -429,3 +429,4 @@ export class TriadFeature extends InstrumentFeature {
     super.destroy?.();
   }
 }
+

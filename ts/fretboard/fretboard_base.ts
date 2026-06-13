@@ -1,11 +1,7 @@
 import { Feature, ConfigurationSchemaArg } from "../feature";
 import { View } from "../core/view";
-import {
-  FretboardConfig,
-  INSTRUMENTS,
-  InstrumentName,
-  resolveTuning,
-} from "./fretboard";
+import { FretboardConfig } from "./fretboard_config";
+import { INSTRUMENTS, InstrumentName, resolveTuning } from "./instruments";
 import { AppSettings } from "../settings";
 import {
   InstrumentSettings,

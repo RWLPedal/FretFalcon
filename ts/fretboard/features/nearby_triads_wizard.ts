@@ -1,16 +1,16 @@
-// ts/fretboard/features/nearby_triads_wizard.ts
-import { NoteRenderData, LineData } from '../fretboard';
-import { FretboardConfig } from '../fretboard';
+﻿// ts/fretboard/features/nearby_triads_wizard.ts
+import { NoteRenderData, LineData } from '../renderer';
+import { FretboardConfig } from '../fretboard_config';
 import { FretboardView } from '../views/fretboard_view';
 import {
   TriadVoicing, RankedVoicing,
   enumerateVoicings, rankVoicingsByTransitionCost,
-} from '../nearby_triads_algo';
-import { DiatonicMode } from '../music_types';
-import { CHORD_ROOTS, getRomansForMode, resolveAbsoluteChordKey } from '../chord_key_resolver';
+} from '../../music/nearby_triads_algo';
+import { DiatonicMode } from '../../music/music_types';
+import { CHORD_ROOTS, getRomansForMode, resolveAbsoluteChordKey } from '../../music/chord_key_resolver';
 import { ChordEntryPanel } from './chord_entry_panel';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface WizardInProgressState {
   step: 'entry' | 'voicing';
@@ -41,7 +41,7 @@ interface ChordSuggestion {
   inKey: boolean;
 }
 
-// ─── Chord name helpers ───────────────────────────────────────────────────────
+// â”€â”€â”€ Chord name helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SUFFIX_DISPLAY: Record<string, string> = {
   MAJ: '', MIN: 'm', DIM: 'dim', AUG: 'aug',
@@ -49,14 +49,14 @@ const SUFFIX_DISPLAY: Record<string, string> = {
 };
 
 const QUALITY_PARSE: Array<[RegExp, string]> = [
-  [/^(maj7|M7|△7|Δ7)$/i, 'MAJ7'],
+  [/^(maj7|M7|â–³7|Î”7)$/i, 'MAJ7'],
   [/^(m7|min7|-7)$/i,    'MIN7'],
-  [/^(dim7|°7)$/i,       'DIM7'],
+  [/^(dim7|Â°7)$/i,       'DIM7'],
   [/^(dom7|7)$/i,        'DOM7'],
-  [/^(dim|°)$/i,         'DIM'],
+  [/^(dim|Â°)$/i,         'DIM'],
   [/^(aug|\+)$/i,        'AUG'],
   [/^(m|min|-)$/i,       'MIN'],
-  [/^(maj|M|Δ|△)?$/i,    'MAJ'],
+  [/^(maj|M|Î”|â–³)?$/i,    'MAJ'],
 ];
 
 const ORDERED_SUFFIXES = ['MAJ', 'MIN', 'DIM', 'DOM7', 'MAJ7', 'MIN7', 'AUG'];
@@ -153,7 +153,7 @@ function voicingKey(v: TriadVoicing): string {
   return `${v.frets.join(',')}|${v.stringGroup.join(',')}`;
 }
 
-// ─── Ghost note / line builders ───────────────────────────────────────────────
+// â”€â”€â”€ Ghost note / line builders â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const PREV_FILL     = 'rgba(66, 133, 244, 0.45)';
 const PREV_STROKE   = 'rgba(66, 133, 244, 0.9)';
@@ -203,7 +203,7 @@ function buildTriadLines(
   return lines;
 }
 
-// ─── TriadsWizard ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ TriadsWizard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class TriadsWizard {
   private step: 'entry' | 'voicing' = 'entry';
@@ -337,7 +337,7 @@ export class TriadsWizard {
     }
   }
 
-  // ─── Step 1: chord entry ────────────────────────────────────────────────────
+  // â”€â”€â”€ Step 1: chord entry â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private _renderEntry(
     container: HTMLElement,
@@ -366,7 +366,7 @@ export class TriadsWizard {
     );
   }
 
-  // ─── Step 2: voicing selection ──────────────────────────────────────────────
+  // â”€â”€â”€ Step 2: voicing selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private _renderVoicing(
     container: HTMLElement,
@@ -382,12 +382,12 @@ export class TriadsWizard {
     wrap.style.cssText = 'display:flex;flex-direction:column;gap:8px;padding:4px 0;';
     container.appendChild(wrap);
 
-    // ── chord tab bar ─────────────────────────────────────────────────────────
+    // â”€â”€ chord tab bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const tabBar = document.createElement('div');
     tabBar.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;justify-content:center;';
     wrap.appendChild(tabBar);
 
-    // ── fretboard ─────────────────────────────────────────────────────────────
+    // â”€â”€ fretboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const canvasWrap = document.createElement('div');
     canvasWrap.style.cssText = 'display:flex;justify-content:center;';
     wrap.appendChild(canvasWrap);
@@ -397,34 +397,34 @@ export class TriadsWizard {
     }
     this.voicingFb.render(canvasWrap);
 
-    // ── chord label ───────────────────────────────────────────────────────────
+    // â”€â”€ chord label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const chordLabel = document.createElement('div');
     chordLabel.style.cssText = 'text-align:center;font-size:0.82rem;color:var(--clr-text-subtle,#888);';
     wrap.appendChild(chordLabel);
 
-    // ── status line ───────────────────────────────────────────────────────────
+    // â”€â”€ status line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const statusEl = document.createElement('div');
     statusEl.style.cssText = 'text-align:center;font-size:0.78rem;color:var(--clr-text-subtle,#888);min-height:1.2em;';
     wrap.appendChild(statusEl);
 
-    // ── bottom buttons ────────────────────────────────────────────────────────
+    // â”€â”€ bottom buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const btnRow = document.createElement('div');
     btnRow.style.cssText = 'display:flex;justify-content:space-between;gap:8px;margin-top:2px;';
     wrap.appendChild(btnRow);
 
     const backBtn = document.createElement('button');
     backBtn.className = 'button is-small';
-    backBtn.textContent = '← Edit chords';
+    backBtn.textContent = 'â† Edit chords';
     backBtn.addEventListener('click', onBack);
     btnRow.appendChild(backBtn);
 
     const applyBtn = document.createElement('button');
     applyBtn.className = 'button is-small is-primary';
-    applyBtn.textContent = 'Apply ✓';
+    applyBtn.textContent = 'Apply âœ“';
     applyBtn.addEventListener('click', onApply);
     btnRow.appendChild(applyBtn);
 
-    // ── helpers ───────────────────────────────────────────────────────────────
+    // â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const INVERSION_LABEL: Record<string, string> = { Root: 'Root pos.', '1st': '1st inv.', '2nd': '2nd inv.' };
 
     const updateStatus = () => {
@@ -433,16 +433,16 @@ export class TriadsWizard {
       if (c.seen) {
         const rv = c.rankedVoicings[c.selectedIndex];
         const inv = rv?.voicing ? (INVERSION_LABEL[rv.voicing.inversion] ?? rv.voicing.inversion) : '';
-        const cost = rv && rv.cost > 0 ? ` · cost ${rv.cost}` : '';
-        statusEl.textContent = `✓ ${inv}${cost} · click to unlock`;
+        const cost = rv && rv.cost > 0 ? ` Â· cost ${rv.cost}` : '';
+        statusEl.textContent = `âœ“ ${inv}${cost} Â· click to unlock`;
       } else if (this.hoveredVoicing) {
         const rv = c.rankedVoicings.find(r => r.voicing === this.hoveredVoicing);
         const inv = INVERSION_LABEL[this.hoveredVoicing.inversion] ?? this.hoveredVoicing.inversion;
-        const cost = rv && rv.cost > 0 ? ` · cost ${rv.cost}` : '';
+        const cost = rv && rv.cost > 0 ? ` Â· cost ${rv.cost}` : '';
         const rank = rv ? c.rankedVoicings.indexOf(rv) + 1 : '?';
-        statusEl.textContent = `${inv} · rank ${rank}/${c.rankedVoicings.length}${cost} · click to lock`;
+        statusEl.textContent = `${inv} Â· rank ${rank}/${c.rankedVoicings.length}${cost} Â· click to lock`;
       } else {
-        statusEl.textContent = `${c.rankedVoicings.length} voicings · hover to preview, click to lock`;
+        statusEl.textContent = `${c.rankedVoicings.length} voicings Â· hover to preview, click to lock`;
       }
     };
 
@@ -451,7 +451,7 @@ export class TriadsWizard {
       this.chords.forEach((c, i) => {
         const isSel = i === this.selectedIdx;
         const tab = document.createElement('button');
-        tab.title = c.roman ? `${c.roman} — ${c.display}` : c.display;
+        tab.title = c.roman ? `${c.roman} â€” ${c.display}` : c.display;
         tab.style.cssText =
           `background:${isSel ? 'var(--clr-accent,#5a9)' : 'var(--clr-btn,rgba(128,128,128,0.1))'};` +
           `color:${isSel ? '#fff' : 'inherit'};` +
@@ -506,8 +506,8 @@ export class TriadsWizard {
       const prevVoicing = prevC ? (prevC.rankedVoicings[prevC.selectedIndex]?.voicing ?? null) : null;
 
       // Sets used by the grey-outline pass:
-      //   activePositions  — positions occupied by the locked or hovered note (skip outline there)
-      //   prevPositions    — positions from the previous chord's locked voicing (grey fill = finger stays)
+      //   activePositions  â€” positions occupied by the locked or hovered note (skip outline there)
+      //   prevPositions    â€” positions from the previous chord's locked voicing (grey fill = finger stays)
       const activePositions = new Set<string>();
       const prevPositions   = new Set<string>();
       const addPos = (v: TriadVoicing, s: Set<string>) => {
@@ -533,8 +533,8 @@ export class TriadsWizard {
         }
       }
 
-      // 1. Current chord voicing positions — drawn first so ghost notes paint on top.
-      //    Positions occupied by the active (locked/hovered) note are skipped — those are
+      // 1. Current chord voicing positions â€” drawn first so ghost notes paint on top.
+      //    Positions occupied by the active (locked/hovered) note are skipped â€” those are
       //    drawn fully colored in steps 4/5 below.
       for (const [key, pos] of posMap) {
         if (activePositions.has(key)) continue;
@@ -549,7 +549,7 @@ export class TriadsWizard {
         });
       }
 
-      // 2. Next chord ghost + triad connecting lines — only when locked or actively hovering
+      // 2. Next chord ghost + triad connecting lines â€” only when locked or actively hovering
       if (this.selectedIdx < N - 1) {
         const nextC = this.chords[this.selectedIdx + 1];
         let nextVoicing: TriadVoicing | null = null;
@@ -565,7 +565,7 @@ export class TriadsWizard {
         }
       }
 
-      // 3. Previous chord ghost + triad connecting lines — rendered after next so it sits on top
+      // 3. Previous chord ghost + triad connecting lines â€” rendered after next so it sits on top
       if (prevVoicing) {
         notes.push(...buildGhostNotes(prevVoicing, 'transparent', PREV_STROKE));
         lines.push(...buildTriadLines(prevVoicing, fb, PREV_LINE, false));
@@ -604,7 +604,7 @@ export class TriadsWizard {
       if (prevC) {
         const s = document.createElement('span');
         s.style.color = PREV_STROKE;
-        s.textContent = `${prevC.display} ← `;
+        s.textContent = `${prevC.display} â† `;
         chordLabel.appendChild(s);
       }
       const curr = document.createElement('span');
@@ -613,14 +613,14 @@ export class TriadsWizard {
       if (this.selectedIdx < N - 1) {
         const s = document.createElement('span');
         s.style.color = NEXT_STROKE;
-        s.textContent = ` → ${this.chords[this.selectedIdx + 1].display}`;
+        s.textContent = ` â†’ ${this.chords[this.selectedIdx + 1].display}`;
         chordLabel.appendChild(s);
       }
 
       updateStatus();
     };
 
-    // ── Canvas mouse / click handling ─────────────────────────────────────────
+    // â”€â”€ Canvas mouse / click handling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const canvas = this.voicingFb.getCanvasElement();
     if (canvas) {
       const toCanvasCoords = (e: MouseEvent): [number, number] => {
@@ -675,13 +675,13 @@ export class TriadsWizard {
       };
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     this._activateChord(this.selectedIdx);
     renderTabs();
     updateFb();
   }
 
-  // ─── Hover helpers ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Hover helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Maps a string index to the 3-string group used for hover selection.
@@ -730,7 +730,7 @@ export class TriadsWizard {
     return null;
   }
 
-  // ─── Lifecycle ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   destroy(): void {
     this._voicingCanvasCleanup?.();
@@ -739,3 +739,4 @@ export class TriadsWizard {
     this.voicingFb = null;
   }
 }
+

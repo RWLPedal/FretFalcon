@@ -10,7 +10,8 @@ import {
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
 import { AppSettings } from "../../settings";
-import { NoteRenderData, FretboardConfig } from "../fretboard";
+import { NoteRenderData } from "../renderer";
+import { FretboardConfig } from "../fretboard_config";
 import {
   NOTE_NAMES_FROM_A,
   getKeyIndex,
@@ -21,7 +22,7 @@ import {
 } from "../fretboard_utils";
 import { FretboardColorScheme } from "../colors";
 import { FretboardView } from "../views/fretboard_view";
-import { planSingleFretboard } from "../fretboard_layout";
+import { planSingleFretboard } from "../layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
 import { featureTypeId } from "../../core/ids";
 import { stringCodec, enumCodec } from "../../core/config/codecs";

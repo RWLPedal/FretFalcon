@@ -1,9 +1,9 @@
-import { featurePanelModule, viewId } from '../module_types';
+﻿import { featurePanelModule, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
 import { TriadFeature } from '../../fretboard/features/triad_feature';
 import { SignalKind, KeyType } from '../../panels/link_types';
-import { ChordQuality } from '../../fretboard/music_types';
-import { scales } from '../../fretboard/scales';
+import { ChordQuality } from '../../music/music_types';
+import { scales } from '../../music/scales';
 
 function tonicIsMinor(scaleKey: string): boolean {
   const scale = (scales as any)[scaleKey];
@@ -50,3 +50,4 @@ export default featurePanelModule({
     ],
   },
 });
+

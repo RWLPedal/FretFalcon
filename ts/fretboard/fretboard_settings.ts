@@ -1,4 +1,4 @@
-﻿import { InstrumentName } from "./fretboard";
+﻿import { InstrumentName } from "./instruments";
 import { FretboardColorScheme } from './colors';
 
 export type FretboardLabelDisplay = "interval" | "note" | "none";

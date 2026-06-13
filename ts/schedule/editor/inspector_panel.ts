@@ -8,7 +8,7 @@ import {
 import { GROUP_COLOR_PALETTE, refreshGroupStats } from "./interval/group_row_ui";
 import { IntervalSettings } from "./interval/types";
 import { getNavEntries } from "../../reference_page/nav_registry";
-import { InstrumentName } from "../../fretboard/fretboard";
+import { InstrumentName } from "../../fretboard/instruments";
 import { getViewIcon, getViewIconByFeatureType } from "../../panels/panel_registry";
 
 // ─── View dropdown (sources from nav_sections) ────────────────────────────────

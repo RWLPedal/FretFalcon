@@ -1,5 +1,5 @@
-import { Scale } from "./scales"; // Import Scale type
-import { NoteName } from "./music_types";
+import { Scale } from "../music/scales";
+import { NoteName } from "../music/music_types";
 
 // Feature configuration constants
 export const START_PX = 35;

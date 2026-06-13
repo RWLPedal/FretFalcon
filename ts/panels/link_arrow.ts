@@ -1,9 +1,9 @@
-// ts/panels/link_arrow.ts
+﻿// ts/panels/link_arrow.ts
 // Owns a single SVG arrow group and its hover tooltip.
 // Extracted from LinkOverlay so metadata-aware rendering can live here.
 
 import { HandleSide, LinkRecord, SignalKind, SignalState, DriveSignal, SIGNAL_KIND_ICON, DiatonicMode } from './link_types';
-import { DIATONIC_MODE_LABELS } from '../fretboard/music_types';
+import { DIATONIC_MODE_LABELS } from '../music/music_types';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -15,7 +15,7 @@ export interface ArrowMeta {
   lastSignals: DriveSignal[];
 }
 
-// ─── SVG helpers (module-private) ────────────────────────────────────────────
+// â”€â”€â”€ SVG helpers (module-private) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function controlPoint(pt: { x: number; y: number }, side: HandleSide): { x: number; y: number } {
   // The lower the offset, the straighter the curve.
@@ -83,7 +83,7 @@ function buildIconBadges(
   return g;
 }
 
-// ─── Tooltip helpers ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Tooltip helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function signalValue(s: DriveSignal): string | null {
   if (s.kind === SignalKind.Groove) return `${Math.round(s.bpm)} BPM`;
@@ -99,7 +99,7 @@ function signalsByKind(signals: DriveSignal[], kind: SignalKind): { current: Dri
   return { current, next };
 }
 
-// ─── LinkArrow ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ LinkArrow â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class LinkArrow {
   readonly svgGroup: SVGGElement;
@@ -129,7 +129,7 @@ export class LinkArrow {
     this.mid   = bezierMidpoint(src, cp1, cp2, tgt);
     const d    = `M${src.x},${src.y} C${cp1.x},${cp1.y} ${cp2.x},${cp2.y} ${tgt.x},${tgt.y}`;
 
-    // ── SVG group ────────────────────────────────────────────────────────────
+    // â”€â”€ SVG group â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const g = document.createElementNS(SVG_NS, 'g') as SVGGElement;
     g.dataset.linkId = link.id;
     g.setAttribute('class', 'link-arrow-group');
@@ -156,13 +156,13 @@ export class LinkArrow {
     this.svgGroup = g;
     svg.appendChild(g);
 
-    // ── Tooltip ──────────────────────────────────────────────────────────────
+    // â”€â”€ Tooltip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'link-signal-tooltip';
 
     const closeBtn = document.createElement('button');
     closeBtn.className = 'link-signal-close-btn';
-    closeBtn.textContent = '×';
+    closeBtn.textContent = 'Ã—';
     closeBtn.title = 'Remove link';
     closeBtn.addEventListener('mousedown', (e) => {
       e.stopPropagation();
@@ -184,7 +184,7 @@ export class LinkArrow {
     this.tooltip.addEventListener('mouseleave', () => this.scheduleHide());
   }
 
-  // ── Hide timer helpers ────────────────────────────────────────────────────
+  // â”€â”€ Hide timer helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private scheduleHide(): void {
     this.hideTimer = setTimeout(() => {
@@ -197,7 +197,7 @@ export class LinkArrow {
     if (this.hideTimer) { clearTimeout(this.hideTimer); this.hideTimer = null; }
   }
 
-  // ── Tooltip rendering ─────────────────────────────────────────────────────
+  // â”€â”€ Tooltip rendering â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private showTooltip(): void {
     if (this.tooltip.classList.contains('is-visible')) return;
@@ -228,8 +228,8 @@ export class LinkArrow {
         row.className = 'link-signal-row link-signal-matched';
         const val = signalValue(current);
         row.textContent = val
-          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
-          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} â†’ ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
         this.tooltipContent.appendChild(row);
       }
 
@@ -238,15 +238,15 @@ export class LinkArrow {
         row.className = 'link-signal-row link-signal-matched link-signal-next';
         const val = signalValue(next);
         row.textContent = val
-          ? `${SIGNAL_KIND_ICON[kind]} ${kind} → ${val}`
-          : `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+          ? `${SIGNAL_KIND_ICON[kind]} ${kind} â†’ ${val}`
+          : `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
         this.tooltipContent.appendChild(row);
       }
 
       if (!current && !next) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-matched';
-        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
         this.tooltipContent.appendChild(row);
       }
     }
@@ -255,13 +255,13 @@ export class LinkArrow {
       for (const kind of emittedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-emitted-only';
-        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} →`;
+        row.textContent = `${SIGNAL_KIND_ICON[kind]} ${kind} â†’`;
         this.tooltipContent.appendChild(row);
       }
       for (const kind of acceptedOnly) {
         const row = document.createElement('div');
         row.className = 'link-signal-row link-signal-accepted-only';
-        row.textContent = `→ ${SIGNAL_KIND_ICON[kind]} ${kind}`;
+        row.textContent = `â†’ ${SIGNAL_KIND_ICON[kind]} ${kind}`;
         this.tooltipContent.appendChild(row);
       }
     }
@@ -274,7 +274,7 @@ export class LinkArrow {
     }
   }
 
-  // ── Lifecycle ────────────────────────────────────────────────────────────
+  // â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   destroy(): void {
     this.cancelHide();
@@ -282,3 +282,4 @@ export class LinkArrow {
     this.tooltip.remove();
   }
 }
+

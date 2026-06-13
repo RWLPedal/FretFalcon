@@ -1,11 +1,11 @@
-import { NOTE_NAMES_FROM_A } from "./fretboard_utils";
+﻿import { NOTE_NAMES_FROM_A } from "../fretboard/fretboard_utils";
 import { Chord, chord_library } from "./chords";
 import { ChordQuality, DiatonicMode } from "./music_types";
 import { scales } from "./scales";
 export { ChordQuality, DiatonicMode };
 
 // Map ChordQuality to the guitar chord library key suffix used by the fingering library.
-// Note: this format differs from chord_tones_library — guitar library keys use _MAJOR/_MINOR etc.
+// Note: this format differs from chord_tones_library â€” guitar library keys use _MAJOR/_MINOR etc.
 function qualityToGuitarSuffix(quality: ChordQuality): string {
   switch (quality) {
     case ChordQuality.Major:       return "_MAJOR";
@@ -69,3 +69,4 @@ export function getChordInKey(
   console.warn(`Could not find key in chord library for: ${fullChordName} (tried: ${variations.join(', ')})`);
   return { chordName: fullChordName, chordKey: null, quality: entry.quality };
 }
+

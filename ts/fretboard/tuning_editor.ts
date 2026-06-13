@@ -1,4 +1,4 @@
-import { Instrument, Tuning } from "./fretboard";
+import { Instrument, Tuning } from "./instruments";
 
 // Pitch-class semitones A=0
 const NOTE_NAMES = ["A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#"] as const;

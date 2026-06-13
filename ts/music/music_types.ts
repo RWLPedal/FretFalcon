@@ -1,4 +1,4 @@
-// ts/instrument/music_types.ts
+﻿// ts/music/music_types.ts
 // Shared music-theory enum types used across instrument features and view signals.
 
 export enum KeyType {
@@ -38,13 +38,13 @@ export const ALL_DIATONIC_MODES: DiatonicMode[] = [
   DiatonicMode.Locrian,
 ];
 
-// Shared by scales.ts and chord_key_resolver.ts — defined here to avoid circular imports.
+// Shared by scales.ts and chord_key_resolver.ts â€” defined here to avoid circular imports.
 export interface RomanEntry {
-  roman: string;        // e.g. "I", "ii", "vii°", "Imaj7"
-  degree: number;       // semitone offset from scale root (0–11)
+  roman: string;        // e.g. "I", "ii", "viiÂ°", "Imaj7"
+  degree: number;       // semitone offset from scale root (0â€“11)
   suffix: string;       // chord_tones_library suffix e.g. "MAJ", "MIN7", "DOM7"
   quality: ChordQuality;
-  degreeIndex: number;  // 0-based scale degree (0–6)
+  degreeIndex: number;  // 0-based scale degree (0â€“6)
 }
 
 export enum ChordQuality {
@@ -78,7 +78,7 @@ export enum NoteName {
   B      = 'B',
 }
 
-// 12 chromatic semitones, C-indexed (0=C), sharps only — matches MIDI convention.
+// 12 chromatic semitones, C-indexed (0=C), sharps only â€” matches MIDI convention.
 export const NOTE_NAMES: NoteName[] = [
   NoteName.C, NoteName.CSharp, NoteName.D, NoteName.DSharp,
   NoteName.E, NoteName.F, NoteName.FSharp, NoteName.G,
@@ -101,3 +101,4 @@ export const ROOT_NOTE_SPECS: ReadonlyArray<{ readonly key: string; readonly nam
     name: noteName,
     noteIndex,
   }));
+

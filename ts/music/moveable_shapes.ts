@@ -1,6 +1,6 @@
 ﻿import { Chord, ChordType, BarreSpec } from "./chords";
-import { InstrumentName, Tuning } from "./fretboard";
-import { getKeyIndex } from "./fretboard_utils";
+import { InstrumentName, Tuning } from "../fretboard/instruments";
+import { getKeyIndex } from "../fretboard/fretboard_utils";
 import type { NoteName } from "./music_types";
 import { NoteName as N } from "./music_types";
 
@@ -597,3 +597,4 @@ export function getEasiestMoveableShape(
     getMoveableShapes(instrumentName, chordName, tuning, chordType)[0] ?? null
   );
 }
+

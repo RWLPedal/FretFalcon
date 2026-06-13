@@ -1,14 +1,14 @@
 ﻿import { BaseView } from "../../core/base_view";
-import { Chord, ChordType } from "../chords";
+import { Chord, ChordType } from "../../music/chords";
 // Import Fretboard class and necessary types/enum from fretboard.ts
+import { FretboardConfig } from "../fretboard_config";
 import {
   Fretboard,
-  FretboardConfig,
   NoteRenderData,
   LineData,
   NoteIcon,
   BarreData,
-} from "../fretboard";
+} from "../renderer";
 import {
   START_PX,
   OPEN_NOTE_RADIUS_FACTOR,
@@ -19,7 +19,7 @@ import {
   addHeader, // Use for external title
   addCanvas,
 } from "../fretboard_utils";
-import { NoteName } from "../music_types";
+import { NoteName } from "../../music/music_types";
 import { ChordLabelDisplay } from "../fretboard_settings";
 
 /**

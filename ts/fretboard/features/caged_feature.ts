@@ -1,4 +1,4 @@
-/* ts/instrument/features/caged_feature.ts */
+﻿/* ts/instrument/features/caged_feature.ts */
 
 import {
   Feature,
@@ -10,11 +10,12 @@ import {
   UiComponentType,
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
-import { planSingleFretboard } from "../fretboard_layout";
+import { planSingleFretboard } from "../layout";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from "../fretboard_settings";
-import { Scale, scales, scale_names } from "../scales";
+import { Scale, scales, scale_names } from "../../music/scales";
 import { AppSettings } from "../../settings";
-import { NoteRenderData, PolygonData, Tuning, InstrumentName, STANDARD_TUNING } from "../fretboard";
+import { NoteRenderData, PolygonData } from "../renderer";
+import { Tuning, InstrumentName, STANDARD_TUNING } from "../instruments";
 import {
   getKeyIndex,
   NOTE_NAMES_FROM_A,
@@ -29,13 +30,13 @@ import { featureTypeId } from "../../core/ids";
 import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { FieldCodec, ConfigSpec } from "../../core/config/spec";
 import { SignalKind } from "../../panels/link_types";
-import { ChordQuality } from "../music_types";
+import { ChordQuality } from "../../music/music_types";
 
 // --- CAGED Definitions ---
 export type CagedShapeName = "C" | "A" | "G" | "E" | "D";
 type LabelDisplayType = "Note Name" | "Interval";
 
-// ─── Typed config ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Typed config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface CagedConfig {
   rootNote: string;
@@ -577,7 +578,7 @@ export class CagedFeature extends InstrumentFeature {
       return { ...renderData, opacity: active ? 1.0 : 0.25 };
     });
 
-    // Polygons: three emphasis levels —
+    // Polygons: three emphasis levels â€”
     //   default (no selection): slightly muted
     //   selected:               full emphasis
     //   unselected:             dimmed but still visible
@@ -640,3 +641,4 @@ export class CagedFeature extends InstrumentFeature {
     // Nothing to clean up beyond base class
   }
 }
+

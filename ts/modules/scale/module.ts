@@ -1,10 +1,10 @@
-import { featurePanelModule, viewId } from '../module_types';
+﻿import { featurePanelModule, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
 import { CORE_VIEW_IDS } from '../../core/ids';
 import { ScaleFeature } from '../../fretboard/features/scale_feature';
 import { SignalKind, DiatonicMode, KeyType, DriveSignal } from '../../panels/link_types';
-import { scales } from '../../fretboard/scales';
-import { ChordQuality } from '../../fretboard/music_types';
+import { scales } from '../../music/scales';
+import { ChordQuality } from '../../music/music_types';
 
 const SCALE_ID = viewId('instrument_scale');
 
@@ -94,3 +94,4 @@ export default featurePanelModule({
     ],
   },
 });
+

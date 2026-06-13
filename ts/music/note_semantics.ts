@@ -1,6 +1,6 @@
-// ts/fretboard/note_semantics.ts
+﻿// ts/music/note_semantics.ts
 
-import { getKeyIndex } from "./fretboard_utils";
+import { getKeyIndex } from "../fretboard/fretboard_utils";
 
 export type ChordFunction = 'CT' | 'T' | 'AV';
 export type PivotRole = 'PIVOT' | 'CURRENT_ONLY' | 'NEXT_ONLY';
@@ -10,20 +10,20 @@ export interface NoteSemantic {
   pivotRole?: PivotRole;         // present when currentChordSemitones + nextChordSemitones provided
 }
 
-/** Map of A-indexed absolute semitone (0–11) → semantic classification. */
+/** Map of A-indexed absolute semitone (0â€“11) â†’ semantic classification. */
 export type SemanticMap = Map<number, NoteSemantic>;
 
 export interface SemanticInput {
-  /** A-indexed absolute semitones (0–11) of all notes in the active scale. */
+  /** A-indexed absolute semitones (0â€“11) of all notes in the active scale. */
   scaleSemitones?: Set<number>;
-  /** A-indexed absolute semitones (0–11) of the current chord's tones. */
+  /** A-indexed absolute semitones (0â€“11) of the current chord's tones. */
   currentChordSemitones?: Set<number>;
-  /** A-indexed absolute semitones (0–11) of the next chord's tones. */
+  /** A-indexed absolute semitones (0â€“11) of the next chord's tones. */
   nextChordSemitones?: Set<number>;
 }
 
 /**
- * Purely visual rendering instructions — no semantic meaning in the field names.
+ * Purely visual rendering instructions â€” no semantic meaning in the field names.
  * Describes what to draw on top of a note, not why.
  */
 export interface NoteRenderAnnotation {
@@ -88,7 +88,7 @@ export function toRenderAnnotation(sem: NoteSemantic): NoteRenderAnnotation {
 
 /**
  * Converts an array of chord-tone note names (from chord_tones_library)
- * into a set of A-indexed absolute semitones (0–11).
+ * into a set of A-indexed absolute semitones (0â€“11).
  */
 export function chordToneNamesToSemitones(toneNames: string[]): Set<number> {
   const result = new Set<number>();
@@ -101,8 +101,9 @@ export function chordToneNamesToSemitones(toneNames: string[]): Set<number> {
 
 /**
  * Converts a scale's degree offsets (relative to its root) and the root's
- * A-indexed semitone into a set of absolute A-indexed semitones (0–11).
+ * A-indexed semitone into a set of absolute A-indexed semitones (0â€“11).
  */
 export function scaleSemitonesFromDegrees(rootSemitone: number, degrees: number[]): Set<number> {
   return new Set(degrees.map(d => (rootSemitone + d) % 12));
 }
+

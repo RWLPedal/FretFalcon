@@ -4,8 +4,8 @@ import {
   resolveChordRootNote,
   getRomansForMode,
   isMajorChordQuality,
-} from '../../../ts/fretboard/chord_key_resolver'
-import { ChordQuality, DiatonicMode } from '../../../ts/fretboard/music_types'
+} from '../../../ts/music/chord_key_resolver'
+import { ChordQuality, DiatonicMode } from '../../../ts/music/music_types'
 
 // ─── resolveAbsoluteChordKey ──────────────────────────────────────────────────
 

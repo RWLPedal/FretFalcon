@@ -1,10 +1,10 @@
-// ts/sounds/note_sounds.ts
+﻿// ts/sounds/note_sounds.ts
 // Library for dynamically playing musical notes as pure tones via Web Audio API.
 
 import { volumeManager } from './volume_manager';
-import { NoteName, NOTE_NAMES } from '../fretboard/music_types';
+import { NoteName, NOTE_NAMES } from '../music/music_types';
 
-export { NoteName, NOTE_NAMES } from '../fretboard/music_types';
+export { NoteName, NOTE_NAMES } from '../music/music_types';
 
 export type WaveType = 'sine' | 'square' | 'sawtooth' | 'triangle' | 'guitar';
 
@@ -28,7 +28,7 @@ export function getGuitarWave(ctx: AudioContext): PeriodicWave {
 export interface PlayNoteOptions {
   /** Duration in seconds (default: 0.5) */
   duration?: number;
-  /** Volume 0–1 (default: 0.5) */
+  /** Volume 0â€“1 (default: 0.5) */
   volume?: number;
   /** Oscillator waveform (default: 'sine') */
   wave?: WaveType;
@@ -65,7 +65,7 @@ export function noteToFrequency(note: NoteName, octave: number = 4): number {
 
 /**
  * Find the nearest note name and octave for a given frequency.
- * Returns the note name, octave, and how many cents sharp (+) or flat (–) the
+ * Returns the note name, octave, and how many cents sharp (+) or flat (â€“) the
  * frequency is from equal temperament.
  */
 export function frequencyToNote(freq: number): { note: NoteName; octave: number; cents: number } {
@@ -77,7 +77,7 @@ export function frequencyToNote(freq: number): { note: NoteName; octave: number;
   return { note: NOTE_NAMES[semitone], octave, cents };
 }
 
-// Shared AudioContext — reused across calls to avoid repeated warm-up latency.
+// Shared AudioContext â€” reused across calls to avoid repeated warm-up latency.
 let _ctx: AudioContext | null = null;
 
 function getContext(): AudioContext {
@@ -139,7 +139,7 @@ export function playFrequency(frequency: number, options: PlayNoteOptions = {}):
  * Play a note by name and octave.
  *
  * @param note    - Note name, e.g. 'C', 'F#', 'Bb'
- * @param octave  - Octave number (default 4 — middle octave, A4 = 440 Hz)
+ * @param octave  - Octave number (default 4 â€” middle octave, A4 = 440 Hz)
  * @param options - Playback options
  *
  * @example playNote('A', 4)              // 440 Hz sine, 0.5 s
@@ -247,7 +247,7 @@ export class SustainedNote {
     });
   }
 
-  /** Hard stop with no fade — use when the view is being destroyed. */
+  /** Hard stop with no fade â€” use when the view is being destroyed. */
   destroy(): void {
     this.unsubscribeVolume?.();
     this.unsubscribeVolume = null;
@@ -275,3 +275,4 @@ export class SustainedNote {
     }
   }
 }
+

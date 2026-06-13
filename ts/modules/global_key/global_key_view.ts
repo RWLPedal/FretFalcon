@@ -1,5 +1,5 @@
-import { BaseView } from '../../core/base_view';
-import { NOTE_NAMES, DiatonicMode, DIATONIC_MODE_LABELS, ALL_DIATONIC_MODES } from '../../fretboard/music_types';
+﻿import { BaseView } from '../../core/base_view';
+import { NOTE_NAMES, DiatonicMode, DIATONIC_MODE_LABELS, ALL_DIATONIC_MODES } from '../../music/music_types';
 import { emitEvent } from '../../core/events';
 
 export const GLOBAL_KEY_VIEW_ID = 'global_key';
@@ -84,3 +84,4 @@ export class GlobalKeyView extends BaseView {
     emitEvent(this.container, 'feature-state-changed', { rootNote: this.rootNote, scaleKey: this.scaleKey });
   }
 }
+

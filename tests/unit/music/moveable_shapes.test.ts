@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { getMoveableShapes, guitar_moveable_chord_library } from '../../../ts/fretboard/moveable_shapes'
-import { Chord, ChordType, chordsAreEquivalent, chord_library, ukulele_chord_library } from '../../../ts/fretboard/chords'
-import { STANDARD_TUNING, UKULELE_GCEA_TUNING, InstrumentName } from '../../../ts/fretboard/fretboard'
-import { NoteName } from '../../../ts/fretboard/music_types'
+import { getMoveableShapes, guitar_moveable_chord_library } from '../../../ts/music/moveable_shapes'
+import { Chord, ChordType, chordsAreEquivalent, chord_library, ukulele_chord_library } from '../../../ts/music/chords'
+import { STANDARD_TUNING, UKULELE_GCEA_TUNING, InstrumentName } from '../../../ts/fretboard/instruments'
+import { NoteName } from '../../../ts/music/music_types'
 
 // ---------------------------------------------------------------------------
 // getMoveableShapes — guitar

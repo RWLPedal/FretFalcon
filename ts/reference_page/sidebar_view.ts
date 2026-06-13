@@ -8,7 +8,7 @@ import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../core/widgets/theme_swatch_picker';
 import { getNavSectionGroups } from './nav_registry';
-import { InstrumentName } from '../fretboard/fretboard';
+import { InstrumentName } from '../fretboard/instruments';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 import { getViewIcon } from '../panels/panel_registry';
 

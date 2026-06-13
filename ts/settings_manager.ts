@@ -5,7 +5,7 @@ import {
   INSTRUMENTS,
   InstrumentName,
   getAvailableTunings,
-} from "./fretboard/fretboard";
+} from "./fretboard/instruments";
 import { TuningEditor } from "./fretboard/tuning_editor";
 import { ThemeSwatchPicker } from "./core/widgets/theme_swatch_picker";
 import { Theme } from "./theme_manager";

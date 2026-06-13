@@ -1,4 +1,4 @@
-// ts/views/backing_track_view.ts
+﻿// ts/views/backing_track_view.ts
 import { BaseView } from "../core/base_view";
 import { ValueSlider } from "../core/widgets/value_slider";
 import { SignalKind, StrumSignal } from "../panels/link_types";
@@ -9,7 +9,7 @@ import {
   ALL_DRUM_SOUND_IDS,
   playDrumSound,
 } from "../sounds/drum_sounds";
-import { chord_tones_library } from "../fretboard/chords";
+import { chord_tones_library } from "../music/chords";
 import { volumeManager } from "../sounds/volume_manager";
 import { getGuitarWave } from "../sounds/note_sounds";
 import {
@@ -17,12 +17,12 @@ import {
   getRomansForMode,
   resolveAbsoluteChordKey,
   isMajorChordQuality,
-} from "../fretboard/chord_key_resolver";
+} from "../music/chord_key_resolver";
 import {
   DiatonicMode,
   ALL_DIATONIC_MODES,
   DIATONIC_MODE_LABELS,
-} from "../fretboard/music_types";
+} from "../music/music_types";
 import {
   ToneVoice,
   ALL_TONE_VOICES,
@@ -30,10 +30,10 @@ import {
   buildVoiceChain,
 } from "../sounds/tone_voices";
 
-// ─── Data types ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Data types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type TrackData = (DrumSoundId | null)[];
-type BassStep = number | null; // 1–7 scale degree, null = rest
+type BassStep = number | null; // 1â€“7 scale degree, null = rest
 
 interface DrumPreset {
   name: string;
@@ -42,13 +42,13 @@ interface DrumPreset {
   tracks: TrackData[];
   bassTrack: BassStep[];
   numMeasures?: 4 | 8 | 12;
-  measureChords?: (number | null)[]; // scale degree numbers 1–7, null = rest
+  measureChords?: (number | null)[]; // scale degree numbers 1â€“7, null = rest
   progMode?: DiatonicMode;
-  swingAmount?: number; // 0.0–0.5; undefined = leave slider untouched
+  swingAmount?: number; // 0.0â€“0.5; undefined = leave slider untouched
   toneVoice?: ToneVoice;
 }
 
-// ─── Chord tone frequency helper ───────────────────────────────────────────────
+// â”€â”€â”€ Chord tone frequency helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function chordToneFreq(toneName: string, octave: number): number {
   const idx = CHORD_ROOTS.indexOf(toneName);
@@ -56,9 +56,9 @@ function chordToneFreq(toneName: string, octave: number): number {
   return 440 * Math.pow(2, (idx + 12 * (octave - 4)) / 12);
 }
 
-// ─── Bass helpers ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Bass helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// Semitone offsets for each scale degree (1–7) in major and natural minor
+// Semitone offsets for each scale degree (1â€“7) in major and natural minor
 const MAJOR_SCALE_SEMITONES = [0, 2, 4, 5, 7, 9, 11];
 const MINOR_SCALE_SEMITONES = [0, 2, 3, 5, 7, 8, 10];
 
@@ -72,7 +72,7 @@ const BASS_DEGREE_COLORS: Record<number, string> = {
   7: "var(--dm-palette-7)",
 };
 
-// ─── Constants ─────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const NUM_TRACKS = 4;
 const DEFAULT_TRACK_SOUNDS: DrumSoundId[] = ["kick", "snare", "hihat", "crash"];
@@ -87,7 +87,7 @@ const SOUND_COLORS: Record<DrumSoundId, string> = {
   shaker: "var(--dm-palette-7)",
 };
 
-// ─── Preset library ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Preset library â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function emptyTracks(steps: number): TrackData[] {
   return Array.from({ length: NUM_TRACKS }, () => new Array(steps).fill(null));
@@ -96,7 +96,7 @@ function emptyBass(steps: number): BassStep[] {
   return new Array(steps).fill(null);
 }
 
-// measureChords values are scale degree numbers (1=tonic, 4=subdominant, 5=dominant…)
+// measureChords values are scale degree numbers (1=tonic, 4=subdominant, 5=dominantâ€¦)
 // Presets assume Ionian (Major) by default; mode changes re-express the same degrees.
 const PRESETS: DrumPreset[] = [
   {
@@ -213,7 +213,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 4, 1, 5, 1, 4, 2, 5],
   },
   {
-    // Ambient: sparse crash/open-hihat pulse with gentle shaker breath, slow Aeolian i–bVI–bVII progression
+    // Ambient: sparse crash/open-hihat pulse with gentle shaker breath, slow Aeolian iâ€“bVIâ€“bVII progression
     name: "Ambient",
     bpm: 62,
     steps: 16,
@@ -416,7 +416,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 1, 1, 1, 4, 4, 1, 1, 5, 4, 1, 5],
   },
   {
-    // Bluegrass: fast boom-chick with rolling 8th hihats and dotted shaker pulse, I–IV–V–I
+    // Bluegrass: fast boom-chick with rolling 8th hihats and dotted shaker pulse, Iâ€“IVâ€“Vâ€“I
     name: "Bluegrass",
     bpm: 165,
     steps: 16,
@@ -518,7 +518,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 4, 5, 1],
   },
   {
-    // Desert/stoner rock: slow heavy kick with syncopated doublet, open hihats on offbeats, Dorian i–bVII–IV
+    // Desert/stoner rock: slow heavy kick with syncopated doublet, open hihats on offbeats, Dorian iâ€“bVIIâ€“IV
     name: "Desert Rock",
     bpm: 72,
     steps: 16,
@@ -621,7 +621,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 7, 4, 1],
   },
   {
-    // Dream Pop: sparse kick, steady hihats, Lydian I–II shimmer
+    // Dream Pop: sparse kick, steady hihats, Lydian Iâ€“II shimmer
     name: "Dream Pop",
     bpm: 95,
     steps: 16,
@@ -823,7 +823,7 @@ const PRESETS: DrumPreset[] = [
     measureChords: [1, 5, 6, 4],
   },
   {
-    // Folk rock: straight kick/snare with offbeat hihats and shaker strum texture, I–V–vi–IV
+    // Folk rock: straight kick/snare with offbeat hihats and shaker strum texture, Iâ€“Vâ€“viâ€“IV
     name: "Folk Rock",
     bpm: 112,
     steps: 16,
@@ -1533,13 +1533,13 @@ const PRESETS: DrumPreset[] = [
   },
 ];
 
-// ─── View ──────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ View â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class BackingTrackView extends BaseView {
   // Drum playback state
   private bpm: number = 120;
   private steps: number = 16;
-  private swingAmount: number = 0; // 0.0–0.5 fraction of stepMs to delay odd steps
+  private swingAmount: number = 0; // 0.0â€“0.5 fraction of stepMs to delay odd steps
   private stepMs: number = 0;
   private tracks: TrackData[] = [];
   private bassTrack: BassStep[] = [];
@@ -1555,8 +1555,8 @@ export class BackingTrackView extends BaseView {
   private numMeasures: 4 | 8 | 12 = 4;
   private progRootNote: string = "C";
   private progMode: DiatonicMode = DiatonicMode.Ionian;
-  private selectedChordDeg: number | null = null; // 1–7, null = erase tool
-  private measureChords: (number | null)[] = []; // degree numbers 1–7, null = rest
+  private selectedChordDeg: number | null = null; // 1â€“7, null = erase tool
+  private measureChords: (number | null)[] = []; // degree numbers 1â€“7, null = rest
   private currentMeasure: number = -1;
 
   // Layout
@@ -1685,7 +1685,7 @@ export class BackingTrackView extends BaseView {
     return null;
   }
 
-  // ─── View interface ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ View interface â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   render(container: HTMLElement): void {
     this.container = container;
@@ -1730,7 +1730,7 @@ export class BackingTrackView extends BaseView {
         return;
       }
       if (signal.kind !== SignalKind.Groove) return;
-      // Ignore per-beat ticks — only sync BPM from config updates (no beat field)
+      // Ignore per-beat ticks â€” only sync BPM from config updates (no beat field)
       if (signal.beat !== undefined) return;
       const clamped = Math.max(30, Math.min(200, Math.round(signal.bpm)));
       if (clamped === this.bpm) return;
@@ -1775,7 +1775,7 @@ export class BackingTrackView extends BaseView {
     super.destroy();
   }
 
-  // ─── Header (two-row layout with large play button) ──────────────────────────
+  // â”€â”€â”€ Header (two-row layout with large play button) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private buildHeader(): HTMLElement {
     const header = document.createElement("div");
@@ -1817,7 +1817,7 @@ export class BackingTrackView extends BaseView {
     presetWrap.classList.add("select", "is-small");
     const sel = document.createElement("select");
     this.presetSelectEl = sel;
-    sel.appendChild(new Option("Preset…", ""));
+    sel.appendChild(new Option("Presetâ€¦", ""));
     PRESETS.forEach((p, i) => {
       const opt = new Option(p.name, String(i));
       if (i === this.activePresetIndex) opt.selected = true;
@@ -1967,7 +1967,7 @@ export class BackingTrackView extends BaseView {
     return row;
   }
 
-  // ─── Grid ────────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private rebuildGrid(): void {
     if (!this.gridEl) return;
@@ -1988,7 +1988,7 @@ export class BackingTrackView extends BaseView {
   private rebuildGridHorizontal(): void {
     if (!this.gridEl) return;
 
-    // Header row — beat numbers
+    // Header row â€” beat numbers
     const headerRow = document.createElement("div");
     headerRow.classList.add("dm-row", "dm-header-row");
     headerRow.appendChild(this.makeTrackLabel(""));
@@ -2035,7 +2035,7 @@ export class BackingTrackView extends BaseView {
     this.gridEl.style.gap = "2px";
     this.gridEl.style.alignItems = "stretch";
 
-    // ── Header row ─────────────────────────────────────────────────
+    // â”€â”€ Header row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     this.gridEl.appendChild(this.makeVHeaderCell("Chord"));
     this.gridEl.appendChild(this.makeVHeaderCell(""));
     for (let t = 0; t < NUM_TRACKS; t++) {
@@ -2047,7 +2047,7 @@ export class BackingTrackView extends BaseView {
     }
     this.gridEl.appendChild(this.makeVBassHeader());
 
-    // ── Chord measure cells (col 1, spanning spm rows each) ────────
+    // â”€â”€ Chord measure cells (col 1, spanning spm rows each) â”€â”€â”€â”€â”€â”€â”€â”€
     for (let m = 0; m < this.numMeasures; m++) {
       const cell = document.createElement("div");
       cell.classList.add("dm-v-measure-cell");
@@ -2059,7 +2059,7 @@ export class BackingTrackView extends BaseView {
       this.gridEl.appendChild(cell);
     }
 
-    // ── Step rows ──────────────────────────────────────────────────
+    // â”€â”€ Step rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     for (let t = 0; t < NUM_TRACKS; t++) this.cellEls.push([]);
 
     for (let s = 0; s < this.steps; s++) {
@@ -2256,7 +2256,7 @@ export class BackingTrackView extends BaseView {
     return wrap;
   }
 
-  // ─── Cell width / beat-alignment helpers ─────────────────────────────────────
+  // â”€â”€â”€ Cell width / beat-alignment helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private measureCellWidth(): number {
     return 416 / this.numMeasures - 2;
@@ -2267,7 +2267,7 @@ export class BackingTrackView extends BaseView {
     return m % (this.numMeasures / 4) === 0;
   }
 
-  // ─── Cell appearance ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Cell appearance â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private updateCellAppearance(
     cell: HTMLElement,
@@ -2336,7 +2336,7 @@ export class BackingTrackView extends BaseView {
     });
   }
 
-  // ─── Click handlers ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Click handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private handleCellClick(track: number, step: number): void {
     const selectedSound = this.trackSounds[track];
@@ -2386,7 +2386,7 @@ export class BackingTrackView extends BaseView {
     this.dispatchStateChange();
   }
 
-  // ─── Chord tool options ───────────────────────────────────────────────────────
+  // â”€â”€â”€ Chord tool options â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private rebuildChordToolOptions(): void {
     if (!this.chordToolSelectEl) return;
@@ -2404,15 +2404,15 @@ export class BackingTrackView extends BaseView {
       const chordName = chordKey
         ? (chord_tones_library[chordKey]?.name ?? entry.roman)
         : entry.roman;
-      const degNum = entry.degreeIndex + 1; // 1–7
-      const opt = new Option(`${entry.roman} — ${chordName}`, String(degNum));
+      const degNum = entry.degreeIndex + 1; // 1â€“7
+      const opt = new Option(`${entry.roman} â€” ${chordName}`, String(degNum));
       if (degNum === this.selectedChordDeg) opt.selected = true;
       this.chordToolSelectEl.appendChild(opt);
     }
     this.refreshAllMeasureCells();
   }
 
-  // ─── Bars count ───────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Bars count â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private setNumMeasures(n: 4 | 8 | 12): void {
     if (this.numMeasures === n) return;
@@ -2421,7 +2421,7 @@ export class BackingTrackView extends BaseView {
 
     // All valid counts (4, 8, 12) divide evenly into 4 beat-groups.
     // Remap group-by-group: if a group is internally uniform, broadcast its value
-    // to the new group size. This makes transitions reversible (4↔8↔12).
+    // to the new group size. This makes transitions reversible (4â†”8â†”12).
     const oldGroupSize = oldLen / 4;
     const newGroupSize = n / 4;
     const newChords: (number | null)[] = new Array(n).fill(null);
@@ -2451,7 +2451,7 @@ export class BackingTrackView extends BaseView {
     this.dispatchStateChange();
   }
 
-  // ─── Steps / preset / state changes ──────────────────────────────────────────
+  // â”€â”€â”€ Steps / preset / state changes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private applyPreset(preset: DrumPreset): void {
     this.activePresetIndex = PRESETS.indexOf(preset);
@@ -2595,7 +2595,7 @@ export class BackingTrackView extends BaseView {
     }
   }
 
-  // ─── Playback engine ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Playback engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private startPlayback(): void {
     if (this.isPlaying) return;
@@ -2777,7 +2777,7 @@ export class BackingTrackView extends BaseView {
     this.playBtn.classList.toggle("is-light", !this.isPlaying);
   }
 
-  // ─── Bass playback ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Bass playback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private playBassStep(bassDeg: number): void {
     let rootName = this.progRootNote;
@@ -2832,7 +2832,7 @@ export class BackingTrackView extends BaseView {
     }
   }
 
-  // ─── Strum chord ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Strum chord â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private playStrumChord(signal: StrumSignal): void {
     if (signal.action === "rest" || signal.action === "air") return;
@@ -2927,7 +2927,7 @@ export class BackingTrackView extends BaseView {
     }
   }
 
-  // ─── Chord drone ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Chord drone â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private playChordDrone(chordDeg: number): void {
     const entry = getRomansForMode(this.progMode)[chordDeg - 1];
@@ -2980,7 +2980,7 @@ export class BackingTrackView extends BaseView {
     }
   }
 
-  // ─── Export / Import ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Export / Import â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private getState(): object {
     return {
@@ -3027,3 +3027,4 @@ export class BackingTrackView extends BaseView {
     emitEvent(this.container, 'feature-state-changed', this.getState() as FeatureStateChangedDetail);
   }
 }
+

@@ -1,4 +1,4 @@
-// ts/fretboard/features/nearby_triads_feature.ts
+﻿// ts/fretboard/features/nearby_triads_feature.ts
 import {
   Feature,
   FeatureSpec,
@@ -15,10 +15,11 @@ import { InstrumentFeature } from '../fretboard_base';
 import { emitEvent } from '../../core/events';
 import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
-import { DiatonicMode, DIATONIC_MODE_LABELS } from '../music_types';
-import { InstrumentName, FretboardConfig } from '../fretboard';
-import { NoteRenderData, LineData } from '../fretboard';
-import { planSingleFretboard } from '../fretboard_layout';
+import { DiatonicMode, DIATONIC_MODE_LABELS } from '../../music/music_types';
+import { InstrumentName } from '../instruments';
+import { FretboardConfig } from '../fretboard_config';
+import { NoteRenderData, LineData } from '../renderer';
+import { planSingleFretboard } from '../layout';
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';
 import {
   NOTE_NAMES_FROM_A,
@@ -31,8 +32,8 @@ import {
   getRomansForMode,
   resolveAbsoluteChordKey,
   CHORD_ROOTS,
-} from '../chord_key_resolver';
-import { chord_tones_library } from '../chords';
+} from '../../music/chord_key_resolver';
+import { chord_tones_library } from '../../music/chords';
 import { FretboardView } from '../views/fretboard_view';
 import {
   TriadVoicing,
@@ -41,11 +42,11 @@ import {
   rankVoicingsByTransitionCost,
   transitionCost,
   parseChordKey,
-} from '../nearby_triads_algo';
+} from '../../music/nearby_triads_algo';
 import { SignalKind, SignalState, ChordSignal, KeySignal } from '../../panels/link_types';
 import { TriadsWizard, WizardChord, WizardInProgressState, getChordRomanInKey } from './nearby_triads_wizard';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type NearbyTriadsMode = 'reference' | 'compact';
 
@@ -92,12 +93,12 @@ interface ChordSlot {
   columnEl: HTMLElement | null;  // outer column div in reference mode, for active-chord highlight
 }
 
-// ─── Note-building helpers ────────────────────────────────────────────────────
+// â”€â”€â”€ Note-building helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const NEXT_CHORD_STROKE = 'rgba(60, 60, 60, 0.75)';
 const VOICE_LINE_COLOR  = 'rgba(160, 160, 160, 0.55)';
 
-// No fillColor → fretboard uses the user's configured color scheme (interval or note).
+// No fillColor â†’ fretboard uses the user's configured color scheme (interval or note).
 // Pass fillColor only when the color itself is the distinguishing signal (compact mode).
 function buildCurrentNotes(voicing: TriadVoicing, fillColor?: string): NoteRenderData[] {
   return voicing.stringGroup.map((strIdx, i) => {
@@ -147,7 +148,7 @@ function buildVoicingLines(
     const dx = to.x - from.x;
     const dy = to.y - from.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < r * 2) continue; // circles overlap — skip
+    if (dist < r * 2) continue; // circles overlap â€” skip
     const nx = dx / dist;
     const ny = dy / dist;
     lines.push({
@@ -159,7 +160,7 @@ function buildVoicingLines(
   return lines;
 }
 
-// ─── Feature ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Feature â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   static readonly typeName       = 'Nearby Triads';
@@ -183,7 +184,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private readonly targetFret: number | null;
   private readonly targetString: number | null;
 
-  // Sized for one slot in reference mode (full-width ÷ N); equals fretboardConfig in other modes.
+  // Sized for one slot in reference mode (full-width Ã· N); equals fretboardConfig in other modes.
   private slotFretboardConfig: FretboardConfig;
   private _zoomMultiplier: number = 1.2;
   private _slotsNeedLayout: boolean = false;
@@ -251,7 +252,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const N = Math.max(this.progDegrees.length, this.progChordKeys.length);
       const gap = 8;      // matches slotsRow CSS gap
       const slotPad = 8;  // col's padding:4px left + 4px right
-      const overhead = 42;       // label + 2×gap(2px) + nav controls + 2×vpad(2px) per slot row
+      const overhead = 42;       // label + 2Ã—gap(2px) + nav controls + 2Ã—vpad(2px) per slot row
       const rowMargin = 8;       // slotsRow margin-top (fixed, not per-row)
       if (maxWidth && maxCanvasHeight) {
         this.slotFretboardConfig = NearbyTriadsFeature.bestSlotConfig(
@@ -275,7 +276,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     }
   }
 
-  // ─── Slot management ─────────────────────────────────────────────────────────
+  // â”€â”€â”€ Slot management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private initSlots(): void {
     this.slots = [];
@@ -369,7 +370,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     slot.previewIndex = 0;
   }
 
-  // ─── Fretboard note updates ───────────────────────────────────────────────────
+  // â”€â”€â”€ Fretboard note updates â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private updateSlotFretboard(slot: ChordSlot, slotIndex: number): void {
     const voicing = slot.rankedVoicings[slot.selectedIndex]?.voicing;
@@ -394,9 +395,9 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     if (!slot.counterEl) return;
     const total = slot.rankedVoicings.length;
     const idx   = slot.previewIndex;
-    if (total === 0) { slot.counterEl.textContent = '—'; return; }
+    if (total === 0) { slot.counterEl.textContent = 'â€”'; return; }
     const ranked = slot.rankedVoicings[idx];
-    const costStr = ranked && ranked.cost > 0 ? ` · ${ranked.cost}` : '';
+    const costStr = ranked && ranked.cost > 0 ? ` Â· ${ranked.cost}` : '';
     slot.counterEl.textContent = `${idx + 1}/${total}${costStr}`;
   }
 
@@ -405,7 +406,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     if (!this.wizardApplied) { this.compactFretboardView.clearMarkings(); return; }
     const fb = this.compactFretboardView.getFretboard();
 
-    // Resolve CSS palette vars → actual rgb() strings for canvas use.
+    // Resolve CSS palette vars â†’ actual rgb() strings for canvas use.
     // Canvas 2D fillStyle/strokeStyle cannot use var() or oklch(), so we
     // assign each var as a CSS color property on a temp element and read
     // back the browser-resolved rgb() string.
@@ -487,7 +488,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     // Set notes first, then lines. Both calls queue a rAF redraw, but since
     // JS is single-threaded, both setNotes() and setLines() complete before
-    // any rAF fires — so the first rAF already sees both data sets.
+    // any rAF fires â€” so the first rAF already sees both data sets.
     this.compactFretboardView.setNotes(notes);
     this.compactFretboardView.setLines(lines);
   }
@@ -504,7 +505,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     return resolved;
   }
 
-  // ─── Header text ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Header text â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private buildHeaderText(): string {
     const modeLabel = DIATONIC_MODE_LABELS[this.diatonicMode] ?? this.diatonicMode;
@@ -513,16 +514,16 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         const roman = getChordRomanInKey(ck, this.rootNote, this.diatonicMode);
         return roman ?? (chord_tones_library[ck]?.name ?? ck);
       });
-      return `${names.join(' – ')} in ${this.rootNote} ${modeLabel}`;
+      return `${names.join(' â€“ ')} in ${this.rootNote} ${modeLabel}`;
     }
     const romans = getRomansForMode(this.diatonicMode);
     const progression = this.progDegrees
       .map(d => romans[d - 1]?.roman ?? String(d))
-      .join(' – ');
+      .join(' â€“ ');
     return `${progression} in ${this.rootNote} ${modeLabel}`;
   }
 
-  // ─── render() ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ render() â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   render(container: HTMLElement): void {
     // Clean up any existing listeners
@@ -544,7 +545,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const header = addHeader(container, this.buildHeaderText());
     header.classList.add('feature-main-title');
 
-    // Driven toggle button — hidden until a link-status-changed event fires with hasIncomingLinks
+    // Driven toggle button â€” hidden until a link-status-changed event fires with hasIncomingLinks
     const drivenBtn = document.createElement('button');
     drivenBtn.className = 'button is-small';
     drivenBtn.textContent = 'Driven Mode';
@@ -565,7 +566,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         if (!this.drivenFretboardView) {
           this.drivenFretboardView = new FretboardView(this.fretboardConfig, 15);
         }
-        drivenBtn.textContent = '← Back';
+        drivenBtn.textContent = 'â† Back';
         this.renderDriven(contentArea);
         this.attachDriveSignalListener(contentArea);
       } else {
@@ -611,14 +612,14 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     renderContent();
   }
 
-  // ─── Reference mode ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Reference mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private renderReference(container: HTMLElement): void {
     // Lazy layout: if maxWidth was unknown at construction, compute correct slot dims
     // from the actual container width now that the DOM is available.
     // If the container is not yet in the DOM (clientWidth === 0, which happens when
-    // FloatingViewWrapper calls render() before appendChild), fall back to 420px —
-    // the descriptor's defaultWidth — so slots are not created at full default size.
+    // FloatingViewWrapper calls render() before appendChild), fall back to 420px â€”
+    // the descriptor's defaultWidth â€” so slots are not created at full default size.
     if (this._slotsNeedLayout) {
       const cs = getComputedStyle(container);
       let w = (container.clientWidth || container.offsetWidth)
@@ -650,7 +651,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     if (this.slots.length === 0) {
       const placeholder = document.createElement('div');
       placeholder.style.cssText = 'font-size:0.82rem;color:var(--clr-text-subtle,#888);text-align:center;padding:16px 0;';
-      placeholder.textContent = 'No chords configured — add chords in the settings above.';
+      placeholder.textContent = 'No chords configured â€” add chords in the settings above.';
       container.appendChild(placeholder);
       return;
     }
@@ -667,7 +668,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       // Chord label
       const label = document.createElement('div');
       label.style.cssText = 'font-weight:bold;font-size:0.85rem;text-align:center;';
-      label.textContent = `${slot.roman} — ${slot.chordName}`;
+      label.textContent = `${slot.roman} â€” ${slot.chordName}`;
       col.appendChild(label);
 
       // Canvas container
@@ -698,7 +699,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       return btn;
     };
 
-    const prevBtn = mkNavBtn('‹');
+    const prevBtn = mkNavBtn('â€¹');
     prevBtn.addEventListener('click', () => {
       if (!nextSlot.rankedVoicings.length) return;
       nextSlot.previewIndex = (nextSlot.previewIndex - 1 + nextSlot.rankedVoicings.length) % nextSlot.rankedVoicings.length;
@@ -709,7 +710,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     counter.style.cssText = 'min-width:58px;text-align:center;';
     nextSlot.counterEl = counter;
 
-    const nextBtn = mkNavBtn('›');
+    const nextBtn = mkNavBtn('â€º');
     nextBtn.addEventListener('click', () => {
       if (!nextSlot.rankedVoicings.length) return;
       nextSlot.previewIndex = (nextSlot.previewIndex + 1) % nextSlot.rankedVoicings.length;
@@ -717,7 +718,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     });
 
     const lockBtn = document.createElement('button');
-    lockBtn.textContent = '✓';
+    lockBtn.textContent = 'âœ“';
     lockBtn.title = 'Lock in this voicing for ' + nextSlot.roman;
     lockBtn.style.cssText = 'background:none;border:none;padding:0 4px;font-size:0.8rem;cursor:pointer;color:var(--clr-accent,#5a9);opacity:0.85;line-height:1;';
     lockBtn.addEventListener('click', () => {
@@ -738,7 +739,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     return wrap;
   }
 
-  // ─── Compact mode ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Compact mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private renderCompact(container: HTMLElement, reRender: () => void): void {
     if (!this.compactFretboardView) return;
@@ -794,7 +795,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const editBtn = document.createElement('button');
     editBtn.className = 'button is-small';
     editBtn.style.cssText = 'align-self:flex-end;margin-right:4px;font-size:0.75rem;';
-    editBtn.textContent = '✎ Edit chords & voicings';
+    editBtn.textContent = 'âœŽ Edit chords & voicings';
     editBtn.addEventListener('click', () => {
       this.wizardActive = true;
       // Reset wizard so it re-initializes from current applied state
@@ -851,7 +852,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     return legend;
   }
 
-  // ─── Driven mode ─────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Driven mode â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private renderDriven(container: HTMLElement): void {
     const wrap = document.createElement('div');
@@ -860,7 +861,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     const status = document.createElement('div');
     status.style.cssText = 'font-size:0.8rem;color:var(--clr-text-subtle,#888);';
-    status.textContent = 'Waiting for backing track signal…';
+    status.textContent = 'Waiting for backing track signalâ€¦';
     this.drivenStatusEl = status;
     wrap.appendChild(status);
 
@@ -905,7 +906,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     if (!this.drivenCurrentKey) {
       this.drivenFretboardView.clearMarkings();
-      if (this.drivenStatusEl) this.drivenStatusEl.textContent = 'No chord — rest';
+      if (this.drivenStatusEl) this.drivenStatusEl.textContent = 'No chord â€” rest';
       return;
     }
 
@@ -938,13 +939,13 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       const parsed   = parseChordKey(this.drivenCurrentKey);
       const nextParsed = this.drivenNextKey ? parseChordKey(this.drivenNextKey) : null;
       const curr = parsed ? `${parsed.rootNote} ${parsed.quality}` : this.drivenCurrentKey;
-      const next = nextParsed ? `${nextParsed.rootNote} ${nextParsed.quality}` : (this.drivenNextKey ?? '—');
+      const next = nextParsed ? `${nextParsed.rootNote} ${nextParsed.quality}` : (this.drivenNextKey ?? 'â€”');
       const cost = ranked[0]?.cost ?? 0;
       this.drivenStatusEl.textContent = `Current: ${curr} | Next: ${next}${this.drivenLastVoicing ? ` | cost: ${cost}` : ''}`;
     }
   }
 
-  // ─── Active-chord highlight ───────────────────────────────────────────────────
+  // â”€â”€â”€ Active-chord highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   private updateSlotHighlights(): void {
     for (const slot of this.slots) {
@@ -954,7 +955,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     }
   }
 
-  // ─── Wizard persistence (survives feature recreation on config change) ───────
+  // â”€â”€â”€ Wizard persistence (survives feature recreation on config change) â”€â”€â”€â”€â”€â”€â”€
 
   private _loadFromLocalStorage(): NTWizardPersisted | null {
     try {
@@ -1010,17 +1011,17 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const p = domState ?? this._loadFromLocalStorage();
 
     if (this.progChordKeys.length > 0) {
-      // Config has chord keys — treat them as the authoritative chord list.
+      // Config has chord keys â€” treat them as the authoritative chord list.
       const savedKeys = p?.chords.map(c => c.chordKey) ?? [];
       const chordsMatch = savedKeys.length === this.progChordKeys.length &&
         savedKeys.every((k, i) => k === this.progChordKeys[i]);
 
       if (chordsMatch && p) {
-        // Exact match — use saved state to preserve voicings and dismissed flag.
+        // Exact match â€” use saved state to preserve voicings and dismissed flag.
         this.wizardDismissed = p.dismissed;
         this.wizardApplied = this._restoreWizardApplied(p.chords);
       } else {
-        // Config changed — reconcile: use config chord list, preserve voicings for unchanged chords.
+        // Config changed â€” reconcile: use config chord list, preserve voicings for unchanged chords.
         const savedMap = new Map((p?.chords ?? []).map(c => [c.chordKey, c]));
         const reconciledChords: NTWizardPersisted['chords'] = this.progChordKeys.map(ck => {
           const saved = savedMap.get(ck);
@@ -1033,7 +1034,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         this._persistWizardState(false);
       }
     } else if (p) {
-      // No config chords — use wizard's saved state.
+      // No config chords â€” use wizard's saved state.
       this.wizardDismissed = p.dismissed;
       if (p.chords.length > 0) {
         this.wizardApplied = this._restoreWizardApplied(p.chords);
@@ -1044,7 +1045,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   /**
    * Re-enumerate and re-rank voicings with the current targetFret.
    * Seen chords: find the same physical voicing in the new ranking (by frets+strings key).
-   * Unseen chords: use index 0 — cheapest under the new cost function.
+   * Unseen chords: use index 0 â€” cheapest under the new cost function.
    */
   private _restoreWizardApplied(
     saved: NTWizardPersisted['chords']
@@ -1076,7 +1077,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     return result;
   }
 
-  // ─── Lifecycle ────────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Lifecycle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   destroy?(): void {
     if (this.drivenSignalContainer && this.drivenSignalHandler) {
@@ -1104,7 +1105,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     super.destroy?.();
   }
 
-  // ─── Layout helpers ──────────────────────────────────────────────────────────
+  // â”€â”€â”€ Layout helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   /**
    * Finds the column count (1..N) that maximises canvas area for the N-slot
@@ -1145,7 +1146,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     return planSingleFretboard(base, bestW || undefined, bestH || undefined, zoom, 15);
   }
 
-  // ─── Config schema ────────────────────────────────────────────────────────────
+  // â”€â”€â”€ Config schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
   static getConfigurationSchema(): ConfigurationSchema {
     const displayArg: ConfigurationSchemaArg = {
@@ -1211,7 +1212,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const ntMode: NearbyTriadsMode =
       displayStr === 'compact' ? 'compact' : 'reference';
 
-    // Remaining args after the first 3 are degree index strings ("0"–"6"), a target fret ("fret:N"), or a target string ("string:N").
+    // Remaining args after the first 3 are degree index strings ("0"â€“"6"), a target fret ("fret:N"), or a target string ("string:N").
     const targetFretStr = config.slice(3).find(s => /^fret:\d+$/.test(s));
     const targetFret = targetFretStr ? parseInt(targetFretStr.slice(5), 10) : null;
 
@@ -1221,7 +1222,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     // New format: absolute chord keys (ChordEntryWidget diatonicOnly=false)
     const chordKeyStrings = config.slice(3).filter(s => /^[A-G][b#]?_[A-Z0-9]+$/.test(s));
-    // Legacy format: 0-based degree index strings "0"–"6"
+    // Legacy format: 0-based degree index strings "0"â€“"6"
     const degreeStrings = config.slice(3).filter(s => /^\d$/.test(s));
 
     let progChordKeys: string[];
@@ -1250,7 +1251,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   }
 }
 
-// ─── FeatureSpec ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ FeatureSpec â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface NearbyTriadsConfig {
   rootNote: string;
@@ -1394,3 +1395,4 @@ export const NearbyTriadsFeatureSpec: FeatureSpec<NearbyTriadsConfig> = {
     );
   },
 };
+

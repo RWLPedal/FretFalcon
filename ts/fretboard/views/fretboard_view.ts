@@ -1,11 +1,11 @@
 ﻿import { BaseView } from "../../core/base_view";
+import { FretboardConfig } from "../fretboard_config";
 import {
   Fretboard,
-  FretboardConfig,
   NoteRenderData,
   LineData,
   PolygonData,
-} from "../fretboard"; // Import types from fretboard.ts
+} from "../renderer";
 import { addCanvas, START_PX } from "../fretboard_utils";
 
 /**

@@ -19,14 +19,14 @@ import {
   getAvailableRoots,
   getAvailableChordTypes,
   findChordByRootAndType,
-} from "../chords";
-import type { NoteName } from "../music_types";
+} from "../../music/chords";
+import type { NoteName } from "../../music/music_types";
 import { AppSettings } from "../../settings";
 import { ChordDiagramView } from "../views/chord_diagram_view";
 import { MoveableToggleView } from "../views/moveable_toggle_view";
-import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../moveable_shapes";
-import { resolveTuning, InstrumentName } from "../fretboard";
-import { planChordDiagramGrid } from "../fretboard_layout";
+import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../../music/moveable_shapes";
+import { resolveTuning, InstrumentName } from "../instruments";
+import { planChordDiagramGrid } from "../layout";
 import { addHeader, clearAllChildren } from "../fretboard_utils";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS, ChordLabelDisplay } from "../fretboard_settings";
 import { featureTypeId } from "../../core/ids";
@@ -363,3 +363,4 @@ export class ChordFeature extends InstrumentFeature {
     }
   }
 }
+

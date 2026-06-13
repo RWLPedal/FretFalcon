@@ -1,7 +1,7 @@
-// ts/fretboard/nearby_triads_algo.ts
-import { FretboardConfig } from './fretboard';
+﻿// ts/fretboard/nearby_triads_algo.ts
+import { FretboardConfig } from '../fretboard/fretboard_config';
 import { TriadQuality, TriadInversion, TRIAD_SHAPE_CATALOG, catalogGroupForIntervalPattern } from './triads';
-import { NOTE_NAMES_FROM_A, getKeyIndex, getIntervalLabel } from './fretboard_utils';
+import { NOTE_NAMES_FROM_A, getKeyIndex, getIntervalLabel } from '../fretboard/fretboard_utils';
 
 export interface TriadVoicing {
   chordKey: string;
@@ -183,3 +183,4 @@ export function rankVoicingsByTransitionCost(
     .map(v => ({ voicing: v, cost: transitionCost(from, v) + targetCost(v) }))
     .sort((a, b) => a.cost - b.cost || neckPosition(a.voicing) - neckPosition(b.voicing));
 }
+

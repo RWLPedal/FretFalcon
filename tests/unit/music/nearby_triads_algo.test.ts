@@ -4,7 +4,7 @@ import {
   transitionCost,
   rankVoicingsByTransitionCost,
   TriadVoicing,
-} from '../../../ts/fretboard/nearby_triads_algo'
+} from '../../../ts/music/nearby_triads_algo'
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

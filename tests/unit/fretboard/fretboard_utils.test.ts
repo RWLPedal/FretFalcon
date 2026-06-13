@@ -6,8 +6,8 @@ import {
   getNotesInScale,
   NOTE_NAMES_FROM_A,
 } from '../../../ts/fretboard/fretboard_utils'
-import { scales } from '../../../ts/fretboard/scales'
-import { NoteName } from '../../../ts/fretboard/music_types'
+import { scales } from '../../../ts/music/scales'
+import { NoteName } from '../../../ts/music/music_types'
 
 // A-indexed semitone positions (0=A, 3=C, 7=E, etc.)
 describe('getKeyIndex', () => {

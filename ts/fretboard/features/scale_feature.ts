@@ -1,4 +1,4 @@
-import {
+﻿import {
   Feature,
   FeatureSpec,
   FeatureContext,
@@ -8,9 +8,9 @@ import {
   UiComponentType,
 } from "../../feature";
 import { InstrumentFeature } from "../fretboard_base";
-import { Scale, scale_names, scales } from "../scales";
+import { Scale, scale_names, scales } from "../../music/scales";
 import { AppSettings } from "../../settings";
-import { NoteRenderData } from "../fretboard";
+import { NoteRenderData } from "../renderer";
 import {
   getKeyIndex,
   NOTE_NAMES_FROM_A,
@@ -20,7 +20,7 @@ import {
   clearAllChildren,
 } from "../fretboard_utils";
 import { FretboardView } from "../views/fretboard_view";
-import { planSingleFretboard } from "../fretboard_layout";
+import { planSingleFretboard } from "../layout";
 import {
   InstrumentSettings,
   DEFAULT_INSTRUMENT_SETTINGS,
@@ -30,7 +30,7 @@ import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
 
-// ─── Typed config ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Typed config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export interface ScaleConfig {
   scaleName: string;
@@ -355,3 +355,4 @@ export class ScaleFeature extends InstrumentFeature {
     container.appendChild(titleRow);
   }
 }
+

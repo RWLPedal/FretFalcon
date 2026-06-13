@@ -1,13 +1,13 @@
-// Privileged: uses drive.broadcast = true (Global Key broadcast mechanism).
+﻿// Privileged: uses drive.broadcast = true (Global Key broadcast mechanism).
 // LinkManager reads the broadcast viewId from drive_registry instead of
-// a constructor-injected string — CORE_VIEW_IDS.GlobalKey can now be removed.
+// a constructor-injected string â€” CORE_VIEW_IDS.GlobalKey can now be removed.
 
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
 import { GlobalKeyView } from './global_key_view';
 import { SignalKind, KeySignal, ChordSignal, DiatonicMode, KeyType } from '../../panels/link_types';
-import { scales } from '../../fretboard/scales';
-import { ChordQuality } from '../../fretboard/music_types';
+import { scales } from '../../music/scales';
+import { ChordQuality } from '../../music/music_types';
 
 const GLOBAL_KEY_ID = viewId('global_key');
 
@@ -59,3 +59,4 @@ const module: ViewModule = {
 };
 
 export default module;
+

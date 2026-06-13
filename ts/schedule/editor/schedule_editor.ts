@@ -24,7 +24,7 @@ import { DragDropManager } from "./drag_drop_manager";
 import { KeyboardShortcutManager } from "./keyboard_shortcut_manager";
 import { ScheduleBuilder } from "./schedule_builder";
 import { InspectorPanel } from "./inspector_panel";
-import { InstrumentName } from "../../fretboard/fretboard";
+import { InstrumentName } from "../../fretboard/instruments";
 import { refreshGroupStats } from "./interval/group_row_ui";
 
 enum EditorMode {

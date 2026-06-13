@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { Scale, scales } from '../../../ts/fretboard/scales'
-import { ChordQuality } from '../../../ts/fretboard/music_types'
+import { Scale, scales } from '../../../ts/music/scales'
+import { ChordQuality } from '../../../ts/music/music_types'
 
 // ─── Scale.getChordQualityAt ──────────────────────────────────────────────────
 
