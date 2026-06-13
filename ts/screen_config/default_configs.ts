@@ -112,8 +112,9 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       viewState: {
         featureTypeName: "MultiLayerFretboard",
         config: [
+          "true",
+          "chord|driven_next|var(--dm-palette-1)|none",
           "chord|driven|var(--dm-palette-2)|none",
-          "chord|driven_next|none|var(--dm-palette-4)",
           "scale|driven|driven|var(--dm-palette-3)|none",
         ],
       },
@@ -207,20 +208,20 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       instanceId: "fv-1",
       viewId: "drum_machine",
       viewState: {
-        bpm: 63,
+        bpm: 108,
         steps: 16,
         swingAmount: 0,
         numMeasures: 8,
         progRootNote: "C",
         progMode: "MAJOR",
-        measureChords: [1, 1, 5, 5, 6, 6, 4, 4],
+        measureChords: [1, 1, 2, 2, 5, 5, 6, 6],
         tracks: [
-          ["kick", null, null, null, null, null, "kick", null, "kick", null, null, null, null, null, null, null],
+          ["kick", null, null, null, null, null, null, null, "kick", null, null, null, null, null, null, null],
           [null, null, null, null, "snare", null, null, null, null, null, null, null, "snare", null, null, null],
           ["hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null, "hihat", null],
-          ["crash", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null, "shaker", null],
+          ["crash", null, null, null, null, null, "shaker", null, null, null, null, null, "shaker", null, null, null],
         ],
-        bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, 7, null],
+        bassTrack: [1, null, null, null, null, null, null, null, 5, null, null, null, null, null, null, null],
         trackSounds: ["kick", "snare", "hihat", "crash"],
       },
     },
@@ -229,7 +230,7 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       viewId: "instrument_nearby_triads",
       viewState: {
         featureTypeName: "Nearby Triads",
-        config: ["C", "MAJOR", "reference", "0", "4", "5", "3"],
+        config: ["C", "MAJOR", "reference", "fret:5", "none", "0", "1", "4", "5"],
       },
     },
     "fv-5": {
@@ -238,6 +239,8 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       viewState: {
         featureTypeName: "MultiLayerFretboard",
         config: [
+          "true",
+          "chord|driven_next|var(--dm-palette-1)|none",
           "chord|driven|var(--dm-palette-2)|none",
           "scale|driven|driven|var(--dm-palette-3)|none",
         ],

@@ -280,7 +280,7 @@ export class CircleOfFifthsView extends BaseView {
 
     container.appendChild(view);
 
-    this.cofResizeObserver = new ResizeObserver(() => this._applySvgSize());
+    this.cofResizeObserver = new ResizeObserver(() => requestAnimationFrame(() => this._applySvgSize()));
     this.cofResizeObserver.observe(container);
 
     this.listen(container, 'drive-signal', (e: Event) => {

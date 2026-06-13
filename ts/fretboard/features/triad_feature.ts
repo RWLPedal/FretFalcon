@@ -73,7 +73,7 @@ const triadConfigSpec: ConfigSpec<TriadConfig> = {
     label: 'Qualities',
     codec: stringArrayCodec as FieldCodec<TriadQuality[]>,
     ui: { kind: 'toggleButtons', options: TRIAD_QUALITIES.map(v => ({ value: v, label: v })) },
-    defaultValue: ['Major', 'Minor'],
+    defaultValue: ['Major'],
     drivable: {
       kinds: [SignalKind.Key, SignalKind.Chord],
       transparent: true,

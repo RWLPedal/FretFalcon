@@ -205,6 +205,7 @@ export class FormBuilder<C> {
       };
       let customCtrl: CustomFieldController;
       customCtrl = ui.render(control, ctx);
+      if (cv.mode === 'literal') customCtrl.setValue(cv.value);
       widget = {
         root,
         getValue: (): ConfigValue<unknown> => ({ mode: 'literal', value: customCtrl.getValue() }),

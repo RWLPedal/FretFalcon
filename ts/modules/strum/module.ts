@@ -1,21 +1,21 @@
-import { ViewModule, ViewContext, viewId } from '../module_types';
-import { NavSection } from '../../core/ids';
-import { StrumView, StrumViewState } from './strum_view';
-import { AudioController } from '../../audio_controller';
-import { SignalKind, GrooveSignal } from '../../panels/link_types';
+import { ViewModule, ViewContext, viewId } from "../module_types";
+import { NavSection } from "../../core/ids";
+import { StrumView, StrumViewState } from "./strum_view";
+import { AudioController } from "../../audio_controller";
+import { SignalKind, GrooveSignal } from "../../panels/link_types";
 
-const STRUM_ID = viewId('strum_view');
+const STRUM_ID = viewId("strum_view");
 
 const module: ViewModule = {
   id: STRUM_ID,
   panel: {
-    displayName: 'Strum',
-    icon: 'music_note',
-    defaultSize: { width: 520, height: 160 },
+    displayName: "Strum",
+    icon: "music_note",
+    defaultSize: { width: 470, height: 160 },
   },
   nav: {
     section: NavSection.PracticeTools,
-    label: 'Strum',
+    label: "Strum",
   },
   drive: {
     sources: [
@@ -23,13 +23,13 @@ const module: ViewModule = {
         viewId: STRUM_ID,
         emittedKinds: [SignalKind.Groove, SignalKind.Strum, SignalKind.Play],
         extractSignals(detail: any) {
-          if (typeof detail?.bpm !== 'number') return [];
+          if (typeof detail?.bpm !== "number") return [];
           const grooveSignal: GrooveSignal = {
             kind: SignalKind.Groove,
             bpm: detail.bpm,
             timeSig: detail?.timeSig ?? { beats: 4, division: 4 },
             swing: detail?.swing ?? 0,
-            beat: typeof detail?.beat === 'number' ? detail.beat : undefined,
+            beat: typeof detail?.beat === "number" ? detail.beat : undefined,
           };
           return [grooveSignal];
         },
@@ -37,18 +37,18 @@ const module: ViewModule = {
     ],
     targets: [
       {
-        featureTypeName: 'Strum',
+        featureTypeName: "Strum",
         viewId: STRUM_ID,
-        argName: 'BPM',
-        label: 'BPM (from linked groove source)',
+        argName: "BPM",
+        label: "BPM (from linked groove source)",
         acceptedKinds: [SignalKind.Groove],
         resolveValue: () => null,
       },
       {
-        featureTypeName: 'Strum',
+        featureTypeName: "Strum",
         viewId: STRUM_ID,
-        argName: 'Play',
-        label: 'Play/stop (from linked source)',
+        argName: "Play",
+        label: "Play/stop (from linked source)",
         acceptedKinds: [SignalKind.Play],
         resolveValue: () => null,
       },
@@ -56,12 +56,15 @@ const module: ViewModule = {
   },
   createView(_ctx: ViewContext, state?: unknown) {
     const audioController = new AudioController(
-      document.querySelector('#intro-end-sound') as HTMLAudioElement,
-      document.querySelector('#interval-end-sound') as HTMLAudioElement,
-      document.querySelector('#metronome-sound') as HTMLAudioElement,
-      document.querySelector('#metronome-accent-sound') as HTMLAudioElement,
+      document.querySelector("#intro-end-sound") as HTMLAudioElement,
+      document.querySelector("#interval-end-sound") as HTMLAudioElement,
+      document.querySelector("#metronome-sound") as HTMLAudioElement,
+      document.querySelector("#metronome-accent-sound") as HTMLAudioElement,
     );
-    return new StrumView(state as Partial<StrumViewState> | undefined, audioController);
+    return new StrumView(
+      state as Partial<StrumViewState> | undefined,
+      audioController,
+    );
   },
 };
 

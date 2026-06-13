@@ -383,8 +383,10 @@ export class FloatingViewWrapper {
           emitEvent(this.contentElement, 'wrapper-user-resized', { width: w, height: h }, { bubbles: false });
         }
       });
-    } else {
-      // Auto-size to canvas content after the element is in the DOM
+    } else if (!this._defaultHeight) {
+      // Auto-size to canvas content after the element is in the DOM.
+      // Skipped when _defaultHeight is set — notifyDefaultDimensions() already
+      // fires wrapper-user-resized synchronously with the correct height.
       requestAnimationFrame(() => this._autoSizeToContent(false));
     }
 
