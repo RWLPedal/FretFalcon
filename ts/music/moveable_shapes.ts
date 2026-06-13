@@ -57,6 +57,16 @@ export const guitar_moveable_chord_library: Chord[] = [
     0,
     N.E,
   ),
+  Chord.template(
+    "F-Shape",
+    [-1, -1, 3, 2, 1, 0],
+    [-1, -1, 3, 2, 1, 0],
+    [],
+    ChordType.MAJ7,
+    2,
+    N.F,
+    3,
+  ),
   // Finger 1 covers E and G strings at root fret; 2 and 3 step up on A and D.
   Chord.template(
     "E-Shape",
@@ -116,6 +126,47 @@ export const guitar_moveable_chord_library: Chord[] = [
     ChordType.MAJ7,
     1,
     N.A,
+  ),
+
+  Chord.template(
+    "Shape",
+    [0, 2, 0, 0, 0, 2],
+    [1, 3, 1, 1, 1, 4],
+    [{ fret: 0, stringStart: 0, stringEnd: 5 }],
+    ChordType.MIN9,
+    0,
+    N.A,
+  ),
+
+  Chord.template(
+    "Shape",
+    [-1, 2, 0, 2, 2, -1],
+    [-1, 1, 0, 2, 3, -1],
+    [],
+    ChordType.MIN9,
+    4,
+    N.A,
+  ),
+  Chord.template(
+    "A-Shape",
+    [1, 0, 2, 0, -1, -1],
+    [2, 1, 3, 1, -1, -1],
+    [{ fret: 0, stringStart: 1, stringEnd: 3 }],
+    ChordType.MAJ9,
+    0,
+    N.E,
+    1,
+  ),
+
+  Chord.template(
+    "Shape",
+    [-1, 1, 0, 2, 1, -1],
+    [-1, 2, 1, 4, 3, -1],
+    [],
+    ChordType.MAJ9,
+    1,
+    N.D,
+    1,
   ),
   // No barre: D at +1, G at +2, B at +1 (D and B share fret but aren't adjacent).
   Chord.template(
@@ -597,4 +648,3 @@ export function getEasiestMoveableShape(
     getMoveableShapes(instrumentName, chordName, tuning, chordType)[0] ?? null
   );
 }
-

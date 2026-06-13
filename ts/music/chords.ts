@@ -14,6 +14,8 @@ export enum ChordType {
   DOM7 = "Dom 7",
   MAJ7 = "Major 7",
   MIN7 = "Minor 7",
+  MAJ9 = "Major 9",
+  MIN9 = "Minor 9",
   SUS2 = "Sus2",
   SUS4 = "Sus4",
   ADD9 = "Add9",
@@ -29,6 +31,8 @@ export const CHORD_TYPE_SORT_ORDER: ChordType[] = [
   ChordType.DOM7,
   ChordType.MAJ7,
   ChordType.MIN7,
+  ChordType.MAJ9,
+  ChordType.MIN9,
   ChordType.SUS2,
   ChordType.SUS4,
   ChordType.ADD9,
@@ -866,8 +870,8 @@ const _CHORD_TYPES: _ChordTypeSpec[] = [
   //{ key: 'HDIM7',   name: 'Half-Dim 7',    intervals: [0, 3, 6, 10] },
   //{ key: 'MINMAJ7', name: 'Minor-Maj 7',   intervals: [0, 3, 7, 11] },
   //{ key: 'DOM9',    name: 'Dom 9',         intervals: [0, 4, 7, 10, 14] },
-  //{ key: 'MAJ9',    name: 'Major 9',       intervals: [0, 4, 7, 11, 14] },
-  //{ key: 'MIN9',    name: 'Minor 9',       intervals: [0, 3, 7, 10, 14] },
+  { key: "MAJ9", name: "Major 9", intervals: [0, 4, 7, 11, 14] },
+  { key: "MIN9", name: "Minor 9", intervals: [0, 3, 7, 10, 14] },
   { key: "ADD9", name: "Add 9", intervals: [0, 4, 7, 14] },
   { key: "MINOR_ADD9", name: "Minor Add 9", intervals: [0, 3, 7, 14] },
   //{ key: 'MADD9',   name: 'Minor Add 9',   intervals: [0, 3, 7, 14] },
@@ -895,4 +899,3 @@ export const chord_tones_library: Record<string, ChordToneEntry> = (() => {
   }
   return lib;
 })();
-

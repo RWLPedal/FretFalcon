@@ -169,7 +169,9 @@ export class ChordDiagramView extends BaseView {
             if (
               intervalLabel === "2" &&
               (this.chord.chordType === ChordType.ADD9 ||
-                this.chord.chordType === ChordType.MINOR_ADD9)
+                this.chord.chordType === ChordType.MINOR_ADD9 ||
+                this.chord.chordType === ChordType.MAJ9 ||
+                this.chord.chordType === ChordType.MIN9)
             ) {
               intervalLabel = "9";
             }

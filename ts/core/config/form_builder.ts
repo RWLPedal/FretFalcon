@@ -379,8 +379,15 @@ export class FormBuilder<C> {
     parent: HTMLElement,
     ui: Extract<import('./spec').UiControl, { kind: 'toggleButtons' }>,
   ): FieldWidget<unknown> {
+    // Single-select when the field's default is a plain string (enumCodec fields like chord display).
+    // Multi-select when the default is an array (stringArrayCodec fields like scale highlights).
+    const isSingleSelect = !Array.isArray(field.defaultValue);
+
+    const initValue = initialCv.mode === 'literal' ? initialCv.value : field.defaultValue;
     const currentSelection = new Set<string>(
-      initialCv.mode === 'literal' && Array.isArray(initialCv.value) ? (initialCv.value as string[]) : []
+      Array.isArray(initValue)
+        ? (initValue as string[])
+        : (isSingleSelect && typeof initValue === 'string' ? [initValue] : [])
     );
     const buttonsDiv = el('div', { class: 'toggle-buttons-wrap' });
     buttonsDiv.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;';
@@ -396,16 +403,24 @@ export class FormBuilder<C> {
       if (isAdvanced) btn.style.display = 'none';
       if (currentSelection.has(value)) btn.classList.add('is-active');
       btn.addEventListener('click', () => {
-        btn.classList.toggle('is-active');
-        const arr = this.getCurrentToggleValues(key);
-        const pos = arr.indexOf(value);
-        if (btn.classList.contains('is-active')) {
-          if (pos === -1) arr.push(value);
+        if (isSingleSelect) {
+          buttonsDiv.querySelectorAll<HTMLButtonElement>('button[data-value]').forEach(b => {
+            b.classList.toggle('is-active', b === btn);
+          });
+          (this.config as any)[key] = { mode: 'literal', value };
+          this.fireChange();
         } else {
-          if (pos !== -1) arr.splice(pos, 1);
+          btn.classList.toggle('is-active');
+          const arr = this.getCurrentToggleValues(key);
+          const pos = arr.indexOf(value);
+          if (btn.classList.contains('is-active')) {
+            if (pos === -1) arr.push(value);
+          } else {
+            if (pos !== -1) arr.splice(pos, 1);
+          }
+          (this.config as any)[key] = { mode: 'literal', value: arr };
+          this.fireChange();
         }
-        (this.config as any)[key] = { mode: 'literal', value: arr };
-        this.fireChange();
       });
       return btn;
     };
@@ -437,23 +452,41 @@ export class FormBuilder<C> {
 
     return {
       root: parent.parentElement!,
-      getValue: () => ({ mode: 'literal', value: this.getCurrentToggleValues(key) }),
+      getValue: () => {
+        if (isSingleSelect) {
+          const activeBtn = buttonsDiv.querySelector<HTMLButtonElement>('button.is-active');
+          return { mode: 'literal', value: activeBtn?.dataset.value ?? field.defaultValue };
+        }
+        return { mode: 'literal', value: this.getCurrentToggleValues(key) };
+      },
       setValue: (cv: ConfigValue<unknown>) => {
         if (cv.mode !== 'literal') return;
-        const vals = Array.isArray(cv.value) ? (cv.value as string[]) : [];
         const btns = buttonsDiv.querySelectorAll<HTMLButtonElement>('button[data-value]');
-        btns.forEach(btn => {
-          const v = btn.dataset.value ?? '';
-          const resolved = vals.some(sv => sv === v) ? v : null;
-          btn.classList.toggle('is-active', resolved !== null);
-        });
-        (this.config as any)[key] = { mode: 'literal', value: vals };
+        if (isSingleSelect) {
+          const v = typeof cv.value === 'string' ? cv.value : '';
+          btns.forEach(btn => btn.classList.toggle('is-active', btn.dataset.value === v));
+          (this.config as any)[key] = cv;
+        } else {
+          const vals = Array.isArray(cv.value) ? (cv.value as string[]) : [];
+          btns.forEach(btn => btn.classList.toggle('is-active', vals.includes(btn.dataset.value ?? '')));
+          (this.config as any)[key] = { mode: 'literal', value: vals };
+        }
       },
       setDrivenVisible: () => {},
       autoSelectDriven: () => {},
       applyDrivenValue: () => {},
       applyDrivenNextValue: () => {},
       setTransparentValue: (values: string[]): boolean => {
+        if (isSingleSelect) {
+          const newVal = values[0] ?? '';
+          const cv = this.config[key];
+          const current = cv.mode === 'literal' && typeof (cv as any).value === 'string' ? (cv as any).value : '';
+          if (current === newVal) return false;
+          buttonsDiv.querySelectorAll<HTMLButtonElement>('button[data-value]').forEach(btn => {
+            btn.classList.toggle('is-active', btn.dataset.value === newVal);
+          });
+          return true;
+        }
         const current = this.getCurrentToggleValues(key);
         if (current.length === values.length && current.every((v, i) => v === values[i])) return false;
         const btns = buttonsDiv.querySelectorAll<HTMLButtonElement>('button[data-value]');
@@ -462,7 +495,13 @@ export class FormBuilder<C> {
       },
       getControllerKey: (): string | undefined => undefined,
       getControlsKey: (): string | undefined => field.controls,
-      getEffectiveValue: () => this.getCurrentToggleValues(key),
+      getEffectiveValue: () => {
+        if (isSingleSelect) {
+          const activeBtn = buttonsDiv.querySelector<HTMLButtonElement>('button.is-active');
+          return activeBtn?.dataset.value ?? field.defaultValue;
+        }
+        return this.getCurrentToggleValues(key);
+      },
       // Expose the renderButtons fn so the controller (Key select) can trigger a rebuild
       _renderButtons: renderButtons,
       _getKeyType: () => keyType,
