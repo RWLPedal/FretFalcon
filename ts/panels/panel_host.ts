@@ -8,7 +8,7 @@ import { AppSettings } from '../settings';
 import { LinkManager } from './link_manager';
 import { SignalSink } from './link_types';
 import { getFloatingViewDescriptor, getViewIcon, getViewIconByFeatureType } from './panel_registry';
-import { getFeatureTypeNameByViewId } from './drive_registry';
+import { getFeatureTypeNameByViewId, getBroadcastSourceViewId } from './drive_registry';
 import { isFretboardDescriptor, FloatingViewDescriptor } from './panel_types';
 import { onEvent, emitEvent } from '../core/events';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
@@ -56,9 +56,23 @@ export class PanelHost {
     this.screenConfigManager = screenConfigManager;
 
     this.floatingLayout = new FloatingLayout(() => this.saveState());
-    this.tabbedLayout = new TabbedLayout((viewId) => {
-      this.spawnView(viewId);
-    });
+    this.tabbedLayout = new TabbedLayout(
+      (viewId) => this.spawnView(viewId),
+      (i) => this.toggleTabbedLink(i),
+      (i) => this.tabbedPairState(i),
+      (newOrder) => {
+        if (this.linkManager) {
+          for (const link of [...this.linkManager.getLinks()]) {
+            const si = newOrder.indexOf(link.sourceInstanceId);
+            const ti = newOrder.indexOf(link.targetInstanceId);
+            if (si === -1 || ti === -1 || ti !== si + 1) {
+              this.linkManager.removeLinkBetween(link.sourceInstanceId, link.targetInstanceId);
+            }
+          }
+        }
+        this.saveState();
+      },
+    );
 
     const area = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!area) {
@@ -136,8 +150,11 @@ export class PanelHost {
           ? () => this._handleZoomRequest(record.instanceId) : undefined,
         onClose: (id) => this.destroyView(id),
       });
+      this.linkManager?.registerInstanceEl(record.instanceId, record.contentEl);
       if (record.chrome.wrapperEl) {
         this.linkManager?.onWindowSpawned(record.instanceId, record.chrome.wrapperEl);
+      } else {
+        this.linkManager?.refreshForInstance(record.instanceId);
       }
     }
 
@@ -159,6 +176,33 @@ export class PanelHost {
 
   public setLinkManager(lm: LinkManager): void { this.linkManager = lm; }
   public getLinkManager(): LinkManager | null { return this.linkManager; }
+
+  /** Toggle a link between tab[i] and tab[i+1]. */
+  public toggleTabbedLink(i: number): void {
+    if (!this.linkManager) return;
+    const order = this.tabbedLayout.getOrder();
+    if (i < 0 || i >= order.length - 1) return;
+    const src = order[i];
+    const tgt = order[i + 1];
+    if (this.linkManager.hasLink(src, tgt)) {
+      this.linkManager.removeLinkBetween(src, tgt);
+    } else {
+      this.linkManager.createLink(src, 'right', tgt, 'left');
+    }
+    this.saveState();
+  }
+
+  /** Returns the link state between tab[i] and tab[i+1]. */
+  public tabbedPairState(i: number): 'linked' | 'available' | 'incompatible' {
+    if (!this.linkManager) return 'incompatible';
+    const order = this.tabbedLayout.getOrder();
+    if (i < 0 || i >= order.length - 1) return 'incompatible';
+    const src = order[i];
+    const tgt = order[i + 1];
+    if (this.linkManager.hasLink(src, tgt)) return 'linked';
+    if (!this.linkManager.canLink(src, tgt)) return 'incompatible';
+    return 'available';
+  }
 
   public setSettingsCallback(fn: () => void): void {
     this.tabbedLayout.setSettingsCallback(fn);
@@ -319,8 +363,15 @@ export class PanelHost {
         this.sinks.set(instanceId, viewInstance as unknown as SignalSink);
       }
 
+      this.linkManager?.registerInstanceEl(instanceId, contentEl);
       if (chrome.wrapperEl) {
         this.linkManager?.onWindowSpawned(instanceId, chrome.wrapperEl);
+      } else {
+        this.linkManager?.refreshForInstance(instanceId);
+      }
+
+      if (this.currentStrategy === this.tabbedLayout) {
+        this.tabbedLayout.rebuildConnectors();
       }
 
       this.saveState();
@@ -338,6 +389,9 @@ export class PanelHost {
     this.linkManager?.onWindowDestroyed(instanceId);
     record._unlistens.forEach(u => u());
     record.chrome.destroy();
+    if (this.currentStrategy === this.tabbedLayout) {
+      this.tabbedLayout.onPanelClosed(instanceId);
+    }
 
     try { record.viewInstance.destroy(); } catch (e) {
       console.error(`PanelHost: Error destroying view ${instanceId}:`, e);
@@ -390,6 +444,12 @@ export class PanelHost {
         continue;
       }
 
+      // Global Key (broadcast source) is hidden from mobile — skip restoring it in tabbed mode.
+      if (this.currentStrategy === this.tabbedLayout) {
+        const broadcastViewId = getBroadcastSourceViewId();
+        if (broadcastViewId && entry.viewId === broadcastViewId) continue;
+      }
+
       try {
         const numericId = parseInt(entry.instanceId.replace('fv-', ''), 10);
         if (!isNaN(numericId)) this.nextInstanceId = Math.max(this.nextInstanceId, numericId + 1);
@@ -426,6 +486,9 @@ export class PanelHost {
 
     this.currentStrategy.applyLayoutData(saved.layout);
     this.linkManager?.initialize(saved.links ?? []);
+    if (this.currentStrategy === this.tabbedLayout) {
+      this.tabbedLayout.rebuildConnectors();
+    }
   }
 
   private _computeRestoreScale(refGrid: { cols: number; rows: number }): number {

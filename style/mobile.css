@@ -106,13 +106,18 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Mirror .floating-view-content rule: layout math assumes main title is hidden */
+.tabbed-panel-content .feature-main-title {
+  display: none !important;
+}
+
 /* ─── Tab bar ─────────────────────────────────────────────────────────────── */
 
 .tabbed-tab-bar {
   display: flex;
   flex-direction: row;
   align-items: center;
-  height: 62px;
+  height: 54px;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
   background: var(--sidebar-bg);
@@ -121,7 +126,7 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: 0 4px;
-  gap: 2px;
+  gap: 1px;
 }
 .tabbed-tab-bar::-webkit-scrollbar { display: none; }
 
@@ -131,8 +136,8 @@
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 58px;
-  padding: 5px 7px;
+  min-width: 50px;
+  padding: 4px 5px;
   border-radius: 8px;
   cursor: pointer;
   color: var(--text-muted);
@@ -152,7 +157,7 @@
   font-weight: 500;
 }
 
-.tabbed-tab-icon { font-size: 20px !important; }
+.tabbed-tab-icon { font-size: 18px !important; }
 
 .tabbed-tab-title {
   max-width: 76px;
@@ -190,8 +195,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 44px;
-  padding: 5px 7px;
+  min-width: 38px;
+  padding: 4px 5px;
   border-radius: 8px;
   cursor: pointer;
   background: none;
@@ -202,7 +207,7 @@
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s, color 0.12s;
 }
-.tabbed-add-btn .material-icons { font-size: 20px; }
+.tabbed-add-btn .material-icons { font-size: 18px; }
 .tabbed-add-btn:active {
   background: color-mix(in srgb, var(--accent) 10%, transparent);
   color: var(--accent);
@@ -303,4 +308,103 @@
   font-size: 18px !important;
   color: var(--accent);
   flex-shrink: 0;
+}
+
+/* ─── Link connectors (between adjacent tabs in the tab bar) ─────────────── */
+
+.tabbed-link-connector {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.tabbed-link-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+  transition: background 0.15s;
+}
+
+.tabbed-link-connector.is-linked .tabbed-link-line {
+  background: var(--accent);
+}
+
+/* Incompatible: faint dashed line, no link icon */
+.tabbed-link-connector.is-incompatible .tabbed-link-line {
+  background: repeating-linear-gradient(
+    to right,
+    color-mix(in srgb, var(--border) 50%, transparent) 0 3px,
+    transparent 3px 6px
+  );
+}
+
+.tabbed-link-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: none;
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  cursor: pointer;
+  color: var(--text-muted);
+  padding: 0;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.tabbed-link-btn .material-icons { font-size: 9px; }
+
+.tabbed-link-btn:active {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.tabbed-link-connector.is-linked .tabbed-link-btn {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Incompatible: muted static dot, no button affordance */
+.tabbed-link-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--border) 60%, transparent);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* ─── Drag-to-reorder ────────────────────────────────────────────────────── */
+
+.tabbed-tab.is-dragging {
+  opacity: 0.35;
+  cursor: grabbing;
+}
+
+/* Ghost clone that follows the pointer during drag */
+.tabbed-tab-ghost {
+  background: var(--sidebar-bg) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  opacity: 0.9;
+  cursor: grabbing;
+  border-radius: 8px;
+}
+
+/* Vertical accent bar showing the drop position */
+.tabbed-drop-indicator {
+  width: 3px;
+  min-height: 40px;
+  border-radius: 2px;
+  background: var(--accent);
+  flex-shrink: 0;
+  pointer-events: none;
+  margin: 0 1px;
 }

@@ -15,8 +15,10 @@ export class LinkManager {
   private nextLinkId = 1;
   private overlay: LinkOverlay;
 
-  // Maps wrapper HTMLElement → instanceId for efficient event routing
+  // Maps wrapper HTMLElement → instanceId for efficient event routing (floating layout)
   private wrapperToInstanceId = new Map<HTMLElement, string>();
+  // Maps content HTMLElement → instanceId for routing in wrapper-free layouts (e.g. tabbed)
+  private routingElToInstanceId = new Map<HTMLElement, string>();
   // Maps instanceId → viewId (for looking up source descriptors)
   private instanceIdToViewId: (id: string) => string | null;
   // Maps instanceId → featureTypeName (for drive target slot lookup)
@@ -174,8 +176,8 @@ export class LinkManager {
 
   public initialize(existingLinks: LinkRecord[]): void {
     this.links = existingLinks.filter(link =>
-      this.getWrapperEl(link.sourceInstanceId) !== null &&
-      this.getWrapperEl(link.targetInstanceId) !== null
+      this.getContentEl(link.sourceInstanceId) !== null &&
+      this.getContentEl(link.targetInstanceId) !== null
     );
     if (this.links.length) {
       const maxId = Math.max(...this.links.map(l => parseInt(l.id.replace('link-', ''), 10) || 0));
@@ -211,6 +213,11 @@ export class LinkManager {
     }
   }
 
+  /** Register a content element for signal-event routing. Call for every panel regardless of layout. */
+  public registerInstanceEl(instanceId: string, contentEl: HTMLElement): void {
+    this.routingElToInstanceId.set(contentEl, instanceId);
+  }
+
   public onWindowSpawned(instanceId: string, wrapperEl: HTMLElement): void {
     this.wrapperToInstanceId.set(wrapperEl, instanceId);
     this.overlay.registerWrapper(instanceId, wrapperEl);
@@ -233,6 +240,10 @@ export class LinkManager {
     if (wrapperEl) {
       this.overlay.unregisterWrapper(instanceId);
       this.wrapperToInstanceId.delete(wrapperEl);
+    }
+    const contentEl = this.getContentEl(instanceId);
+    if (contentEl) {
+      this.routingElToInstanceId.delete(contentEl);
     }
     if (instanceId === this.globalSourceInstanceId) {
       this.globalSourceInstanceId = null;
@@ -301,6 +312,37 @@ export class LinkManager {
     this.links = this.links.filter(l => l.id !== linkId);
     this.notifyLinkStatus(link.targetInstanceId);
     this.scheduleRedraw();
+  }
+
+  public hasLink(sourceId: string, targetId: string): boolean {
+    return this.links.some(
+      l => l.sourceInstanceId === sourceId && l.targetInstanceId === targetId
+    );
+  }
+
+  public removeLinkBetween(sourceId: string, targetId: string): void {
+    const link = this.links.find(
+      l => l.sourceInstanceId === sourceId && l.targetInstanceId === targetId
+    );
+    if (link) this.removeLink(link.id);
+  }
+
+  /** Returns true if src emits at least one signal kind that tgt accepts. */
+  public canLink(sourceId: string, targetId: string): boolean {
+    const sourceViewId = this.instanceIdToViewId(sourceId) ?? '';
+    const sourceFeatureTypeName = this.instanceIdToFeatureTypeName?.(sourceId) ?? undefined;
+    const sourceDescriptor = getDriveSourceDescriptor(sourceViewId, sourceFeatureTypeName);
+    if (!sourceDescriptor?.emittedKinds.length) return false;
+
+    const targetViewId = this.instanceIdToViewId(targetId) ?? '';
+    const targetFeatureTypeName =
+      this.instanceIdToFeatureTypeName?.(targetId) ??
+      getFeatureTypeNameByViewId(targetViewId) ??
+      null;
+    const targetSlots = targetFeatureTypeName ? getDriveTargetSlots(targetFeatureTypeName) : [];
+    const acceptedKinds = new Set(targetSlots.flatMap(s => s.acceptedKinds));
+
+    return sourceDescriptor.emittedKinds.some(k => acceptedKinds.has(k));
   }
 
   // ─── Signal routing ────────────────────────────────────────────────────────
@@ -451,7 +493,7 @@ export class LinkManager {
   private resolveSourceInstanceId(event: Event): string | null {
     for (const node of event.composedPath()) {
       if (!(node instanceof HTMLElement)) continue;
-      const id = this.wrapperToInstanceId.get(node);
+      const id = this.wrapperToInstanceId.get(node) ?? this.routingElToInstanceId.get(node);
       if (id !== undefined) return id;
     }
     return null;

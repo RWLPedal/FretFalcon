@@ -104,8 +104,8 @@ export class FeaturePanelController extends BaseView implements SignalSink {
     });
 
     this.listenEvent(container, 'wrapper-user-resized', ({ width, height }) => {
-      this._availableHeight = Math.max(50, height);
-      this._availableWidth  = Math.max(50, width);
+      if (width > 0)  this._availableWidth  = width;
+      if (height > 0) this._availableHeight = height;
       this.rebuildFeatureNew();
     });
   }
