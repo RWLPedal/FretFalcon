@@ -37,7 +37,9 @@
   --note-sixth: oklch(0.45 0.06 65); /* dark taupe */
   --note-seventh: oklch(0.35 0.05 65); /* deep warm grey */
   --danger: oklch(0.52 0.17 22); /* brick red */
-  --note-pivot: oklch(0.75 0.16 75); /* amber-gold — pivot / common-tone highlight */
+  --note-pivot: oklch(
+    0.75 0.16 75
+  ); /* amber-gold — pivot / common-tone highlight */
 
   --layer-scale: #507a35; /* note-fifth feel: olive/sage green */
   --layer-chord: #a86030; /* note-root feel: warm amber */
@@ -52,6 +54,42 @@
   --dm-palette-5: #286870; /* dark teal   (crash / 5) */
   --dm-palette-6: #705028; /* warm brown  (tom / 6) */
   --dm-palette-7: #7a3840; /* burgundy    (shaker / 7) */
+
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.80' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+/* ── BODY: foxed paper — stain halos + diagonal fiber weave + grain ── */
+[data-theme="warm"] body {
+  background-color: var(--bg);
+  background-image:
+    /* foxing stain — top-right corner */
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(130, 100, 65, 0.12),
+      transparent 15%
+    ),
+    /* foxing stain — bottom-left corner */
+    radial-gradient(circle at 11% 87%, rgba(130, 100, 65, 0.1), transparent 14%),
+    /* small foxing fleck — mid-field */
+    radial-gradient(circle at 66% 72%, rgba(100, 75, 45, 0.06), transparent 11%),
+    /* diagonal paper-fibre weave */
+    repeating-linear-gradient(
+        116deg,
+        transparent 0 3px,
+        rgba(100, 85, 60, 0.022) 3px 4px
+      ),
+    var(--grain);
+
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    auto,
+    auto;
+
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+
+  background-position: 0 0;
 }
 
 /* ─────────────────────────────────────────────────────────────────
@@ -84,7 +122,9 @@
   --note-sixth: oklch(0.44 0.1 35); /* dark rust */
   --note-seventh: oklch(0.36 0.08 35); /* deep rust */
   --danger: oklch(0.5 0.14 25); /* terracotta rust */
-  --note-pivot: oklch(0.72 0.14 75); /* warm gold — pivot / common-tone highlight */
+  --note-pivot: oklch(
+    0.72 0.14 75
+  ); /* warm gold — pivot / common-tone highlight */
   --pad-off: #cfd5bb;
   --shadow: 0 2px 10px rgba(34, 40, 28, 0.1);
   --shadow-panel:
@@ -326,7 +366,9 @@
   --note-sixth: oklch(0.5 0.06 90); /* olive drab */
   --note-seventh: oklch(0.42 0.04 70); /* warm grey-brown */
   --danger: oklch(0.55 0.13 30); /* faded brick red */
-  --note-pivot: oklch(0.70 0.13 70); /* muted gold — pivot / common-tone highlight */
+  --note-pivot: oklch(
+    0.7 0.13 70
+  ); /* muted gold — pivot / common-tone highlight */
 
   --pad-off: #3f3020;
   --shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
@@ -483,7 +525,9 @@
   --note-sixth: oklch(0.54 0.1 170); /* dark seafoam */
   --note-seventh: oklch(0.46 0.08 170); /* deep seafoam */
   --danger: oklch(0.57 0.2 18); /* deep crimson */
-  --note-pivot: oklch(0.78 0.17 75); /* bright gold — pivot / common-tone highlight */
+  --note-pivot: oklch(
+    0.78 0.17 75
+  ); /* bright gold — pivot / common-tone highlight */
   --pad-off: #1e2840;
   --shadow: 0 2px 14px rgba(0, 0, 0, 0.55);
   --shadow-panel: 0 6px 32px rgba(0, 0, 0, 0.65);
@@ -500,7 +544,43 @@
   --dm-palette-5: oklch(0.6 0.16 320); /* orchid */
   --dm-palette-6: oklch(0.58 0.16 25); /* coral red */
   --dm-palette-7: oklch(0.68 0.13 130); /* moonlit lime */
-  --grain: none;
+
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.95' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.048'/%3E%3C/svg%3E");
+}
+
+/* ── BODY: midnight with navy orb, gold dust glow, vignette + grain ── */
+[data-theme="sigil"] body {
+  background-color: var(--bg);
+  background-image:
+    /* blue-navy orb — top-left, off-canvas */
+    radial-gradient(
+      ellipse 58% 52% at 12% -2%,
+      rgba(55, 100, 200, 0.2),
+      transparent 26%
+    ),
+    /* gold glow — bottom-right, off-canvas */
+    radial-gradient(
+        ellipse 52% 48% at 92% 104%,
+        rgba(195, 158, 65, 0.14),
+        transparent 36%
+      ),
+    /* vignette — darkens corners */
+    radial-gradient(
+        ellipse 125% 105% at 50% 50%,
+        transparent 52%,
+        rgba(0, 0, 0, 0.45)
+      ),
+    var(--grain);
+
+  background-size:
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    auto;
+
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+
+  background-position: 0 0;
 }
 
 /* ───────────────────────────────────────
@@ -527,7 +607,9 @@
   --note-sixth: oklch(0.6 0.2 295); /* deep purple */
   --note-seventh: oklch(0.5 0.15 295); /* dark purple */
   --danger: oklch(0.68 0.26 12); /* hot coral-red */
-  --note-pivot: oklch(0.82 0.2 75); /* electric gold — pivot / common-tone highlight */
+  --note-pivot: oklch(
+    0.82 0.2 75
+  ); /* electric gold — pivot / common-tone highlight */
   --pad-off: #1f1147;
   --shadow: 0 2px 18px rgba(255, 60, 200, 0.18);
   --shadow-panel: 0 4px 32px rgba(120, 60, 255, 0.25);
@@ -546,26 +628,54 @@
   --dm-palette-7: oklch(0.72 0.16 240); /* electric blue */
   --grain: none;
 }
+/* ── BODY: deep-space — starfield + aurora ribbons ── */
 :root[data-theme="neon"] body {
-  /* horizontal scanlines + soft horizon glow */
+  background-color: var(--bg);
   background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(255, 80, 200, 0.025) 3px,
-      rgba(255, 80, 200, 0.025) 4px
-    ),
+    /* bright stars — near-white, faint lavender tint */
+    radial-gradient(circle, rgba(240, 230, 255, 0.12) 1.5px, transparent 1.5px),
+    /* mid stars — cyan tint */
+    radial-gradient(circle, rgba(140, 210, 255, 0.22) 1.1px, transparent 1.1px),
+    /* dim stars — lavender dust */
+    radial-gradient(circle, rgba(180, 140, 255, 0.36) 0.8px, transparent 0.8px),
+    /* aurora ribbon 1 — cyan, left-centre */
     radial-gradient(
-      ellipse at 60% 110%,
-      rgba(255, 60, 180, 0.18) 0%,
-      transparent 45%
-    ),
+        ellipse 56% 20% at 30% 28%,
+        rgba(80, 200, 255, 0.18),
+        transparent
+      ),
+    /* aurora ribbon 2 — cyan, right-top */
     radial-gradient(
-      ellipse at 20% 0%,
-      rgba(80, 200, 255, 0.1) 0%,
-      transparent 50%
-    );
+        ellipse 58% 26% at 68% 20%,
+        rgba(80, 200, 255, 0.15),
+        transparent
+      ),
+    /* aurora ribbon 3 — magenta, top-centre */
+    radial-gradient(
+        ellipse 84% 36% at 50% 8%,
+        rgba(255, 60, 200, 0.2),
+        transparent
+      ),
+    /* aurora ribbon 4 — purple, horizon floor */
+    radial-gradient(
+        ellipse 90% 52% at 50% 124%,
+        rgba(140, 60, 255, 0.2),
+        transparent
+      );
+
+  background-size:
+    300px 280px,
+    264px 222px,
+    370px 200px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+
+  background-repeat:
+    repeat, repeat, repeat, no-repeat, no-repeat, no-repeat, no-repeat;
+
+  background-position: 0 0;
 }
 :root[data-theme="neon"] .panel {
   border-color: var(--border);
