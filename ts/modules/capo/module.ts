@@ -2,6 +2,7 @@ import { ViewModule, ViewContext, viewId } from "../module_types";
 import { NavSection } from "../../core/ids";
 import { CapoView } from "./capo_view";
 import { InstrumentName } from "../../fretboard/instruments";
+import { SignalKind, DriveSignal } from "../../panels/link_types";
 
 const CAPO_ID = viewId("capo_view");
 
@@ -26,6 +27,18 @@ const module: ViewModule = {
       InstrumentName.Mandola,
       InstrumentName.TenorBanjo,
       InstrumentName.Charango,
+    ],
+  },
+  drive: {
+    sources: [
+      {
+        viewId: CAPO_ID,
+        emittedKinds: [SignalKind.Capo],
+        extractSignals(detail: unknown): DriveSignal[] {
+          const fret = (detail as { fret?: number })?.fret ?? 0;
+          return [{ kind: SignalKind.Capo, fret }];
+        },
+      },
     ],
   },
   createView(ctx: ViewContext) {

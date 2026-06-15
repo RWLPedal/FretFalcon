@@ -29,6 +29,7 @@ import { ChordDiagramView } from '../views/chord_diagram_view';
 import { getEasiestMoveableShape, MOVEABLE_CHORD_LIBRARIES } from '../../music/moveable_shapes';
 import { planChordDiagramGrid } from '../layout';
 import { getRomansForMode, resolveAbsoluteChordKey } from '../../music/chord_key_resolver';
+import { capoVoicing } from '../capo';
 
 interface ChordProgSlot {
   /** chord_tones_library key for drive-signal comparison; null when unresolvable. */
@@ -61,6 +62,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     settings: AppSettings,
     maxCanvasHeight?: number,
     maxWidth?: number,
+    capoFret = 0,
   ) {
     super(config, settings, maxCanvasHeight, maxWidth);
 
@@ -72,6 +74,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
 
     const romanLabels = progDegrees.map(d => romans[d - 1]?.roman ?? String(d));
     this.headerText = `${romanLabels.join(' – ')} in ${rootNote} ${modeLabel}`;
+    if (capoFret > 0) this.headerText += ` (capo ${capoFret})`;
 
     if (progDegrees.length > 0) {
       const { config: fc } = planChordDiagramGrid(
@@ -86,6 +89,10 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
       return;
     }
 
+    const capoCtx = capoFret > 0
+      ? { library: chordLibrary, instrument: guitarSettings.instrument as InstrumentName, tuning: this.fretboardConfig.tuning }
+      : null;
+
     for (const deg of progDegrees) {
       const entry    = romans[deg - 1];
       const numeral  = entry?.roman ?? String(deg);
@@ -93,22 +100,29 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
 
       const chordDetails = getChordInKey(rootNoteIndex, numeral, mode, chordLibrary);
       const chordData    = chordDetails.chordKey ? chordLibrary[chordDetails.chordKey] : null;
+      const baseChord    = chordData ?? getEasiestMoveableShape(guitarSettings.instrument, chordDetails.chordName, this.fretboardConfig.tuning);
 
-      if (chordData) {
-        const title = `${chordDetails.chordName} (${numeral})`;
-        this.chordSlots.push({ signalKey, view: new ChordDiagramView(chordData, title, this.fretboardConfig), unresolvable: null });
-      } else {
-        const easiest = getEasiestMoveableShape(
-          guitarSettings.instrument, chordDetails.chordName, this.fretboardConfig.tuning
-        );
-        if (easiest) {
-          const title = `${chordDetails.chordName} [${easiest.shapeName}] (${numeral})`;
-          this.chordSlots.push({ signalKey, view: new ChordDiagramView(easiest, title, this.fretboardConfig), unresolvable: null });
-        } else {
-          console.warn(`[${this.typeName}] No shape for ${chordDetails.chordName} (${numeral}) in ${rootNote} ${mode}`);
-          this.chordSlots.push({ signalKey, view: null, unresolvable: new UnresolvableChordView(chordDetails.chordName, numeral) });
-        }
+      if (!baseChord) {
+        console.warn(`[${this.typeName}] No shape for ${chordDetails.chordName} (${numeral}) in ${rootNote} ${mode}`);
+        this.chordSlots.push({ signalKey, view: null, unresolvable: new UnresolvableChordView(chordDetails.chordName, numeral) });
+        continue;
       }
+
+      // Capo is display-only here: re-voice to a shape playable above the capo while keeping the
+      // sounding chord, and keep `signalKey` untransposed so backing-track highlight matching works.
+      let displayChord: Chord;
+      let title: string;
+      if (capoCtx) {
+        displayChord = capoVoicing(String(baseChord.rootKey), baseChord.chordType, chordDetails.chordName, capoFret, capoCtx).chord;
+        title = `${chordDetails.chordName} (${numeral})`;
+      } else {
+        displayChord = baseChord;
+        const isMoveable = baseChord !== chordData;
+        title = isMoveable
+          ? `${chordDetails.chordName} [${baseChord.shapeName}] (${numeral})`
+          : `${chordDetails.chordName} (${numeral})`;
+      }
+      this.chordSlots.push({ signalKey, view: new ChordDiagramView(displayChord, title, this.fretboardConfig), unresolvable: null });
     }
   }
 
@@ -322,6 +336,7 @@ export const ChordProgressionFeatureSpec: FeatureSpec<ChordProgressionConfig> = 
       ctx.settings,
       ctx.constraints.maxHeight,
       ctx.constraints.maxWidth,
+      ctx.capo ?? 0,
     );
   },
 };

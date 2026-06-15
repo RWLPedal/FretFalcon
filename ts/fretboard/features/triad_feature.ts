@@ -38,6 +38,7 @@ import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
 import { ChordQuality } from "../../music/music_types";
 import { scales } from "../../music/scales";
+import { capoBarre, capoIsActive } from "../capo";
 
 // ─── Typed config ─────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ export const TriadFeatureSpec: FeatureSpec<TriadConfig> = {
     if (keyIndex === -1) throw new Error(`[TriadFeature] Unknown key: "${config.rootNote}"`);
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
     const mainHeaderText = `${validRootName} Triad Shapes (${config.qualities.join(', ')})`;
-    return new TriadFeature([], validRootName, config.qualities, mainHeaderText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth);
+    return new TriadFeature([], validRootName, config.qualities, mainHeaderText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth, ctx.capo ?? 0);
   },
 };
 
@@ -140,6 +141,7 @@ class TriadQualityRowView extends BaseView {
     quality: TriadQuality,
     rootNoteName: string,
     fretboardConfig: FretboardConfig,
+    capoFret = 0,
   ) {
     super();
     this.quality = quality;
@@ -151,6 +153,7 @@ class TriadQualityRowView extends BaseView {
     if (this.fretboardConfig.handedness === "left") {
       orderedGroups.reverse();
     }
+    const capoBarres = capoIsActive(capoFret) ? [capoBarre(capoFret, fretboardConfig)] : [];
     orderedGroups.forEach((group) => {
       const triadData = getTriadNotesAndLinesForGroup(
         rootNoteName,
@@ -158,10 +161,12 @@ class TriadQualityRowView extends BaseView {
         group,
         fretCount,
         fretboardConfig,
+        capoFret,
       );
       const view = new FretboardView(fretboardConfig, fretCount);
       view.setNotes(triadData.notes);
       view.setLines(triadData.lines);
+      view.setBarres(capoBarres);
       this.fretboardViews.push(view);
     });
   }
@@ -237,6 +242,7 @@ export class TriadFeature extends InstrumentFeature {
   private readonly _qualities: TriadQuality[];
   private readonly _rootNoteName: string;
   private readonly _zoomMultiplier: number;
+  private readonly _capoFret: number;
 
   private rowViews: TriadQualityRowView[] = [];
 
@@ -248,6 +254,7 @@ export class TriadFeature extends InstrumentFeature {
     settings: AppSettings,
     maxCanvasHeight?: number,
     maxWidth?: number,
+    capoFret = 0,
   ) {
     const guitarGlobalSettings =
       (settings.instrumentSettings as InstrumentSettings | undefined) ??
@@ -286,6 +293,7 @@ export class TriadFeature extends InstrumentFeature {
     this._qualities = [...qualities];
     this._rootNoteName = rootNoteName;
     this._zoomMultiplier = guitarGlobalSettings.zoomMultiplier ?? 1.2;
+    this._capoFret = capoFret;
 
     // Build views immediately when dimensions were available; otherwise defer to render().
     if (maxWidth && maxCanvasHeight) {
@@ -296,7 +304,7 @@ export class TriadFeature extends InstrumentFeature {
   private _buildRowViews(config: FretboardConfig): void {
     this.rowViews.forEach((v) => v.destroy());
     this.rowViews = this._qualities.map(
-      (quality) => new TriadQualityRowView(quality, this._rootNoteName, config),
+      (quality) => new TriadQualityRowView(quality, this._rootNoteName, config, this._capoFret),
     );
     this.fretboardConfig = config;
   }
@@ -410,7 +418,8 @@ export class TriadFeature extends InstrumentFeature {
     }
 
     clearAllChildren(container);
-    const mainHeader = addHeader(container, this.mainHeaderText);
+    const capoSuffix = this._capoFret > 0 ? ` (capo ${this._capoFret})` : "";
+    const mainHeader = addHeader(container, `${this.mainHeaderText}${capoSuffix}`);
     mainHeader.classList.add("feature-main-title");
 
     this.rowViews.forEach((view) => {

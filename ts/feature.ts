@@ -174,6 +174,12 @@ export interface SettingsUISchemaItem {
 export interface FeatureContext {
   settings: AppSettings;
   constraints: { maxWidth?: number; maxHeight?: number };
+  /**
+   * Capo fret driven by a linked Capo source (0 = no capo). Fretboard features apply this:
+   * Chord/ChordProgression transpose up by `capo` and draw a capo barre; Scale/Arpeggio/
+   * Triad/MultiLayerFretboard hide notes below `capo` and draw a capo barre (no transposition).
+   */
+  capo?: number;
 }
 
 /**

@@ -67,6 +67,13 @@ export default featurePanelModule({
           return null;
         },
       },
+      {
+        featureTypeName: MultiLayerFretboardFeature.typeName,
+        argName: "Capo",
+        label: "Capo (from linked source)",
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

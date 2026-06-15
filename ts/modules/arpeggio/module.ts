@@ -52,6 +52,13 @@ export default featurePanelModule({
           return suffixMap[suffix] ?? null;
         },
       },
+      {
+        featureTypeName: ArpeggioFeature.typeName,
+        argName: "Capo",
+        label: "Capo (from linked source)",
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

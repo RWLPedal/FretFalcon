@@ -1,4 +1,5 @@
 ﻿import { BaseView } from '../../core/base_view';
+import { emitEvent } from '../../core/events';
 import { AppSettings } from '../../settings';
 import { getChordLibraryForInstrument, Chord, ChordType } from '../../music/chords';
 import { getKeyIndex, NOTE_NAMES_FROM_A } from '../../fretboard/fretboard_utils';
@@ -52,6 +53,7 @@ export class CapoView extends BaseView {
   }
 
   render(container: HTMLElement): void {
+    this.container = container;
     container.classList.add('capo-view');
 
     const instrument = this.appSettings?.instrumentSettings?.instrument ?? 'Guitar';
@@ -96,6 +98,8 @@ export class CapoView extends BaseView {
     capoSelect.addEventListener('change', () => {
       this.capoFret = parseInt(capoSelect.value, 10);
       this.updateRows();
+      // Drive any linked fretboard panels with the new capo fret.
+      if (this.container) emitEvent(this.container, 'capo-changed', { fret: this.capoFret });
     });
     capoRow.appendChild(capoSelect);
     container.appendChild(capoRow);

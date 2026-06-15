@@ -377,10 +377,17 @@ export class StrumView extends BaseView {
     const idx = CYCLE_ORDER.indexOf(current);
     this.slots[index] = CYCLE_ORDER[(idx + 1) % CYCLE_ORDER.length];
     this.updateCellStyle(this.cellEls[index], index);
+    this.syncPresetSelection();
     this.dispatchStateChange();
   }
 
   // ─── Presets ──────────────────────────────────────────────────────────────────
+
+  /** Option label with a subdivision tag so 8th- vs 16th-note presets are distinguishable. */
+  private static presetLabel(preset: StrumPreset): string {
+    const tag = preset.subdivision === 'sixteenth' ? '16th' : '8th';
+    return `${preset.name} · ${tag}`;
+  }
 
   private refreshPresetList(): void {
     if (!this.presetSelect) return;
@@ -395,15 +402,34 @@ export class StrumView extends BaseView {
     if (builtIn.length) {
       const grp = document.createElement('optgroup');
       grp.label = 'Built-in';
-      builtIn.forEach(p => grp.appendChild(new Option(p.name, p.id)));
+      builtIn.forEach(p => grp.appendChild(new Option(StrumView.presetLabel(p), p.id)));
       this.presetSelect.appendChild(grp);
     }
     if (custom.length) {
       const grp = document.createElement('optgroup');
       grp.label = 'Custom';
-      custom.forEach(p => grp.appendChild(new Option(p.name, p.id)));
+      custom.forEach(p => grp.appendChild(new Option(StrumView.presetLabel(p), p.id)));
       this.presetSelect.appendChild(grp);
     }
+    this.syncPresetSelection();
+  }
+
+  /** True when `preset` exactly matches the current time sig, subdivision and slots. */
+  private matchesPreset(preset: StrumPreset): boolean {
+    return (
+      preset.timeSig.beats === this.timeSig.beats &&
+      preset.timeSig.division === this.timeSig.division &&
+      preset.subdivision === this.subdivision &&
+      preset.slots.length === this.slots.length &&
+      preset.slots.every((s, i) => s === this.slots[i])
+    );
+  }
+
+  /** Show the preset whose pattern equals the current one (or clear the selector). */
+  private syncPresetSelection(): void {
+    if (!this.presetSelect) return;
+    const match = [...BUILT_IN_PRESETS, ...this.customPresets].find(p => this.matchesPreset(p));
+    this.presetSelect.value = match ? match.id : '';
   }
 
   private applyPreset(preset: StrumPreset): void {
@@ -419,6 +445,7 @@ export class StrumView extends BaseView {
     const n = totalSlots(preset.timeSig, preset.subdivision);
     this.slots = preset.slots.length === n ? [...preset.slots] : [...preset.slots].slice(0, n);
     this.buildCells();
+    this.refreshPresetList();
     this.dispatchStateChange();
   }
 
@@ -427,7 +454,6 @@ export class StrumView extends BaseView {
     if (!name) return;
     const preset: StrumPreset = {
       _v: 1, id: `custom_${Date.now()}`, name,
-      instrument: 'Guitar',
       timeSig: { ...this.timeSig },
       subdivision: this.subdivision,
       slots: [...this.slots],

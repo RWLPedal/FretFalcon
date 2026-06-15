@@ -439,6 +439,7 @@ export function getTriadNotesAndLinesForGroup(
   stringGroup: [number, number, number],
   fretCount: number,
   fretboardConfig: FretboardConfig, // Pass the config for coordinate calculations
+  minFret = 0, // Notes below this fret are blocked (e.g. by a capo); such triad instances are dropped entirely
 ): { notes: NoteRenderData[]; lines: LineData[] } {
   const rootNoteIndex = getKeyIndex(rootNoteName);
   if (rootNoteIndex === -1) return { notes: [], lines: [] };
@@ -490,8 +491,8 @@ export function getTriadNotesAndLinesForGroup(
             shape.relativeFrets[i] -
             shape.relativeFrets[shape.rootStringIndexInGroup];
 
-          if (absFret < 0 || absFret > fretCount) {
-            isValidInstance = false; // Note is outside the fretboard range
+          if (absFret < 0 || absFret > fretCount || absFret < minFret) {
+            isValidInstance = false; // Note is outside the fretboard range, or blocked by a capo
             break;
           }
           const resultingNoteIndex = (currentStringTuning + absFret) % 12; // Calculate the note index (0-11)

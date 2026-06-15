@@ -5,6 +5,7 @@ import {
   NoteRenderData,
   LineData,
   PolygonData,
+  BarreData,
 } from "../renderer";
 import { addCanvas, START_PX } from "../fretboard_utils";
 
@@ -106,6 +107,11 @@ export class FretboardView extends BaseView {
 
   public setPolygons(polygons: PolygonData[]): void {
     this.fretboard.setPolygons(polygons);
+    this.redrawIfReady();
+  }
+
+  public setBarres(barres: BarreData[]): void {
+    this.fretboard.setBarres(barres);
     this.redrawIfReady();
   }
 

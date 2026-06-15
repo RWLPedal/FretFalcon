@@ -1,377 +1,77 @@
 // Built-in strumming pattern presets for the StrumView.
+//
+// Presets are organised by meter + subdivision (not by instrument): the same
+// pattern played on a guitar, ukulele or mandolin is one preset, so the list
+// stays free of instrument-only duplicates. The StrumView filters the list by
+// the current time signature and labels each option with its subdivision.
 
-import { StrokeAction, StrumPreset } from './strum_types';
+import { StrokeAction, StrumPreset } from "./strum_types";
 
-// ─── 4/4 Guitar ───────────────────────────────────────────────────────────────
+// Single-letter aliases keep the slot arrays readable like a strum chart.
+// Up/down direction is implied by slot position, so S is just "strum".
+const R = StrokeAction.Rest;   // rest (silent, hand keeps moving)
+const S = StrokeAction.Stroke; // strum (down on the beat, up off the beat)
+const A = StrokeAction.Accent; // accented strum
+const X = StrokeAction.Chuck;  // muted/percussive chuck
+const G = StrokeAction.Air;    // ghost stroke (hand moves, no contact)
 
-const GUITAR_4_4_EIGHTH: StrumPreset[] = [
-  {
-    _v: 1, id: 'g44_all_down', name: 'All Downs',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-    ],
-  },
-  {
-    _v: 1, id: 'g44_down_up', name: 'Down-Up',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // D DU UDU
-    _v: 1, id: 'g44_island', name: 'Island (D DU UDU)',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Air,    StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // D chuck D chuck
-    _v: 1, id: 'g44_country', name: 'Country Chug',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-    ],
-  },
-  {
-    // Muted downbeat + upstroke offbeats (reggae skank)
-    _v: 1, id: 'g44_reggae', name: 'Reggae Skank',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Chuck,  StrokeAction.Stroke,
-      StrokeAction.Chuck,  StrokeAction.Stroke,
-      StrokeAction.Chuck,  StrokeAction.Stroke,
-      StrokeAction.Chuck,  StrokeAction.Stroke,
-    ],
-  },
-  {
-    // D D DU D DU
-    _v: 1, id: 'g44_folk', name: 'Folk (D D DU D DU)',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // D DU UDU with accent on beat 1
-    _v: 1, id: 'g44_rock', name: 'Rock Accent',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Accent, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // DDU DDU DDU DDU
-    _v: 1, id: 'g44_constant', name: 'Constant Motion',
-    instrument: 'Guitar', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Air,    StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Air,    StrokeAction.Stroke,
-    ],
-  },
+const FOUR_FOUR = { beats: 4, division: 4 } as const;
+const THREE_FOUR = { beats: 3, division: 4 } as const;
+
+function preset(
+  id: string,
+  name: string,
+  timeSig: { beats: number; division: number },
+  subdivision: "eighth" | "sixteenth",
+  slots: StrokeAction[],
+): StrumPreset {
+  return { _v: 1, id, name, timeSig, subdivision, slots, isBuiltIn: true };
+}
+
+// ─── 4/4 — 8th notes ───────────────────────────────────────────────────────────
+// 8 slots: down on the beat (even index), up off the beat (odd index).
+
+const FOUR_FOUR_EIGHTH: StrumPreset[] = [
+  preset("e44_all_down", "All Downs",            FOUR_FOUR, "eighth", [S, R, S, R, S, R, S, R]),
+  preset("e44_down_up",  "Down-Up",              FOUR_FOUR, "eighth", [S, S, S, S, S, S, S, S]),
+  preset("e44_island",   "Island (D DU UDU)",    FOUR_FOUR, "eighth", [S, R, S, S, G, S, S, S]),
+  preset("e44_folk",     "Folk (D DU D DU)",     FOUR_FOUR, "eighth", [S, R, S, S, S, R, S, S]),
+  preset("e44_rock",     "Rock Accent",          FOUR_FOUR, "eighth", [A, R, S, S, S, R, S, S]),
+  preset("e44_constant", "Constant (DDU DDU)",   FOUR_FOUR, "eighth", [S, S, G, S, S, S, G, S]),
+  preset("e44_calypso",  "Calypso",              FOUR_FOUR, "eighth", [S, R, S, G, S, S, G, S]),
+  preset("e44_country",  "Country Chug (D X)",   FOUR_FOUR, "eighth", [S, X, S, X, S, X, S, X]),
+  preset("e44_reggae",   "Reggae Skank (X D)",   FOUR_FOUR, "eighth", [X, S, X, S, X, S, X, S]),
+  preset("e44_chop",     "Bluegrass Chop",       FOUR_FOUR, "eighth", [S, X, G, X, S, X, G, X]),
 ];
 
-// ─── 3/4 Guitar ───────────────────────────────────────────────────────────────
+// ─── 3/4 — 8th notes ───────────────────────────────────────────────────────────
+// 6 slots.
 
-const GUITAR_3_4_EIGHTH: StrumPreset[] = [
-  {
-    _v: 1, id: 'g34_waltz_down', name: 'Waltz (All Downs)',
-    instrument: 'Guitar', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-    ],
-  },
-  {
-    // D DU DU
-    _v: 1, id: 'g34_waltz_du', name: 'Waltz (D DU DU)',
-    instrument: 'Guitar', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // Accent on 1, light on 2 & 3
-    _v: 1, id: 'g34_ballad', name: 'Ballad',
-    instrument: 'Guitar', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Accent, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-    ],
-  },
-  {
-    // D chuck DU chuck DU
-    _v: 1, id: 'g34_country', name: 'Country 3/4',
-    instrument: 'Guitar', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'g34_full', name: 'Full Strum',
-    instrument: 'Guitar', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
+const THREE_FOUR_EIGHTH: StrumPreset[] = [
+  preset("e34_waltz_down", "Waltz (All Downs)",  THREE_FOUR, "eighth", [S, R, S, R, S, R]),
+  preset("e34_waltz_du",   "Waltz (D DU DU)",    THREE_FOUR, "eighth", [S, R, S, S, S, S]),
+  preset("e34_ballad",     "Ballad",             THREE_FOUR, "eighth", [A, R, S, R, S, R]),
+  preset("e34_full",       "Full Strum",         THREE_FOUR, "eighth", [S, S, S, S, S, S]),
 ];
 
-// ─── 4/4 Ukulele ──────────────────────────────────────────────────────────────
+// ─── 4/4 — 16th notes ──────────────────────────────────────────────────────────
+// 16 slots: four per beat (down on the beat & the "+", up on the "e" & "a").
 
-const UKE_4_4_EIGHTH: StrumPreset[] = [
-  {
-    _v: 1, id: 'uke44_island', name: 'Island (D DU UDU)',
-    instrument: 'Ukulele', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Air,    StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    // Skank: offbeat upstrokes only
-    _v: 1, id: 'uke44_skank', name: 'Skank (offbeats)',
-    instrument: 'Ukulele', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Rest,   StrokeAction.Stroke,
-      StrokeAction.Rest,   StrokeAction.Stroke,
-      StrokeAction.Rest,   StrokeAction.Stroke,
-      StrokeAction.Rest,   StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'uke44_down_up', name: 'Down-Up',
-    instrument: 'Ukulele', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'uke44_chuck', name: 'Chucka (D X DU X)',
-    instrument: 'Ukulele', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Chuck,  StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-    ],
-  },
-  {
-    _v: 1, id: 'uke44_calypso', name: 'Calypso',
-    instrument: 'Ukulele', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Air,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Air,    StrokeAction.Stroke,
-    ],
-  },
+const FOUR_FOUR_SIXTEENTH: StrumPreset[] = [
+  preset("s44_all",     "Sixteenths (all)",     FOUR_FOUR, "sixteenth",
+    [S, S, S, S, S, S, S, S, S, S, S, S, S, S, S, S]),
+  preset("s44_gallop",  "Gallop (D DU)",        FOUR_FOUR, "sixteenth",
+    [S, R, S, S, S, R, S, S, S, R, S, S, S, R, S, S]),
+  preset("s44_funk",    "Funk (accent + chuck)", FOUR_FOUR, "sixteenth",
+    [A, X, S, X, A, X, S, X, A, X, S, X, A, X, S, X]),
+  preset("s44_offbeat", "Offbeats (e & a)",     FOUR_FOUR, "sixteenth",
+    [R, S, R, S, R, S, R, S, R, S, R, S, R, S, R, S]),
 ];
-
-// ─── 3/4 Ukulele ──────────────────────────────────────────────────────────────
-
-const UKE_3_4_EIGHTH: StrumPreset[] = [
-  {
-    _v: 1, id: 'uke34_waltz', name: 'Waltz',
-    instrument: 'Ukulele', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'uke34_full', name: 'Full Swing',
-    instrument: 'Ukulele', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'uke34_skank', name: 'Skank 3/4',
-    instrument: 'Ukulele', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Rest,   StrokeAction.Stroke,
-      StrokeAction.Rest,   StrokeAction.Stroke,
-      StrokeAction.Rest,   StrokeAction.Stroke,
-    ],
-  },
-];
-
-// ─── 4/4 Mandolin / Mandola ───────────────────────────────────────────────────
-
-const MANDOLIN_4_4_EIGHTH: StrumPreset[] = [
-  {
-    // All downstrokes — basic chop rhythm
-    _v: 1, id: 'mand44_chop', name: 'Chop (offbeats)',
-    instrument: 'Mandolin', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Rest,   StrokeAction.Chuck,
-      StrokeAction.Rest,   StrokeAction.Chuck,
-      StrokeAction.Rest,   StrokeAction.Chuck,
-      StrokeAction.Rest,   StrokeAction.Chuck,
-    ],
-  },
-  {
-    _v: 1, id: 'mand44_down_up', name: 'Down-Up Strum',
-    instrument: 'Mandolin', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-  {
-    _v: 1, id: 'mand44_accent_chop', name: 'Accent + Chop',
-    instrument: 'Mandolin', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Accent, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-    ],
-  },
-  {
-    _v: 1, id: 'mand44_bluegrass', name: 'Bluegrass Chop',
-    instrument: 'Mandolin', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Air,    StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Air,    StrokeAction.Chuck,
-    ],
-  },
-  {
-    _v: 1, id: 'mand44_irish', name: 'Irish Jig Feel',
-    instrument: 'Mandolin', timeSig: { beats: 4, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Accent, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-      StrokeAction.Accent, StrokeAction.Stroke,
-      StrokeAction.Stroke, StrokeAction.Stroke,
-    ],
-  },
-];
-
-const MANDOLA_4_4_EIGHTH: StrumPreset[] = MANDOLIN_4_4_EIGHTH.map(p => ({
-  ...p,
-  id: p.id.replace('mand44', 'mandola44'),
-  instrument: 'Mandola' as const,
-}));
-
-// ─── 3/4 Mandolin / Mandola ──────────────────────────────────────────────────
-
-const MANDOLIN_3_4_EIGHTH: StrumPreset[] = [
-  {
-    _v: 1, id: 'mand34_waltz_chop', name: 'Waltz Chop',
-    instrument: 'Mandolin', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-      StrokeAction.Stroke, StrokeAction.Chuck,
-    ],
-  },
-  {
-    _v: 1, id: 'mand34_waltz_down', name: 'Waltz Down',
-    instrument: 'Mandolin', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Accent, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-      StrokeAction.Stroke, StrokeAction.Rest,
-    ],
-  },
-  {
-    _v: 1, id: 'mand34_offbeat_chop', name: 'Offbeat Chop',
-    instrument: 'Mandolin', timeSig: { beats: 3, division: 4 },
-    subdivision: 'eighth', isBuiltIn: true,
-    slots: [
-      StrokeAction.Rest,   StrokeAction.Chuck,
-      StrokeAction.Rest,   StrokeAction.Chuck,
-      StrokeAction.Rest,   StrokeAction.Chuck,
-    ],
-  },
-];
-
-const MANDOLA_3_4_EIGHTH: StrumPreset[] = MANDOLIN_3_4_EIGHTH.map(p => ({
-  ...p,
-  id: p.id.replace('mand34', 'mandola34'),
-  instrument: 'Mandola' as const,
-}));
 
 // ─── Full built-in preset list ────────────────────────────────────────────────
 
 export const BUILT_IN_PRESETS: StrumPreset[] = [
-  ...GUITAR_4_4_EIGHTH,
-  ...GUITAR_3_4_EIGHTH,
-  ...UKE_4_4_EIGHTH,
-  ...UKE_3_4_EIGHTH,
-  ...MANDOLIN_4_4_EIGHTH,
-  ...MANDOLA_4_4_EIGHTH,
-  ...MANDOLIN_3_4_EIGHTH,
-  ...MANDOLA_3_4_EIGHTH,
+  ...FOUR_FOUR_EIGHTH,
+  ...THREE_FOUR_EIGHTH,
+  ...FOUR_FOUR_SIXTEENTH,
 ];

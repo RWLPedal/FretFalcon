@@ -171,7 +171,15 @@ export class DroneView extends BaseView {
     });
 
     this.listen(container, 'link-status-changed', (e: Event) => {
-      const { hasIncomingLinks } = (e as CustomEvent<{ hasIncomingLinks: boolean }>).detail;
+      const detail = (e as CustomEvent<{ hasIncomingLinks: boolean; incomingKinds?: SignalKind[] }>).detail;
+      const { hasIncomingLinks } = detail;
+      // Decide strum articulation from the link's signal kinds, not from the first
+      // strum tick. A Play signal arrives synchronously the moment the strum starts —
+      // before any tick — so without this the drone would start a sustained tone and
+      // only discover it should have been plucked once ticks begin (drone *and* strum).
+      const hadStrumLink = this.hasStrumLink;
+      this.hasStrumLink = !!detail.incomingKinds?.includes(SignalKind.Strum);
+
       if (hasIncomingLinks) {
         if (!this.drivenOption) {
           this.drivenOption = document.createElement('option');
@@ -181,7 +189,6 @@ export class DroneView extends BaseView {
         }
         if (this.noteSelect) this.noteSelect.value = 'driven';
       } else {
-        this.hasStrumLink = false;
         if (this.drivenOption) {
           this.drivenOption.remove();
           this.drivenOption = null;
@@ -189,6 +196,14 @@ export class DroneView extends BaseView {
         if (this.noteSelect) this.noteSelect.value = this.note;
         this.dispatchTitle();
         if (this.isPlaying) this.startDrone();
+      }
+
+      // Reconcile a live drone when a strum link is added/removed mid-playback:
+      // silence the sustained tone when the strum takes over articulation, and
+      // resume it when the strum link goes away.
+      if (this.isPlaying && hasIncomingLinks) {
+        if (this.hasStrumLink && !hadStrumLink) this.stopDrone();
+        else if (!this.hasStrumLink && hadStrumLink) this.startDrone();
       }
     });
 

@@ -33,6 +33,7 @@ import { featureTypeId } from "../../core/ids";
 import { enumCodec } from "../../core/config/codecs";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
+import { capoVoicing, capoChordTitle } from "../capo";
 
 // ─── Typed config ─────────────────────────────────────────────────────────────
 
@@ -134,7 +135,7 @@ export const ChordFeatureSpec: FeatureSpec<ChordConfig> = {
   create(config: ChordConfig, ctx: FeatureContext): Feature {
     const chords = buildChordsFromConfig(config, ctx.settings);
     if (chords.length === 0) throw new Error(`[ChordFeature] No chord found for ${config.root} ${config.type}`);
-    return new ChordFeature([], chords, ctx.settings, ctx.constraints.maxHeight, config.display, ctx.constraints.maxWidth);
+    return new ChordFeature([], chords, ctx.settings, ctx.constraints.maxHeight, config.display, ctx.constraints.maxWidth, ctx.capo ?? 0);
   },
 };
 
@@ -157,6 +158,7 @@ export class ChordFeature extends InstrumentFeature {
   private readonly chords: ReadonlyArray<Chord>;
   private moveableView: MoveableToggleView | null = null;
   private readonly isMoveable: boolean;
+  private readonly capoFret: number;
 
   constructor(
     config: ReadonlyArray<string>,
@@ -165,38 +167,59 @@ export class ChordFeature extends InstrumentFeature {
     maxCanvasHeight?: number,
     chordLabelDisplay: ChordLabelDisplay = "fingering",
     maxWidth?: number,
+    capoFret = 0,
   ) {
     super(config, settings, maxCanvasHeight, maxWidth);
 
-    this.chords = chords;
+    this.capoFret = capoFret;
+    const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
+
+    // Under a capo, keep the sounding chords but re-voice each to a shape playable above the
+    // capo (open shape of chord−capo on the capo, or a moveable shape above it). The capo IS
+    // the barre, so the moveable-shape toggle is bypassed and we always use ChordDiagramView.
+    let displayChords: ReadonlyArray<Chord>;
+    let titles: string[];
+    if (capoFret > 0) {
+      const capoCtx = {
+        library: getChordLibraryForInstrument(guitarSettings.instrument),
+        instrument: guitarSettings.instrument as InstrumentName,
+        tuning: this.fretboardConfig.tuning,
+      };
+      const voiced = chords.map((c) => capoVoicing(String(c.rootKey), c.chordType, c.name, capoFret, capoCtx));
+      displayChords = voiced.map((v) => v.chord);
+      titles = voiced.map((v) => capoChordTitle(v.chord, capoFret, v.shapeLabel));
+    } else {
+      displayChords = chords;
+      titles = chords.map((c) => c.name);
+    }
+    this.chords = displayChords;
     this.isMoveable = localStorage.getItem(ChordFeature.MOVEABLE_PREF_KEY) === "true";
 
-    if (chords.length > 0) {
-      const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
-      let diagramCount = chords.length;
-      if (this.isMoveable && guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES) {
-        const moveableCount = chords.reduce(
+    if (displayChords.length > 0) {
+      let diagramCount = displayChords.length;
+      if (capoFret === 0 && this.isMoveable && guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES) {
+        const moveableCount = displayChords.reduce(
           (sum, chord) => sum + getMoveableShapes(guitarSettings.instrument, chord.name, this.fretboardConfig.tuning, chord.chordType).length,
           0
         );
         diagramCount += moveableCount;
       }
-      const { config } = planChordDiagramGrid(
+      const { config: planned } = planChordDiagramGrid(
         this.fretboardConfig, maxWidth, maxCanvasHeight,
         diagramCount, guitarSettings.zoomMultiplier ?? 1.2
       );
-      this.fretboardConfig = config;
+      this.fretboardConfig = planned;
     }
 
-    const guitarSettings = settings.instrumentSettings ?? DEFAULT_INSTRUMENT_SETTINGS;
+    const useMoveable = capoFret === 0 && guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES;
 
-    if (guitarSettings.instrument in MOVEABLE_CHORD_LIBRARIES) {
-      this.moveableView = new MoveableToggleView(chords, this.fretboardConfig, this.isMoveable, guitarSettings.instrument, chordLabelDisplay);
+    if (useMoveable) {
+      this.moveableView = new MoveableToggleView(displayChords, this.fretboardConfig, this.isMoveable, guitarSettings.instrument, chordLabelDisplay);
       this._views.push(this.moveableView);
     } else {
-      // Other instruments: static chord diagrams only.
-      chords.forEach((chord) => {
-        this._views.push(new ChordDiagramView(chord, chord.name, this.fretboardConfig, undefined, undefined, chordLabelDisplay));
+      // Other instruments, or any instrument under a capo: static chord diagrams only.
+      displayChords.forEach((chord, i) => {
+        this._views.push(new ChordDiagramView(chord, titles[i]!, this.fretboardConfig, undefined, undefined, chordLabelDisplay));
       });
     }
   }
@@ -341,6 +364,7 @@ export class ChordFeature extends InstrumentFeature {
         headerText = uniqueNames.slice(0, 3).join(" / ") + " Chords";
       }
     }
+    if (this.capoFret > 0) headerText += ` (capo ${this.capoFret})`;
     const header = addHeader(container, headerText);
     header.classList.add("feature-main-title");
 

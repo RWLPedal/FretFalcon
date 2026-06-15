@@ -13,7 +13,6 @@ export interface StrumPreset {
   _v: 1;
   id: string;
   name: string;
-  instrument: string;
   timeSig: { beats: number; division: number };
   subdivision: 'eighth' | 'sixteenth';
   slots: StrokeAction[];

@@ -6,7 +6,7 @@ import { BaseView } from '../../core/base_view';
 import { AppSettings } from '../../settings';
 import { Feature, FeatureSpec, FeatureContext } from '../../feature';
 import { emitEvent } from '../../core/events';
-import { DriveSignal, SignalState, SignalSink } from '../../panels/link_types';
+import { DriveSignal, SignalKind, SignalState, SignalSink } from '../../panels/link_types';
 import { getFeatureSpec } from '../../core/config/feature_spec_registry';
 import { FormBuilder } from '../../core/config/form_builder';
 import { resolveConfig } from '../../core/config/resolve';
@@ -33,6 +33,9 @@ export class FeaturePanelController extends BaseView implements SignalSink {
   private drivenConfig: DrivenConfig<unknown> | null = null;
   private drivenState: DrivenState = emptyDrivenState();
   private lastResolvedConfig: unknown | null = null;
+  // Capo fret from a linked Capo source (0 = no capo). Not a config field — it's transient
+  // and re-applied on every feature rebuild via buildFeatureContext().
+  private currentCapo = 0;
 
   constructor(initialState: any, appSettings: AppSettings) {
     super();
@@ -116,7 +119,7 @@ export class FeaturePanelController extends BaseView implements SignalSink {
     this.receiveSignalsNew(signals, meta);
   }
 
-  setLinkStatus(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean }): void {
+  setLinkStatus(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean; incomingKinds?: SignalKind[] }): void {
     this.setLinkStatusNew(status);
   }
 
@@ -206,6 +209,16 @@ export class FeaturePanelController extends BaseView implements SignalSink {
     for (const signal of signals) {
       const isNext = (signal.state ?? SignalState.Current) === SignalState.Next;
 
+      // Capo isn't a config field; track it on the controller so it survives feature
+      // rebuilds and gets re-applied via buildFeatureContext().
+      if (signal.kind === SignalKind.Capo) {
+        if (!isNext && this.currentCapo !== signal.fret) {
+          this.currentCapo = signal.fret;
+          needsRebuild = true;
+        }
+        continue;
+      }
+
       for (const key of specKeys) {
         const field = (this.spec.configSpec as any)[key];
         if (!field.drivable) continue;
@@ -242,14 +255,27 @@ export class FeaturePanelController extends BaseView implements SignalSink {
     }
   }
 
-  private setLinkStatusNew(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean }): void {
+  private setLinkStatusNew(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean; incomingKinds?: SignalKind[] }): void {
     if (!this.spec) return;
-    const { hasIncomingLinks, hasNextSignals } = status;
-    const kinds = new Set(
+    const { hasIncomingLinks, hasNextSignals, incomingKinds } = status;
+    let kinds = new Set(
       Object.values(this.spec.configSpec as any)
-        .flatMap((f: any) => f.drivable?.kinds ?? []) as import('../../panels/link_types').SignalKind[]
+        .flatMap((f: any) => f.drivable?.kinds ?? []) as SignalKind[]
     );
+    // Only auto-follow fields whose drivable kinds are actually carried by an incoming link.
+    // Without this, a Capo-only link would flip Root/Mode to "driven" with no value to resolve,
+    // leaving resolveConfig() stuck at null and the feature frozen.
+    if (incomingKinds) {
+      const carried = new Set(incomingKinds);
+      kinds = new Set([...kinds].filter(k => carried.has(k)));
+    }
     this.formBuilder?.setLinkStatus(hasIncomingLinks, hasNextSignals ?? false, kinds);
+
+    // Drop the capo when no incoming link carries Capo any more (e.g. the Capo link was removed).
+    if (incomingKinds && this.currentCapo > 0 && !incomingKinds.includes(SignalKind.Capo)) {
+      this.currentCapo = 0;
+      this.rebuildFeatureNew();
+    }
 
     if (this.featureContainer) {
       emitEvent(this.featureContainer, 'link-status-changed', { hasIncomingLinks, hasNextSignals }, { bubbles: false });
@@ -282,7 +308,7 @@ export class FeaturePanelController extends BaseView implements SignalSink {
       maxHeight = Math.max(50, this._availableHeight - configH - paddingV);
     }
 
-    return { settings: this.appSettings, constraints: { maxWidth, maxHeight } };
+    return { settings: this.appSettings, constraints: { maxWidth, maxHeight }, capo: this.currentCapo };
   }
 }
 

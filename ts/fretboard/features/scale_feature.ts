@@ -29,6 +29,7 @@ import { featureTypeId } from "../../core/ids";
 import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind, KeyType } from "../../panels/link_types";
+import { capoBarre, capoIsActive } from "../capo";
 
 // ─── Typed config ─────────────────────────────────────────────────────────────
 
@@ -113,6 +114,7 @@ export const ScaleFeatureSpec: FeatureSpec<ScaleConfig> = {
       ctx.settings,
       ctx.constraints.maxHeight,
       ctx.constraints.maxWidth,
+      ctx.capo ?? 0,
     );
   },
 };
@@ -133,6 +135,7 @@ export class ScaleFeature extends InstrumentFeature {
   private readonly keyIndex: number;
   private readonly highlightNotes: Set<string>;
   private readonly headerText: string;
+  private readonly capoFret: number;
   private fretboardViewInstance: FretboardView;
   private fretCount: number;
 
@@ -145,12 +148,14 @@ export class ScaleFeature extends InstrumentFeature {
     settings: AppSettings,
     maxCanvasHeight?: number,
     maxWidth?: number,
+    capoFret = 0,
   ) {
     super(config, settings, maxCanvasHeight, maxWidth);
     this.scale = scale;
     this.keyIndex = keyIndex;
     this.highlightNotes = highlightNotes;
     this.headerText = headerText;
+    this.capoFret = capoFret;
     this.fretCount = 18;
 
     const guitarSettings =
@@ -269,6 +274,8 @@ export class ScaleFeature extends InstrumentFeature {
       const stringTuning = tuning[stringIndex];
 
       for (let fretIndex = 0; fretIndex <= fretCount; fretIndex++) {
+        // A capo blocks everything below it: those positions can't be played.
+        if (fretIndex < this.capoFret) continue;
         const noteOffsetFromA = (stringTuning + fretIndex) % 12;
         const noteRelativeToKey = (noteOffsetFromA - this.keyIndex + 12) % 12;
         const noteName = NOTE_NAMES_FROM_A[noteOffsetFromA] ?? "?";
@@ -341,6 +348,9 @@ export class ScaleFeature extends InstrumentFeature {
       if (this.fretboardViewInstance) {
         this.fretboardViewInstance.setNotes(notesData);
         this.fretboardViewInstance.setLines([]);
+        this.fretboardViewInstance.setBarres(
+          capoIsActive(this.capoFret) ? [capoBarre(this.capoFret, config)] : [],
+        );
       }
     });
   }
@@ -350,7 +360,8 @@ export class ScaleFeature extends InstrumentFeature {
 
     const titleRow = document.createElement("div");
     titleRow.classList.add("feature-title-row");
-    const header = addHeader(titleRow, this.headerText);
+    const capoSuffix = this.capoFret > 0 ? ` (capo ${this.capoFret})` : "";
+    const header = addHeader(titleRow, `${this.headerText}${capoSuffix}`);
     header.classList.add("feature-main-title");
     container.appendChild(titleRow);
   }

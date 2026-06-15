@@ -48,6 +48,13 @@ export default featurePanelModule({
           return null;
         },
       },
+      {
+        featureTypeName: TriadFeature.typeName,
+        argName: 'Capo',
+        label: 'Capo (from linked source)',
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

@@ -130,6 +130,18 @@ export class LinkManager {
       this.routeSignals(instanceId, signals);
     });
 
+    // Listen for capo-changed (Capo view fret selection)
+    onEvent(viewAreaEl, 'capo-changed', (detail, e) => {
+      const instanceId = this.resolveSourceInstanceId(e);
+      if (!instanceId) return;
+      const viewId = this.instanceIdToViewId(instanceId);
+      if (!viewId) return;
+      const descriptor = getDriveSourceDescriptor(viewId);
+      if (!descriptor) return;
+      const signals = descriptor.extractSignals(detail);
+      this.routeSignals(instanceId, signals);
+    });
+
     // Listen for feature-state-changed (for configurable features as sources)
     onEvent(viewAreaEl, 'feature-state-changed', (detail, e) => {
       if (!detail.featureTypeName) return;
@@ -449,15 +461,28 @@ export class LinkManager {
       return getDriveSourceDescriptor(viewId, ftName)?.emitsNextSignals === true;
     });
 
+    // The SignalKinds actually arriving on incoming links — so a target only auto-follows
+    // drivable fields a link really drives (a Capo-only link must not drive Root/Mode).
+    const incomingKinds = new Set<SignalKind>();
+    for (const l of incoming) {
+      const viewId = this.instanceIdToViewId(l.sourceInstanceId) ?? '';
+      const ftName = this.instanceIdToFeatureTypeName?.(l.sourceInstanceId) ?? undefined;
+      getDriveSourceDescriptor(viewId, ftName)?.emittedKinds.forEach(k => incomingKinds.add(k));
+    }
+    if (this.globalSourceInstanceId !== null && instanceId !== this.globalSourceInstanceId) {
+      const gViewId = this.instanceIdToViewId(this.globalSourceInstanceId) ?? '';
+      getDriveSourceDescriptor(gViewId)?.emittedKinds.forEach(k => incomingKinds.add(k));
+    }
+
     const sink = this.getSink(instanceId);
     if (sink?.setLinkStatus) {
-      sink.setLinkStatus({ hasIncomingLinks: hasIncoming, hasNextSignals });
+      sink.setLinkStatus({ hasIncomingLinks: hasIncoming, hasNextSignals, incomingKinds: [...incomingKinds] });
       return;
     }
 
     const targetEl = this.getContentEl(instanceId) ?? this.getWrapperEl(instanceId);
     if (!targetEl) return;
-    emitEvent(targetEl, 'link-status-changed', { hasIncomingLinks: hasIncoming, hasNextSignals });
+    emitEvent(targetEl, 'link-status-changed', { hasIncomingLinks: hasIncoming, hasNextSignals, incomingKinds: [...incomingKinds] });
   }
 
   private notifyAllLinkStatuses(): void {

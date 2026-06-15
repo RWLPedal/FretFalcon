@@ -631,15 +631,21 @@ export const HARMONY_EXPLORER_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
-/** Strumming: a rhythm-practice layout. The Strum pattern builder drives a Drone so
- *  the pedal tone is plucked in time, a Chord Progression shows the chords to strum,
- *  and a Capo helps transpose the open-chord shapes. */
+/** Strumming: a rhythm-practice layout. The Strum pattern builder (preloaded with the
+ *  Island pattern) drives a Drone so the pedal tone is plucked in time, a Chord Progression
+ *  shows the chords to strum, and a Capo is linked to that progression so its chord diagrams
+ *  re-voice to the shapes you finger above the capo. */
 export const STRUMMING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   instances: {
     "fv-1": {
       instanceId: "fv-1",
       viewId: "strum_view",
-      viewState: {},
+      // Island strum (D DU UDU), 4/4 eighths — matches the e44_island built-in preset.
+      viewState: {
+        subdivision: "eighth",
+        timeSig: { beats: 4, division: 4 },
+        slots: ["stroke", "rest", "stroke", "stroke", "air", "stroke", "stroke", "stroke"],
+      },
     },
     "fv-2": {
       instanceId: "fv-2",
@@ -668,6 +674,14 @@ export const STRUMMING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       sourceHandle: "bottom" as const,
       targetInstanceId: "fv-2",
       targetHandle: "top" as const,
+    },
+    {
+      // Capo drives the Chord Progression's chord diagrams (re-voiced above the capo).
+      id: "link-2",
+      sourceInstanceId: "fv-4",
+      sourceHandle: "right" as const,
+      targetInstanceId: "fv-3",
+      targetHandle: "left" as const,
     },
   ],
   layout: {

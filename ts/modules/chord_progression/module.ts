@@ -37,6 +37,13 @@ export default featurePanelModule({
           return signal.scaleKey;
         },
       },
+      {
+        featureTypeName: ChordProgressionFeature.typeName,
+        argName: 'Capo',
+        label: 'Capo (from linked source)',
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

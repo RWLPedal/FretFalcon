@@ -22,6 +22,7 @@ export enum SignalKind {
   Feature   = 'Feature',
   Play      = 'Play',
   Strum     = 'Strum',
+  Capo      = 'Capo',
 }
 
 export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
@@ -31,6 +32,7 @@ export const SIGNAL_KIND_ICON: Record<SignalKind, string> = {
   [SignalKind.Feature]:   '◈',
   [SignalKind.Play]:      '▶',
   [SignalKind.Strum]:     '♾',
+  [SignalKind.Capo]:      '⇪',
 };
 
 // ─── Signal state ─────────────────────────────────────────────────────────────
@@ -115,7 +117,16 @@ export interface StrumSignal extends BaseSignal {
   totalSteps: number;
 }
 
-export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal | StrumSignal;
+// A capo signal — carries a capo fret position (0 = no capo) from a Capo source.
+// Different fretboard targets interpret it differently:
+//   Chord / ChordProgression: transpose the displayed chord(s) up by `fret` and draw a capo barre.
+//   Scale / Arpeggio / Triad / MultiLayerFretboard: hide notes below `fret` and draw a capo barre (no transposition).
+export interface CapoSignal extends BaseSignal {
+  kind: SignalKind.Capo;
+  fret: number;                  // 0-indexed capo fret; 0 = no capo
+}
+
+export type DriveSignal = ChordSignal | KeySignal | GrooveSignal | FeatureSignal | PlaySignal | StrumSignal | CapoSignal;
 
 // ─── SignalSink ───────────────────────────────────────────────────────────────
 // Views that implement this interface receive drive signals via direct method
@@ -127,6 +138,15 @@ export interface SignalSink {
     signals: DriveSignal[],
     meta: { sourceInstanceId: string; linkId: string | null },
   ): void;
-  setLinkStatus?(status: { hasIncomingLinks: boolean; hasNextSignals?: boolean }): void;
+  setLinkStatus?(status: {
+    hasIncomingLinks: boolean;
+    hasNextSignals?: boolean;
+    /**
+     * The SignalKinds actually carried by incoming links (union of linked sources'
+     * emittedKinds). Targets use this to only auto-follow drivable fields that a link
+     * really drives — e.g. a Capo-only link must not flip a Root/Mode field to "driven".
+     */
+    incomingKinds?: SignalKind[];
+  }): void;
 }
 

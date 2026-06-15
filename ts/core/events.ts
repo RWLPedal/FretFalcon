@@ -5,7 +5,7 @@
 //   emitEvent(el, 'groove-tick', { bpm: 120, timeSig: {beats:4,division:4}, swing: 0, beat: 0 });
 //   const unlisten = onEvent(el, 'groove-tick', (detail) => { ... });
 
-import { DriveSignal, FeatureSignal, StrumAction, DiatonicMode, KeyType } from '../panels/link_types';
+import { DriveSignal, FeatureSignal, StrumAction, DiatonicMode, KeyType, SignalKind } from '../panels/link_types';
 
 // ─── Per-view state shapes ────────────────────────────────────────────────────
 // feature-state-changed carries whatever the emitting view persists as its
@@ -99,6 +99,11 @@ export interface AppEventMap {
     chordKeys: string[];
   };
 
+  /** Emitted by the Capo view when its capo fret changes (0 = no capo). */
+  'capo-changed': {
+    fret: number;
+  };
+
   // ── Feature state ───────────────────────────────────────────────────────────
 
   'feature-state-changed': FeatureStateChangedDetail;
@@ -124,6 +129,10 @@ export interface AppEventMap {
   'link-status-changed': {
     hasIncomingLinks: boolean;
     hasNextSignals?: boolean;
+    /** Union of SignalKinds carried by the incoming links. Lets a target react to
+     *  the *kind* of drive it has (e.g. a Drone arming for strum articulation)
+     *  before any signal actually arrives. */
+    incomingKinds?: SignalKind[];
   };
 
   // ── UI sizing ───────────────────────────────────────────────────────────────

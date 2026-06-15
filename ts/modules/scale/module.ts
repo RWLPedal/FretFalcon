@@ -108,6 +108,13 @@ export default featurePanelModule({
           return signal.rootNote;
         },
       },
+      {
+        featureTypeName: ScaleFeature.typeName,
+        argName: "Capo",
+        label: "Capo (from linked source)",
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

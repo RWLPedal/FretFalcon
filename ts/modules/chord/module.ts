@@ -58,6 +58,13 @@ export default featurePanelModule({
           return signal.keyType === KeyType.Major ? "Major" : "Minor";
         },
       },
+      {
+        featureTypeName: ChordFeature.typeName,
+        argName: "Capo",
+        label: "Capo (from linked source)",
+        acceptedKinds: [SignalKind.Capo],
+        resolveValue: () => null,
+      },
     ],
   },
 });

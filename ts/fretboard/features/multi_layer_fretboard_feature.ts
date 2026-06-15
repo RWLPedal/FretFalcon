@@ -54,6 +54,7 @@ import {
   chordToneNamesToSemitones,
   scaleSemitonesFromDegrees,
 } from "../../music/note_semantics";
+import { capoBarre, capoIsActive } from "../capo";
 
 // --- Layer Spec Types ---
 // rootNote / chordKey may be the sentinel "driven" — resolved at runtime from the incoming signal.
@@ -171,6 +172,7 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   readonly typeName = MultiLayerFretboardFeature.typeName;
   private readonly layers: LayerSpec[];
   private readonly showOverlays: boolean;
+  private readonly capoFret: number;
   // Last signals received — used to resolve "driven" / "driven_next" sentinels in layer fields
   private lastChordSignal: ChordSignal | null = null;
   private lastRootSignal: ChordSignal | KeySignal | null = null;
@@ -188,10 +190,12 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
     settings: AppSettings,
     maxCanvasHeight?: number,
     maxWidth?: number,
+    capoFret = 0,
   ) {
     super(config, settings, maxCanvasHeight, maxWidth);
     this.layers = layers;
     this.showOverlays = showOverlays;
+    this.capoFret = capoFret;
 
     const guitarSettings =
       (settings.instrumentSettings as InstrumentSettings | undefined) ??
@@ -216,7 +220,8 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
   public render(container: HTMLElement): void {
     this.featureContainer = container;
     clearAllChildren(container);
-    const header = addHeader(container, "Multi-Layer Fretboard");
+    const capoSuffix = this.capoFret > 0 ? ` (capo ${this.capoFret})` : "";
+    const header = addHeader(container, `Multi-Layer Fretboard${capoSuffix}`);
     header.classList.add("feature-main-title");
 
     // Listen for drive-signal events forwarded by ConfigurableFeatureView
@@ -473,9 +478,19 @@ export class MultiLayerFretboardFeature extends InstrumentFeature {
       }
     }
 
+    // A capo blocks everything below it across every layer.
+    const visibleNotes = capoIsActive(this.capoFret)
+      ? notesData.filter((n) => n.fret >= this.capoFret)
+      : notesData;
+
     requestAnimationFrame(() => {
-      this.fretboardViewInstance.setNotes(notesData);
+      this.fretboardViewInstance.setNotes(visibleNotes);
       this.fretboardViewInstance.setLines([]);
+      this.fretboardViewInstance.setBarres(
+        capoIsActive(this.capoFret)
+          ? [capoBarre(this.capoFret, this.fretboardConfig)]
+          : [],
+      );
     });
   }
 
@@ -859,6 +874,7 @@ export const MultiLayerFeatureSpec: FeatureSpec<MultiLayerConfig> = {
       ctx.settings,
       ctx.constraints.maxHeight,
       ctx.constraints.maxWidth,
+      ctx.capo ?? 0,
     );
   },
 };

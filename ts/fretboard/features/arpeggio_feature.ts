@@ -28,6 +28,7 @@ import { featureTypeId } from "../../core/ids";
 import { enumCodec, stringArrayCodec } from "../../core/config/codecs";
 import type { ConfigSpec } from "../../core/config/spec";
 import { SignalKind } from "../../panels/link_types";
+import { capoBarre, capoIsActive } from "../capo";
 
 const DEFAULT_STROKE = "rgba(50, 50, 50, 0.7)";
 const ROOT_STROKE = "#333333";
@@ -137,7 +138,7 @@ export const ArpeggioFeatureSpec: FeatureSpec<ArpeggioConfig> = {
     const visibleIntervals: Set<string> | null = config.showIntervals.length > 0 ? new Set(config.showIntervals) : null;
     const validRootName = NOTE_NAMES_FROM_A[keyIndex] ?? config.rootNote;
     const headerText = `${validRootName} ${spec.name} Arpeggio`;
-    return new ArpeggioFeature([], keyIndex, intervals, visibleIntervals, headerText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth);
+    return new ArpeggioFeature([], keyIndex, intervals, visibleIntervals, headerText, ctx.settings, ctx.constraints.maxHeight, ctx.constraints.maxWidth, ctx.capo ?? 0);
   },
 };
 
@@ -153,6 +154,7 @@ export class ArpeggioFeature extends InstrumentFeature {
   private readonly chordIntervals: Set<number>;
   private readonly visibleIntervals: Set<string> | null; // null = show all
   private readonly headerText: string;
+  private readonly capoFret: number;
   private fretboardViewInstance: FretboardView;
   private fretCount: number;
 
@@ -165,12 +167,14 @@ export class ArpeggioFeature extends InstrumentFeature {
     settings: AppSettings,
     maxCanvasHeight?: number,
     maxWidth?: number,
+    capoFret = 0,
   ) {
     super(config, settings, maxCanvasHeight, maxWidth);
     this.keyIndex = keyIndex;
     this.chordIntervals = chordIntervals;
     this.visibleIntervals = visibleIntervals;
     this.headerText = headerText;
+    this.capoFret = capoFret;
     this.fretCount = 18;
 
     const guitarSettings =
@@ -288,6 +292,8 @@ export class ArpeggioFeature extends InstrumentFeature {
       const stringTuning = tuning[stringIndex]!;
 
       for (let fretIndex = 0; fretIndex <= fretCount; fretIndex++) {
+        // A capo blocks everything below it: those positions can't be played.
+        if (fretIndex < this.capoFret) continue;
         const noteOffsetFromA = (stringTuning + fretIndex) % 12;
         const noteRelativeToKey = (noteOffsetFromA - this.keyIndex + 12) % 12;
 
@@ -325,6 +331,9 @@ export class ArpeggioFeature extends InstrumentFeature {
       if (this.fretboardViewInstance) {
         this.fretboardViewInstance.setNotes(notesData);
         this.fretboardViewInstance.setLines([]);
+        this.fretboardViewInstance.setBarres(
+          capoIsActive(this.capoFret) ? [capoBarre(this.capoFret, config)] : [],
+        );
       }
     });
   }
@@ -334,7 +343,8 @@ export class ArpeggioFeature extends InstrumentFeature {
 
     const titleRow = document.createElement("div");
     titleRow.classList.add("feature-title-row");
-    const header = addHeader(titleRow, this.headerText);
+    const capoSuffix = this.capoFret > 0 ? ` (capo ${this.capoFret})` : "";
+    const header = addHeader(titleRow, `${this.headerText}${capoSuffix}`);
     header.classList.add("feature-main-title");
     container.appendChild(titleRow);
   }
