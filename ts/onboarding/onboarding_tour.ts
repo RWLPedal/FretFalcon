@@ -12,6 +12,7 @@ import {
 import {
   SIDEBAR_CONTAINER_CLASS,
   SIDEBAR_LAYOUT_PICKER_CLASS,
+  SIDEBAR_TOOLS_BAR_CLASS,
 } from "../reference_page/sidebar_view";
 import { brandLockupHtml } from "../branding";
 
@@ -139,10 +140,19 @@ const STEPS: TourStep[] = [
     target: () => $(`.${SIDEBAR_LAYOUT_PICKER_CLASS}`),
     pad: 6,
     placement: "right",
-    last: true,
     step: "Layout",
     title: "Layouts &amp; presets",
     body: "Jump to a preset arrangement or save your own. Your layout is automatically remembered between sessions.",
+  },
+  {
+    key: "tools",
+    target: () => $(`.${SIDEBAR_TOOLS_BAR_CLASS}`),
+    pad: 6,
+    placement: "right",
+    last: true,
+    step: "Tools",
+    title: "Save, settings &amp; focus",
+    body: "Down here you can <b>save</b> your board to a file or <b>load</b> a previous board, open <b>settings</b> to fine-tune the app, and switch on <b>Zen mode</b> to clear distractions and just play.",
   },
 ];
 
@@ -196,10 +206,20 @@ function buildWelcome(): void {
     openTourViews(() => startTour());
   });
 
+  const introLink = el(
+    "a",
+    "onb-btn-secondary",
+    `Read intro<span class="material-icons">open_in_new</span>`,
+  ) as HTMLAnchorElement;
+  introLink.href = "https://fretfalcon.com/intro.html";
+  introLink.target = "_blank";
+  introLink.rel = "noopener noreferrer";
+
   const skipBtn = el("button", "onb-btn-ghost", "Explore on my own");
   skipBtn.addEventListener("click", closeWelcome);
 
   actions.appendChild(startBtn);
+  actions.appendChild(introLink);
   actions.appendChild(skipBtn);
 
   card.appendChild(hero);

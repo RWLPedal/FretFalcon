@@ -1,5 +1,6 @@
 ﻿export const SIDEBAR_CONTAINER_CLASS = 'side-bar-container';
 export const SIDEBAR_LAYOUT_PICKER_CLASS = 'sidebar-layout-picker';
+export const SIDEBAR_TOOLS_BAR_CLASS = 'sidebar-tools-bar';
 
 import { FloatingViewManager } from '../panels/panel_host';
 import { VolumeControl } from '../core/widgets/volume_control';
