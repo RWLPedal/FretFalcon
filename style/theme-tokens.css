@@ -9,14 +9,14 @@
    WARM — Parchment · Slate Blue · Amber
    ─────────────────────────────────────── */
 [data-theme="warm"] {
-  --bg: #f2ede4;
-  --panel-bg: #faf7f2;
-  --sidebar-bg: #ede8df;
-  --settings-bg: #f5f1ea;
-  --input-bg: #ede8df;
-  --pad-off: #e0d9cf;
+  --bg: #efe7d3;
+  --panel-bg: #fbf6ea;
+  --sidebar-bg: #e9e1cd;
+  --settings-bg: #f4ecdd;
+  --input-bg: #e9e1cd;
+  --pad-off: #dcd2bd;
 
-  --border: #d8d0c4;
+  --border: #d3c7b1;
   --shadow: 0 2px 12px rgba(44, 40, 32, 0.1);
   --shadow-panel: 0 4px 20px rgba(44, 40, 32, 0.12);
   --clr-shadow: rgba(44, 40, 32, 0.1);
