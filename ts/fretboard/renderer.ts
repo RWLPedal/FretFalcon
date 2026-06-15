@@ -250,8 +250,14 @@ export class Fretboard {
     const tintBoardRight = tintBoardLeft + (stringCount - 1) * config.stringSpacingPx;
     const tintMidVx = tintBoardLeft + Math.floor(stringCount / 2) * config.stringSpacingPx;
     {
-      const tintTL = this._toCanvas(tintMidVx - halfSpacing, this.nutLineY);
-      const tintBR = this._toCanvas(tintBoardRight, this.nutLineY + this.fretCount * config.fretLengthPx);
+      // Tint the half of the board holding the heavy (bass) strings to convey weight.
+      // getStringWidths() reverses for left-handed, so the bass strings sit on the
+      // high-vx half when left-handed and the low-vx half when right-handed.
+      const splitVx = tintMidVx - halfSpacing;
+      const tintNearVx = config.handedness === "left" ? splitVx : tintBoardLeft;
+      const tintFarVx = config.handedness === "left" ? tintBoardRight : splitVx;
+      const tintTL = this._toCanvas(tintNearVx, this.nutLineY);
+      const tintBR = this._toCanvas(tintFarVx, this.nutLineY + this.fretCount * config.fretLengthPx);
       ctx.save();
       ctx.fillStyle = isLightBg ? 'rgba(0,0,0,0.05)' : 'rgba(0,0,0,0.06)';
       ctx.fillRect(
