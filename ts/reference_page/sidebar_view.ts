@@ -53,7 +53,7 @@ export class SidebarView {
         let html = `
             <div class="sidebar-header">
                 <span class="material-icons sidebar-app-icon">music_note</span>
-                <span class="sidebar-app-name">PracTempo</span>
+                <span class="sidebar-app-name">FretFalcon</span>
                 <button id="help-tour-btn" class="sidebar-help-btn" title="Take the tour">
                     <span class="material-icons">help_outline</span>
                 </button>

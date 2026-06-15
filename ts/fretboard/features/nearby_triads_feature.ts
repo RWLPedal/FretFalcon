@@ -67,7 +67,7 @@ interface NTWizardPersisted {
   dismissed: boolean;
 }
 
-const NT_COMPACT_STORAGE_KEY = 'practempo_nearby_triads_compact_v1';
+const NT_COMPACT_STORAGE_KEY = 'fretfalcon_nearby_triads_compact_v1';
 
 const PALETTE_VARS = [
   'var(--dm-palette-1)',

@@ -1,8 +1,8 @@
-# PracTempo User Guide
+# FretFalcon User Guide
 
 ## Table of Contents
 
-- [PracTempo User Guide](#practempo-user-guide)
+- [FretFalcon User Guide](#fretfalcon-user-guide)
   - [Table of Contents](#table-of-contents)
   - [Quickstart](#quickstart)
   - [Core Concepts](#core-concepts)
@@ -58,7 +58,7 @@ In this quickstart we'll set up a short practice session where a scale is shown 
 
 ### The Panel System
 
-PracTempo is built around **floating panels** — draggable, resizable windows you arrange however you like. Open any view from the sidebar and it appears as a floating panel over the main workspace. Panels remember their positions and sizes between sessions.
+FretFalcon is built around **floating panels** — draggable, resizable windows you arrange however you like. Open any view from the sidebar and it appears as a floating panel over the main workspace. Panels remember their positions and sizes between sessions.
 
 Each panel has a **config toggle** (gear icon in its header) that reveals its configuration controls inline. Changes take effect immediately.
 
@@ -66,7 +66,7 @@ Most panels that display fretboard diagrams also have **rotate** and **zoom** co
 
 ### Linking: Connecting Panels Together
 
-Since you might have many panels open at once, there can be a lot of options to consider. And worst of all, while you're practicing you likely want the panels to update automatically. **Linking** is the most powerful feature in PracTempo. It lets one panel **drive** another in real time, so your visual aids stay in sync. Almost any kind of panel can drive other panels that make sense to receive it.
+Since you might have many panels open at once, there can be a lot of options to consider. And worst of all, while you're practicing you likely want the panels to update automatically. **Linking** is the most powerful feature in FretFalcon. It lets one panel **drive** another in real time, so your visual aids stay in sync. Almost any kind of panel can drive other panels that make sense to receive it.
 
 **How to create a link:**
 
@@ -124,7 +124,7 @@ The Schedule is a list of timed practice intervals. Each interval has:
 
 When the schedule is running, the built-in timer counts down each interval. An audio chime signals transitions. The **Any** panel displays whichever feature is configured for the current interval, updating automatically as intervals change.
 
-You don't need a schedule to use PracTempo — all views work independently for open-ended reference and practice.
+You don't need a schedule to use FretFalcon — all views work independently for open-ended reference and practice.
 
 ---
 

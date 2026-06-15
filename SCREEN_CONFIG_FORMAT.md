@@ -1,6 +1,6 @@
 # Screen Configuration Format
 
-This document describes the format used to persist and restore screen layouts (floating view positions, sizes, links, and view-specific state) in PracTempo.
+This document describes the format used to persist and restore screen layouts (floating view positions, sizes, links, and view-specific state) in FretFalcon.
 
 ---
 

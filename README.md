@@ -1,10 +1,10 @@
-# PracTempo
+# FretFalcon
 
 **A practice timer that shows you what to play.**
 
-Sick of flipping between generic scale diagrams, messy chord charts, and external metronomes? *PracTempo* is a free web app that puts every theory reference and practice tool exactly where you need it. Built for absolutely anyone on a fretted instrument (including left-handed players, players of custom tunings, and niche instruments like the charango and mandola), it lets you drag, drop, and link interactive fretboards, chord diagrams, triad hints, backing tracks, metronomes, chord progressions, and more. All your essential tools are visible in a single easy-to-read page, so your hands stay on the strings instead of your mouse. As a bonus, you can build timed practice intervals to automatically switch your references as you progress through your session. Desktop recommended, mobile supported.
+Sick of flipping between generic scale diagrams, messy chord charts, and external metronomes? *FretFalcon* is a free web app that puts every theory reference and practice tool exactly where you need it. Built for absolutely anyone on a fretted instrument (including left-handed players, players of custom tunings, and niche instruments like the charango and mandola), it lets you drag, drop, and link interactive fretboards, chord diagrams, triad hints, backing tracks, metronomes, chord progressions, and more. All your essential tools are visible in a single easy-to-read page, so your hands stay on the strings instead of your mouse. As a bonus, you can build timed practice intervals to automatically switch your references as you progress through your session. Desktop recommended, mobile supported.
 
-[![Try the live demo](https://img.shields.io/badge/Try_the_live_demo-green?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTggNXYxNGwxMS03eiIvPjwvc3ZnPg==&logoColor=white)](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html)
+[![Try the live demo](https://img.shields.io/badge/Try_the_live_demo-green?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0iI2ZmZmZmZiI+PHBhdGggZD0iTTggNXYxNGwxMS03eiIvPjwvc3ZnPg==&logoColor=white)](https://html-preview.github.io/?url=https://github.com/RWLPedal/FretFalcon/blob/main/dist/index.html)
 
 ![Main workspace with Scale, chord diagrams and progression](images/screenshot-main.png)
 
@@ -58,7 +58,7 @@ Guitars (6-, 7-, 8-string, tenor), basses, ukuleles, mandolins, mandolas, charan
 
 ### Structured Practice Sessions
 
-Build a full practice schedule with named timed intervals. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, saving and loading schedules, and keyboard shortcuts. PracTempo notifies you when each interval ends, and advances automatically.
+Build a full practice schedule with named timed intervals. The schedule editor supports drag-and-drop reordering, clipboard copy/paste, saving and loading schedules, and keyboard shortcuts. FretFalcon notifies you when each interval ends, and advances automatically.
 
 ### Fretboard & Theory Reference
 
@@ -94,13 +94,13 @@ Panels don't exist in isolation. Hook up panels to make configuration easy. A ba
 
 ## Technical Philosophy
 
-* PracTempo is built to be a single downloadable, transportable html file.
+* FretFalcon is built to be a single downloadable, transportable html file.
 * It has an intentionally simple dependency stack: no UI framework, no predefined CSS libraries. The stack is TypeScript, Webpack, and vanilla DOM - no React, no Vue, no runtime dependencies beyond what the browser already provides. This keeps the built output a single self-contained HTML file that can be opened locally, hosted on a static server, or previewed directly from GitHub without a build step.
 * Each panel is a self-registering module. Adding a new tool means implementing a small interface and registering it; the workspace, panel linking system, and layout persistence handle the rest automatically. The goal is a codebase where any panel can be understood in isolation, and where the overall architecture stays legible as the feature set grows.
 
 ## Getting Started
 
-No installation required - [try the live demo](https://html-preview.github.io/?url=https://github.com/RWLPedal/PracTempo/blob/main/dist/index.html) directly in your browser.
+No installation required - [try the live demo](https://html-preview.github.io/?url=https://github.com/RWLPedal/FretFalcon/blob/main/dist/index.html) directly in your browser.
 
 Worried the link might go down? You can simply download the `dist/index.html` to your hard drive, and open it in your browser.
 

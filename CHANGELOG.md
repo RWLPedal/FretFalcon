@@ -1,4 +1,4 @@
-# PracTempo Changelog
+# FretFalcon Changelog
 
 ## July 6, 2025
 

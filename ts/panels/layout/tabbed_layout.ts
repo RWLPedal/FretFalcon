@@ -135,7 +135,7 @@ export class TabbedLayout implements LayoutStrategy {
 
     const titleEl = document.createElement('span');
     titleEl.className = 'tabbed-top-bar-title';
-    titleEl.textContent = 'PracTempo';
+    titleEl.textContent = 'FretFalcon';
     this._topBarTitleEl = titleEl;
 
     const settingsBtn = document.createElement('button');
@@ -277,7 +277,7 @@ export class TabbedLayout implements LayoutStrategy {
     if (this.activeId === instanceId) {
       this.activeId = this.order[this.order.length - 1] ?? null;
       if (this.activeId) this.focus(this.activeId);
-      else this._setTopBarTitle('PracTempo');
+      else this._setTopBarTitle('FretFalcon');
     }
     this._rebuildConnectors();
   }
@@ -295,7 +295,7 @@ export class TabbedLayout implements LayoutStrategy {
     if (panelEl) panelEl.style.display = '';
     if (tabEl) tabEl.classList.add('is-active');
     this.activeId = instanceId;
-    this._setTopBarTitle(this._panelTitles.get(instanceId) ?? 'PracTempo');
+    this._setTopBarTitle(this._panelTitles.get(instanceId) ?? 'FretFalcon');
   }
 
   /** Returns instanceIds in current tab order. */

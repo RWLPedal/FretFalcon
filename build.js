@@ -26,17 +26,6 @@ const mainCSS = resolveCSS(path.join(ROOT, 'style/style.css'))
 
 const bundleJS = fs.readFileSync(path.join(ROOT, 'js/reference_bundle.js'), 'utf8');
 
-function wavDataURI(relPath) {
-  const data = fs.readFileSync(path.join(ROOT, relPath));
-  return `data:audio/wav;base64,${data.toString('base64')}`;
-}
-
-const audioMap = {
-  'sounds/metronome.wav': wavDataURI('sounds/metronome.wav'),
-  'sounds/metronome_accent.wav': wavDataURI('sounds/metronome_accent.wav'),
-  'sounds/intro_bell.wav': wavDataURI('sounds/intro_bell.wav'),
-  'sounds/bell.wav': wavDataURI('sounds/bell.wav'),
-};
 
 let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
@@ -53,9 +42,6 @@ html = html.replace(
   `<script defer>\n${bundleJS}\n</script>`
 );
 
-for (const [src, dataURI] of Object.entries(audioMap)) {
-  html = html.replace(new RegExp(`src="${src}"`, 'g'), `src="${dataURI}"`);
-}
 
 const outDir = path.join(ROOT, 'dist');
 fs.mkdirSync(outDir, { recursive: true });

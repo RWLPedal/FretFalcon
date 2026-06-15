@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "practempo",
+      "name": "fretfalcon",
       "runtimeExecutable": "node",
       "runtimeArgs": [".claude/preview-server.js"],
       "port": 4000,

@@ -1,6 +1,6 @@
-# PracTempo TODO List
+# FretFalcon TODO List
 
-This file tracks planned features, improvements, and bug fixes for PracTempo.
+This file tracks planned features, improvements, and bug fixes for FretFalcon.
 
 ## General Features
 

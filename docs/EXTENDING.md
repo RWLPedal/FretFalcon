@@ -1,6 +1,6 @@
 # Adding a New View
 
-Adding a view to PracTempo is intentionally a two-file job: one module file and, if
+Adding a view to FretFalcon is intentionally a two-file job: one module file and, if
 you need a unique view component, one view class file.  The build picks up new modules
 automatically — no registration boilerplate required.
 

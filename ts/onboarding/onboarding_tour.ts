@@ -159,7 +159,7 @@ function buildWelcome(): void {
   hero.innerHTML = `
         <div class="onb-eyebrow">
             <span class="material-icons">music_note</span>
-            <span>PRACTEMPO</span>
+            <span>FRETFALCON</span>
         </div>
         <h1 class="onb-headline">A workbench for <em>working things out</em> on the fretboard.</h1>
         <p class="onb-lede">Not a course and not a song library — a living board of chord shapes, scales and practice tools you arrange to fit whatever you're playing.</p>

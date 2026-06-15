@@ -85,7 +85,7 @@ const MODAL_HTML = `
   <div class="modal-card">
     <header class="modal-card-head settings-modal-head">
       <div class="settings-modal-title">
-        <span class="settings-app-label">PracTempo</span>
+        <span class="settings-app-label">FretFalcon</span>
         <h2 class="settings-title">Settings</h2>
       </div>
       <button class="delete" aria-label="close" id="settings-modal-close"></button>
