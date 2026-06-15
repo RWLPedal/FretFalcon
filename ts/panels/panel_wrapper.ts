@@ -26,11 +26,21 @@ export function setFloatingViewContentOriginX(px: number): void {
   moduleContentOriginX = Math.max(0, px);
 }
 
-function snapX(v: number): number {
+// The grid cell is square (w === h; see _applyGrid), so the two axes share one snap
+// unit. Two cases only: an origin-free snap for sizes and for the y position (the grid's
+// y origin is 0), and an origin-aware snap for the x position (below).
+function snapCell(v: number): number {
   return moduleGridCell ? Math.round(v / moduleGridCell.w) * moduleGridCell.w : v;
 }
-function snapY(v: number): number {
-  return moduleGridCell ? Math.round(v / moduleGridCell.h) * moduleGridCell.h : v;
+/** Snap an x POSITION (a panel's left edge) to the content grid. The grid background is
+ *  drawn from the content origin (the sidebar's right edge, --grid-origin-x in
+ *  _applyGrid), not x=0 — so snapping to a bare multiple of the cell (snapCell) would
+ *  leave the panel offset from the visible grid by `originX mod cell` px. There's no
+ *  snapTop counterpart because the grid's y origin IS 0, so snapCell already aligns. */
+function snapLeft(v: number): number {
+  if (!moduleGridCell) return v;
+  const o = moduleContentOriginX;
+  return o + Math.round((v - o) / moduleGridCell.w) * moduleGridCell.w;
 }
 // --- End Grid Snap ---
 
@@ -62,8 +72,8 @@ function doDrag(e: MouseEvent) {
   const maxX = Math.max(moduleContentOriginX, parentRect.width - elemRect.width);
   const clampedX = Math.max(moduleContentOriginX, Math.min(newX, maxX));
   const clampedY = Math.max(0, Math.min(newY, parentRect.height - elemRect.height));
-  newX = snapX(clampedX);
-  newY = snapY(clampedY);
+  newX = snapLeft(clampedX);
+  newY = snapCell(clampedY);
 
   draggedElement.style.left = `${newX}px`;
   draggedElement.style.top = `${newY}px`;
@@ -181,10 +191,10 @@ function _stopCornerResize(): void {
   if (!_resizeState) return;
   const { element, onDone } = _resizeState;
   if (moduleGridCell) {
-    element.style.width  = `${snapX(parseFloat(element.style.width))}px`;
-    element.style.height = `${snapY(parseFloat(element.style.height))}px`;
-    element.style.left   = `${snapX(parseFloat(element.style.left))}px`;
-    element.style.top    = `${snapY(parseFloat(element.style.top))}px`;
+    element.style.width  = `${snapCell(parseFloat(element.style.width))}px`;
+    element.style.height = `${snapCell(parseFloat(element.style.height))}px`;
+    element.style.left   = `${snapLeft(parseFloat(element.style.left))}px`;
+    element.style.top    = `${snapCell(parseFloat(element.style.top))}px`;
   }
   onDone(parseFloat(element.style.left), parseFloat(element.style.top));
   _resizeState = null;
@@ -434,8 +444,8 @@ export class FloatingViewWrapper {
       this._resizeSaveTimer = setTimeout(() => {
         this._resizeSaveTimer = null;
         if (!wasProgrammatic && moduleGridCell && this.state.size) {
-          const sw = snapX(this.state.size.width);
-          const sh = snapY(this.state.size.height);
+          const sw = snapCell(this.state.size.width);
+          const sh = snapCell(this.state.size.height);
           if (sw !== this.state.size.width || sh !== this.state.size.height) {
             this._isProgrammaticResize = true;
             this.element.style.width = `${sw}px`;
