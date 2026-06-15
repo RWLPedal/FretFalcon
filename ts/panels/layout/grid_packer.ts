@@ -83,6 +83,16 @@ function rectsOverlap(a: PlacedRect, b: PlacedRect): boolean {
       && a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row;
 }
 
+/** True when two rects share any column (their horizontal ranges intersect). */
+function columnsOverlap(a: PlacedRect, b: PlacedRect): boolean {
+  return a.col < b.col + b.colSpan && a.col + a.colSpan > b.col;
+}
+
+/** True when two rects share any row (their vertical ranges intersect). */
+function rowsOverlap(a: PlacedRect, b: PlacedRect): boolean {
+  return a.row < b.row + b.rowSpan && a.row + a.rowSpan > b.row;
+}
+
 /**
  * Reconcile an authored / dragged layout into an aligned, non-overlapping one while
  * staying as close to the input as possible. The rules that make it "look like the
@@ -153,24 +163,26 @@ export function reconcileLayout(
 // ─── Directional de-overlap (Tidy) ────────────────────────────────────────────
 
 /**
- * Tidy an authored / dragged layout into an aligned, non-overlapping one. Like
- * {@link reconcileLayout} it preserves the arrangement — it never resizes, and it
- * processes panels in reading order (top→bottom, then left→right) so the upper-left
- * panels act as anchors that later panels slide around. The difference is HOW an
- * overlap is resolved: instead of always pushing the lower panel straight DOWN, each
- * overlap is cleared by sliding the panel DOWN or RIGHT — whichever needs the smaller
- * move — so the layout uses the horizontal real estate a pure push-down would waste.
+ * Tidy an authored / dragged layout into an aligned, non-overlapping one and pack it
+ * toward the top-left. It never resizes a panel. Two phases:
  *
- *   - A panel only slides RIGHT when the result still fits within `cols` (the "is there
- *     space?" check). If it would overflow the right edge it falls back to pushing down.
- *   - Ties, and the vertical-stack case (two panels in the same column, where sliding
- *     right costs a whole panel width), resolve DOWN — so intentional stacks collapse
- *     downward exactly as before.
- *   - The whole result is shifted so the top-left panel sits at a `border`-cell margin,
- *     pulling the arrangement toward the top-left (same clamp as reconcileLayout, so a
- *     full-width layout is never shoved off the right edge).
+ *   1. De-overlap, preserving the arrangement: panels are processed in reading order
+ *      (top→bottom, then left→right) and each overlap is cleared by sliding the panel
+ *      DOWN or RIGHT — whichever is the smaller move and still fits — so side-by-side
+ *      panels stay side by side instead of collapsing into one tall column (sliding
+ *      right is gated by the "is there room within `cols`?" check; ties and same-column
+ *      stacks resolve DOWN).
+ *   2. Gravity-compact toward the `(border, border)` origin (see {@link gravityCompact}):
+ *      every panel is pulled up and left until it rests on the border or its neighbours
+ *      with a `gap` cell between them. Closing that slack leaves a `border`-cell margin
+ *      on the top & left, uniform gaps between panels, and — because left-packing
+ *      minimises the horizontal extent — a matching margin on the right & bottom
+ *      whenever the arrangement fits. When it does NOT fit (a panel too wide for the
+ *      inset, or more panels than the width holds) the margin is dropped rather than the
+ *      panel resized: that's the "things don't all fit on-screen, so we're compacting"
+ *      case the border is allowed to yield to.
  *
- * Idempotent: a clean, border-aligned layout passes through unchanged.
+ * Idempotent: a clean, packed layout passes through unchanged.
  */
 export function tidyLayout(
   items: ReconcileItem[],
@@ -181,25 +193,14 @@ export function tidyLayout(
   const border = opts.border ?? 1;
   const cols = opts.cols ?? 96;
 
-  // Pull the layout to the top-left border margin. The horizontal shift is clamped so
-  // a full-width layout is never pushed off the right edge (matches reconcileLayout).
-  const minCol = Math.min(...items.map(i => i.col));
-  const minRow = Math.min(...items.map(i => i.row));
-  const maxRight = Math.max(...items.map(i => i.col + i.colSpan));
-  let dCol = border - minCol;
-  if (maxRight + dCol > cols) dCol = cols - maxRight;
-  if (minCol + dCol < 0) dCol = -minCol;
-  const dRow = border - minRow;
-
   const ordered = items
-    .map(i => ({ ...i, col: i.col + dCol, row: i.row + dRow }))
+    .slice()
     .sort((a, b) => (a.row - b.row) || (a.col - b.col) || idNum(a.id) - idNum(b.id));
 
-  const placed: PlacedRect[] = [];
-  const out: Record<string, PlacedRect> = {};
-
+  // ── Phase 1: de-overlap using horizontal real estate ───────────────────────
+  const placed: (PlacedRect & { id: string })[] = [];
   for (const it of ordered) {
-    const rect: PlacedRect = { col: it.col, row: it.row, colSpan: it.colSpan, rowSpan: it.rowSpan };
+    const rect = { id: it.id, col: it.col, row: it.row, colSpan: it.colSpan, rowSpan: it.rowSpan };
 
     // Each pass clears every panel the rect currently overlaps along ONE axis (the
     // cheaper one), then re-scans — the move may bring it into contact with another
@@ -226,10 +227,72 @@ export function tidyLayout(
     }
 
     placed.push(rect);
-    out[it.id] = rect;
   }
 
+  // ── Phase 2: gravity-compact toward (border, border) ───────────────────────
+  gravityCompact(placed, gap, border, cols);
+
+  const out: Record<string, PlacedRect> = {};
+  for (const r of placed) out[r.id] = { col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan };
   return out;
+}
+
+/**
+ * Pack a non-overlapping set of rects toward the `(border, border)` origin, mutating
+ * them in place. Two single-axis sweeps, iterated to a fixed point:
+ *
+ *   - Vertical (top→bottom): raise each panel until it rests on the top border or on the
+ *     bottom (+`gap`) of a panel above it that shares a column.
+ *   - Horizontal (left→right): slide each panel left until it rests on the left border or
+ *     on the right (+`gap`) of a panel to its left that shares a row.
+ *
+ * Because a panel only ever settles just past the panels it shares the cross-axis with,
+ * the reading order is preserved (a left/upper panel never jumps past a right/lower one),
+ * slack is closed, and a `gap` is guaranteed between neighbours. Left-packing minimises
+ * the horizontal extent, so a layout that fits keeps a matching margin on the right.
+ *
+ * A panel too wide for the inset is clamped to the right edge (`cols - colSpan`) rather
+ * than resized — the margin yields when the layout cannot fit. Both coordinates only
+ * decrease until they settle, so the sweeps converge; the round guard caps churn from
+ * the rare clamp-then-restack interaction.
+ */
+function gravityCompact(
+  rects: (PlacedRect & { id: string })[],
+  gap: number,
+  border: number,
+  cols: number,
+): void {
+  for (let round = 0; round <= rects.length + 1; round++) {
+    let changed = false;
+
+    // Vertical sweep.
+    rects.sort((a, b) => (a.row - b.row) || (a.col - b.col) || idNum(a.id) - idNum(b.id));
+    for (let j = 0; j < rects.length; j++) {
+      const r = rects[j];
+      let row = border;
+      for (let k = 0; k < j; k++) {
+        const p = rects[k];
+        if (columnsOverlap(r, p)) row = Math.max(row, p.row + p.rowSpan + gap);
+      }
+      if (row !== r.row) { r.row = row; changed = true; }
+    }
+
+    // Horizontal sweep.
+    rects.sort((a, b) => (a.col - b.col) || (a.row - b.row) || idNum(a.id) - idNum(b.id));
+    for (let j = 0; j < rects.length; j++) {
+      const r = rects[j];
+      let col = border;
+      for (let k = 0; k < j; k++) {
+        const p = rects[k];
+        if (rowsOverlap(r, p)) col = Math.max(col, p.col + p.colSpan + gap);
+      }
+      // Don't resize: a panel too wide for the inset hugs the right edge instead.
+      if (col + r.colSpan > cols) col = Math.max(border, cols - r.colSpan);
+      if (col !== r.col) { r.col = col; changed = true; }
+    }
+
+    if (!changed) break;
+  }
 }
 
 /** Largest `row + rowSpan` across a set of rects — the layout's bottom edge in cells.

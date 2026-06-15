@@ -218,30 +218,80 @@ describe('tidyLayout', () => {
     expect(result['fv-1']).toEqual({ col: 1, row: 1, colSpan: 6, rowSpan: 4 })
   })
 
-  it('leaves a clean, border-aligned layout unchanged (idempotent)', () => {
+  it('leaves a packed, border-aligned layout unchanged (idempotent)', () => {
+    // fv-1 / fv-2 stacked in column 1 with a 1-cell gap; fv-3 beside them with a 1-cell
+    // gap (fv-1 ends at col 11, fv-3 starts at col 12). Already fully packed.
     const items: ReconcileItem[] = [
       { id: 'fv-1', col: 1, row: 1, colSpan: 10, rowSpan: 6 },
       { id: 'fv-2', col: 1, row: 8, colSpan: 10, rowSpan: 6 },
-      { id: 'fv-3', col: 13, row: 1, colSpan: 6, rowSpan: 13 },
+      { id: 'fv-3', col: 12, row: 1, colSpan: 6, rowSpan: 13 },
     ]
     const once = tidyLayout(items, { cols: COLS })
     expect(once['fv-1']).toEqual({ col: 1, row: 1, colSpan: 10, rowSpan: 6 })
     expect(once['fv-2']).toEqual({ col: 1, row: 8, colSpan: 10, rowSpan: 6 })
-    expect(once['fv-3']).toEqual({ col: 13, row: 1, colSpan: 6, rowSpan: 13 })
+    expect(once['fv-3']).toEqual({ col: 12, row: 1, colSpan: 6, rowSpan: 13 })
     const twice = tidyLayout(Object.entries(once).map(([id, r]) => ({ id, ...r })), { cols: COLS })
     expect(twice).toEqual(once)
   })
 
-  it('slides a side-by-side overlap RIGHT (small horizontal overlap, room to spare)', () => {
+  it('closes an authored gap to a single cell (fv-3 pulled in from col 13 to col 12)', () => {
+    const items: ReconcileItem[] = [
+      { id: 'fv-1', col: 1, row: 1, colSpan: 10, rowSpan: 6 },
+      { id: 'fv-2', col: 1, row: 8, colSpan: 10, rowSpan: 6 },
+      { id: 'fv-3', col: 13, row: 1, colSpan: 6, rowSpan: 13 }, // 2-cell gap from fv-1
+    ]
+    const result = tidyLayout(items, { cols: COLS })
+    // The gap collapses to exactly 1 cell: fv-1 ends at col 11, fv-3 starts at col 12.
+    expect(result['fv-3'].col).toBe(result['fv-1'].col + result['fv-1'].colSpan + 1)
+    assertNoOverlapRects(result)
+  })
+
+  it('slides a side-by-side overlap RIGHT, then packs both up to the top border', () => {
     const items: ReconcileItem[] = [
       { id: 'fv-1', col: 1, row: 1, colSpan: 10, rowSpan: 10 },
       { id: 'fv-2', col: 8, row: 2, colSpan: 10, rowSpan: 10 }, // overlaps fv-1 on the right
     ]
     const result = tidyLayout(items, { cols: COLS })
     assertNoOverlapRects(result)
-    // fv-2 keeps roughly its row and moves right past fv-1, rather than dropping below.
-    expect(result['fv-2'].row).toBe(2)
+    // fv-2 moves right past fv-1 (rather than dropping below) and gravity pulls it up to
+    // the top border alongside fv-1, separated by a 1-cell gap.
+    expect(result['fv-2'].row).toBe(1)
     expect(result['fv-2'].col).toBe(result['fv-1'].col + result['fv-1'].colSpan + 1)
+  })
+
+  it('leaves a 1-cell border on every edge when the layout fits', () => {
+    const items: ReconcileItem[] = [
+      { id: 'fv-1', col: 6, row: 4, colSpan: 8, rowSpan: 6 },
+      { id: 'fv-2', col: 20, row: 4, colSpan: 6, rowSpan: 6 }, // far to the right, with slack
+    ]
+    const result = tidyLayout(items, { cols: COLS })
+    const rects = Object.values(result)
+    const minCol = Math.min(...rects.map(r => r.col))
+    const minRow = Math.min(...rects.map(r => r.row))
+    const maxRight = Math.max(...rects.map(r => r.col + r.colSpan))
+    expect(minCol).toBe(1)                 // left border
+    expect(minRow).toBe(1)                 // top border
+    expect(maxRight).toBeLessThanOrEqual(COLS - 1) // right border (panels pulled in)
+  })
+
+  it('enforces a 1-cell gap between panels that were touching', () => {
+    const items: ReconcileItem[] = [
+      { id: 'fv-1', col: 1, row: 1, colSpan: 10, rowSpan: 8 },
+      { id: 'fv-2', col: 11, row: 1, colSpan: 8, rowSpan: 8 }, // flush against fv-1 (no gap)
+    ]
+    const result = tidyLayout(items, { cols: COLS })
+    assertNoOverlapRects(result)
+    expect(result['fv-2'].col).toBe(result['fv-1'].col + result['fv-1'].colSpan + 1)
+  })
+
+  it('drops the right border when a panel is too wide to fit the inset (compacting)', () => {
+    const items: ReconcileItem[] = [
+      { id: 'fv-1', col: 4, row: 5, colSpan: COLS - 1, rowSpan: 8 }, // 31 wide in a 32-col grid
+    ]
+    const result = tidyLayout(items, { cols: COLS })
+    expect(result['fv-1'].col).toBe(1)                       // keeps the left border
+    expect(result['fv-1'].col + result['fv-1'].colSpan).toBe(COLS) // right edge flush — margin yields
+    expect(result['fv-1'].colSpan).toBe(COLS - 1)            // never resized
   })
 
   it('pushes a vertical-stack overlap DOWN (same column; sliding right would cost a full width)', () => {

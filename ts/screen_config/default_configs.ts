@@ -352,8 +352,9 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       perInstance: {
         // Schedule — left, tall
         "fv-1": { col: 1, row: 0, colSpan: 36, rowSpan: 57, zIndex: 100 },
-        // Any view — right column, top
-        "fv-2": { col: 50, row: 0, colSpan: 60, rowSpan: 39, zIndex: 101 },
+        // Any view — right column, top (col 50..96, flush to the right edge like the
+        // other layouts; a wider span would overflow GRID_COLS and break tidy/border).
+        "fv-2": { col: 50, row: 0, colSpan: 46, rowSpan: 39, zIndex: 101 },
         // Metronome — right column, below Any view
         "fv-3": { col: 50, row: 42, colSpan: 27, rowSpan: 15, zIndex: 102 },
       },
