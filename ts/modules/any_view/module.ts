@@ -1,5 +1,6 @@
 import { ViewModule, ViewContext, viewId } from '../module_types';
 import { NavSection } from '../../core/ids';
+import { FEATURE_PANEL_SIZE } from '../../panels/panel_sizing';
 import { AnyFloatingView } from './any_floating_view';
 
 const module: ViewModule = {
@@ -7,7 +8,8 @@ const module: ViewModule = {
   panel: {
     displayName: 'Any',
     icon: 'smart_display',
-    defaultSize: { width: 420, height: 550 },
+    size: FEATURE_PANEL_SIZE.size,
+    sizeHorizontal: FEATURE_PANEL_SIZE.sizeHorizontal,
     showInMenu: false,
   },
   nav: {

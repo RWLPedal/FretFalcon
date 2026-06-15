@@ -7,6 +7,7 @@ import { AppSettings } from '../settings';
 import { ViewId, NavSectionId, viewId as _viewId } from '../core/ids';
 import { DriveSourceDescriptor, DriveTargetSlot } from '../panels/drive_registry';
 import { FeaturePanelController } from './feature_panel/feature_panel_controller';
+import { PanelSizing, FEATURE_PANEL_SIZE } from '../panels/panel_sizing';
 
 export { viewId } from '../core/ids';
 
@@ -26,18 +27,6 @@ export interface ViewContext {
   // Phase 5 will add: constraints, sink registration handle
 }
 
-// ─── Orientation sizing ─────────────────────────────────────────────────────────
-
-/** Per-orientation size overrides. Currently only `horizontal` (the rotated layout)
- *  is overridable; vertical uses the flat defaultSize/minSize/maxSize. */
-export interface OrientationSizes {
-  horizontal?: {
-    defaultSize?: { width: number; height?: number };
-    minSize?: { width: number; height: number };
-    maxSize?: { width: number; height: number };
-  };
-}
-
 // ─── ViewModule ───────────────────────────────────────────────────────────────
 
 export interface ViewModule<S = unknown> {
@@ -46,15 +35,12 @@ export interface ViewModule<S = unknown> {
   panel: {
     displayName: string;
     icon: string;
-    /** Initial panel size; omit height to let the panel auto-size vertically. */
-    defaultSize?: { width: number; height?: number };
-    minSize?: { width: number; height: number };
-    maxSize?: { width: number; height: number };
-    /** Optional per-orientation size overrides. The flat defaultSize/minSize/maxSize
-     *  describe the vertical (default) orientation; `orientationSizes.horizontal`
-     *  overrides them when the panel is rotated to horizontal. Each field falls back
-     *  to its vertical value when omitted. */
-    orientationSizes?: OrientationSizes;
+    /** Panel footprint in GRID CELLS (default/min/max). `size` is the base (vertical)
+     *  footprint; orientation-aware fretboard panels add `sizeHorizontal` for the rotated
+     *  layout. Non-oriented panels (timer, metronome, …) set only `size`. Omit a
+     *  GridSize's `rows` to let the panel auto-size its height. See panel_sizing. */
+    size?: PanelSizing;
+    sizeHorizontal?: PanelSizing;
     singleton?: boolean;
     /** When false, excluded from spawnable-panel picker menus. Defaults to true. */
     showInMenu?: boolean;
@@ -101,10 +87,10 @@ export interface FeaturePanelModuleOpts {
   displayName: string;
   icon: string;
   featureTypeName: string;
-  defaultSize?: { width: number; height?: number };
-  minSize?: { width: number; height: number };
-  maxSize?: { width: number; height: number };
-  orientationSizes?: OrientationSizes;
+  /** Grid footprint overrides. Omit to inherit the shared {@link FEATURE_PANEL_SIZE};
+   *  declare only the orientation(s) that differ. */
+  size?: PanelSizing;
+  sizeHorizontal?: PanelSizing;
   showInMenu?: boolean;
   nav?: ViewModule['nav'];
   drive?: ViewModule['drive'];
@@ -116,10 +102,9 @@ export function featurePanelModule(opts: FeaturePanelModuleOpts): ViewModule {
     panel: {
       displayName: opts.displayName,
       icon: opts.icon,
-      defaultSize: opts.defaultSize,
-      minSize: opts.minSize,
-      maxSize: opts.maxSize,
-      orientationSizes: opts.orientationSizes,
+      // Inherit the shared feature-panel footprint per orientation unless overridden.
+      size: opts.size ?? FEATURE_PANEL_SIZE.size,
+      sizeHorizontal: opts.sizeHorizontal ?? FEATURE_PANEL_SIZE.sizeHorizontal,
       showInMenu: opts.showInMenu ?? false,
       refreshOnInstrumentChange: true,
       capabilities: { rotate: true, zoom: true, configToggle: true },

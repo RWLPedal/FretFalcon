@@ -2,6 +2,7 @@
 import { AppSettings } from "../settings";
 import { LinkRecord } from "./link_types";
 import { ViewId } from "../core/ids";
+import { PanelSizing } from "./panel_sizing";
 
 // Describes a registered type of floating view
 export interface FloatingViewDescriptor {
@@ -11,23 +12,11 @@ export interface FloatingViewDescriptor {
   refreshOnInstrumentChange?: boolean;
   /** For descriptors that always show a specific feature type (e.g. instrument_scale). */
   featureTypeName?: string;
-  defaultWidth?: number; // Optional default width
-  defaultHeight?: number; // Optional default height
-  minWidth?: number; // Optional minimum width (enforced via CSS min-width)
-  minHeight?: number; // Optional minimum height (enforced via CSS min-height)
-  maxWidth?: number; // Optional maximum width (enforced via CSS max-width)
-  maxHeight?: number; // Optional maximum height (enforced via CSS max-height)
-  /** Per-orientation size overrides for the HORIZONTAL (rotated) layout. The flat
-   *  default/min/max fields above describe the vertical orientation; any field
-   *  omitted here falls back to its vertical value. See panel_sizing.resolveSizing. */
-  horizontal?: {
-    defaultWidth?: number;
-    defaultHeight?: number;
-    minWidth?: number;
-    minHeight?: number;
-    maxWidth?: number;
-    maxHeight?: number;
-  };
+  /** Panel footprint in GRID CELLS (default/min/max). `size` is the base (vertical)
+   *  footprint; `sizeHorizontal` overrides it when the panel is rotated. Pixels are
+   *  derived from these against the live cell at the DOM boundary. See panel_sizing. */
+  size?: PanelSizing;
+  sizeHorizontal?: PanelSizing;
   showInMenu?: boolean; // Optional: If false, won't be shown in spawnable view lists. Defaults to true.
   /** When true, opening the view while it is already open focuses the existing instance instead of spawning a second. */
   singleton?: boolean;

@@ -29,9 +29,7 @@ const module: ViewModule = {
   panel: {
     displayName: "Global Key",
     icon: "cell_tower",
-    defaultSize: { width: 300, height: 80 },
-    minSize: { width: 240, height: 80 },
-    maxSize: { width: 460, height: 140 },
+    size: { default: { cols: 19, rows: 5 }, min: { cols: 15, rows: 5 }, max: { cols: 29, rows: 9 } },
     singleton: true,
   },
   nav: {

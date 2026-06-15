@@ -10,9 +10,7 @@ const module: ViewModule = {
   panel: {
     displayName: 'Drone',
     icon: 'graphic_eq',
-    defaultSize: { width: 320, height: 80 },
-    minSize: { width: 310, height: 80 },
-    maxSize: { width: 480, height: 140 },
+    size: { default: { cols: 20, rows: 5 }, min: { cols: 19, rows: 5 }, max: { cols: 30, rows: 9 } },
   },
   nav: {
     section: NavSection.PracticeTools,

@@ -11,8 +11,7 @@ const module: ViewModule = {
   panel: {
     displayName: "Strum",
     icon: "music_note",
-    defaultSize: { width: 470, height: 160 },
-    maxSize: { width: 720, height: 280 },
+    size: { default: { cols: 29, rows: 10 }, max: { cols: 45, rows: 18 } },
   },
   nav: {
     section: NavSection.PracticeTools,

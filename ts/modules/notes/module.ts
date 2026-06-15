@@ -10,7 +10,7 @@ export default featurePanelModule({
   displayName: 'Notes',
   icon: 'music_note',
   featureTypeName: NotesFeature.typeName,
-  defaultSize: { width: 420, height: 550 },
+  // size omitted → inherits the shared FEATURE_PANEL_SIZE (vertical + horizontal).
   nav: {
     section: NavSection.Fretboard,
     label: 'Notes',

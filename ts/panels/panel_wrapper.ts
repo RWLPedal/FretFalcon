@@ -221,8 +221,8 @@ export class FloatingViewWrapper {
   private _resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private _isProgrammaticResize = false;
   private _firstResizeObserverFire = true;
-  private readonly defaultWidth: number;
-  private readonly _defaultHeight: number;
+  private defaultWidth: number;
+  private _defaultHeight: number;
   // Unlisten functions for events bound to contentElement
   private _unlistens: Array<() => void> = [];
 
@@ -524,6 +524,14 @@ export class FloatingViewWrapper {
 
   public setTitle(title: string): void {
     this.titleTextEl.textContent = title;
+  }
+
+  /** Update the stored default footprint (px) used as the auto-size width floor and the
+   *  seed height. Called when the panel's effective orientation changes so a subsequent
+   *  auto-size floors to the NEW orientation's width, not the one captured at construction. */
+  public setDefaultDimensions(width?: number, height?: number): void {
+    this.defaultWidth = width ?? 0;
+    this._defaultHeight = height ?? 0;
   }
 
   /** Update the CSS min/max size constraints (e.g. after the panel's effective

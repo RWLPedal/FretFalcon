@@ -8,7 +8,7 @@ export default featurePanelModule({
   displayName: 'Chord Progression',
   icon: 'arrow_forward',
   featureTypeName: ChordProgressionFeature.typeName,
-  defaultSize: { width: 420, height: 600 },
+  size: { default: { cols: 26, rows: 38 } },
   showInMenu: true,
   nav: {
     section: NavSection.Fretboard,

@@ -100,7 +100,7 @@ export const REFERENCE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         // Scale fretboard — top-left
         "fv-8": { col: 1, row: 1, colSpan: 57, rowSpan: 24, zIndex: 141 },
         // Triad fretboard — below Scale
-        "fv-6": { col: 1, row: 27, colSpan: 57, rowSpan: 30, zIndex: 140 },
+        "fv-6": { col: 1, row: 27, colSpan: 57, rowSpan: 31, zIndex: 140 },
         // Chord diagram — right column
         "fv-7": { col: 60, row: 1, colSpan: 15, rowSpan: 57, zIndex: 142 },
         // Chord Progression — far-right column
@@ -287,18 +287,18 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
       rowPx: ROW_PX,
       nextZIndex: 136,
       perInstance: {
-        // Drum machine — top-left (≈ its default/min 575×300)
-        "fv-1": { col: 1, row: 0, colSpan: 32, rowSpan: 17, zIndex: 134 },
+        // Backing track — top-left (≈ its default/min 575×300)
+        "fv-1": { col: 1, row: 0, colSpan: 38, rowSpan: 20, zIndex: 134 },
         // Timer — top of middle column
-        "fv-4": { col: 51, row: 0, colSpan: 21, rowSpan: 12, zIndex: 120 },
+        "fv-4": { col: 46, row: 0, colSpan: 21, rowSpan: 8, zIndex: 120 },
         // Drone — below Timer
-        "fv-6": { col: 51, row: 15, colSpan: 21, rowSpan: 9, zIndex: 122 },
+        "fv-6": { col: 46, row: 15, colSpan: 21, rowSpan: 8, zIndex: 122 },
         // MultiLayerFretboard — wide, spans the left two columns below the drum
         "fv-5": { col: 1, row: 27, colSpan: 66, rowSpan: 33, zIndex: 131 },
         // Chord (current) — right column, top
-        "fv-7": { col: 75, row: 0, colSpan: 21, rowSpan: 24, zIndex: 136 },
+        "fv-7": { col: 70, row: 0, colSpan: 21, rowSpan: 24, zIndex: 136 },
         // Chord (next) — right column, below current
-        "fv-8": { col: 75, row: 27, colSpan: 21, rowSpan: 27, zIndex: 135 },
+        "fv-8": { col: 70, row: 27, colSpan: 21, rowSpan: 27, zIndex: 135 },
       },
     },
   },
@@ -354,9 +354,9 @@ export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         "fv-1": { col: 1, row: 0, colSpan: 36, rowSpan: 57, zIndex: 100 },
         // Any view — right column, top (col 50..96, flush to the right edge like the
         // other layouts; a wider span would overflow GRID_COLS and break tidy/border).
-        "fv-2": { col: 50, row: 0, colSpan: 46, rowSpan: 39, zIndex: 101 },
+        "fv-2": { col: 43, row: 0, colSpan: 46, rowSpan: 42, zIndex: 101 },
         // Metronome — right column, below Any view
-        "fv-3": { col: 50, row: 42, colSpan: 27, rowSpan: 15, zIndex: 102 },
+        "fv-3": { col: 43, row: 45, colSpan: 27, rowSpan: 12, zIndex: 102 },
       },
     },
   },
@@ -534,9 +534,9 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         // Drum machine — top-left (≈ its default/min 575×300)
         "fv-1": { col: 1, row: 0, colSpan: 32, rowSpan: 17, zIndex: 139 },
         // Timer — below drum machine (left column)
-        "fv-6": { col: 1, row: 20, colSpan: 21, rowSpan: 12, zIndex: 137 },
+        "fv-6": { col: 1, row: 23, colSpan: 21, rowSpan: 8, zIndex: 137 },
         // MultiLayerFretboard — left column, below timer
-        "fv-5": { col: 1, row: 35, colSpan: 57, rowSpan: 21, zIndex: 134 },
+        "fv-5": { col: 1, row: 34, colSpan: 57, rowSpan: 21, zIndex: 134 },
         // Nearby Triads — right, full-height
         "fv-2": { col: 60, row: 0, colSpan: 36, rowSpan: 57, zIndex: 138 },
       },

@@ -80,15 +80,31 @@ export function parseChordInput(input: string): string | null {
   return null;
 }
 
-export function inferKeyFromChords(chordKeys: string[]): { root: string; mode: DiatonicMode } {
-  if (chordKeys.length === 0) return { root: 'C', mode: DiatonicMode.Ionian };
+export function inferKeyFromChords(
+  chordKeys: string[],
+  priorRoot?: string,
+  priorMode?: DiatonicMode,
+): { root: string; mode: DiatonicMode } {
+  if (chordKeys.length === 0) {
+    return { root: priorRoot ?? 'C', mode: priorMode ?? DiatonicMode.Ionian };
+  }
   const MODES: DiatonicMode[] = [DiatonicMode.Ionian, DiatonicMode.Aeolian];
-  let bestRoot = 'C';
-  let bestMode = DiatonicMode.Ionian;
+  let bestRoot = priorRoot ?? 'C';
+  let bestMode = priorMode ?? DiatonicMode.Ionian;
+  // Seed with the prior key's diatonic match count so it's only displaced by a strictly better match,
+  // not just any key that ties due to CHORD_ROOTS iteration order.
   let bestCount = -1;
+  if (priorRoot != null && priorMode != null) {
+    const priorRomans = getRomansForMode(priorMode);
+    const priorDiatonic = new Set(
+      priorRomans.map(r => resolveAbsoluteChordKey(r.roman, priorRoot, priorMode)).filter(Boolean) as string[]
+    );
+    bestCount = chordKeys.filter(k => priorDiatonic.has(k)).length;
+  }
   for (const mode of MODES) {
     const romans = getRomansForMode(mode);
     for (const root of CHORD_ROOTS) {
+      if (root === bestRoot && mode === bestMode) continue;
       const diatonic = new Set(
         romans.map(r => resolveAbsoluteChordKey(r.roman, root, mode)).filter(Boolean) as string[]
       );
@@ -274,7 +290,11 @@ export class TriadsWizard {
   }
 
   private _refreshKey(): void {
-    const inferred = inferKeyFromChords(this.chords.map(c => c.chordKey));
+    const inferred = inferKeyFromChords(
+      this.chords.map(c => c.chordKey),
+      this.inferredRoot,
+      this.inferredMode,
+    );
     this.inferredRoot = inferred.root;
     this.inferredMode = inferred.mode;
     for (const c of this.chords) {

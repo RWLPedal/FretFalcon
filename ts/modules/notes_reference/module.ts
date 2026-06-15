@@ -6,7 +6,8 @@ const module: ViewModule = {
   panel: {
     displayName: 'Fretboard Notes',
     icon: 'music_note',
-    defaultSize: { width: 340, height: 550 },
+    size: { default: { cols: 21, rows: 34 } },
+    sizeHorizontal: { default: { cols: 40, rows: 18 } },
     showInMenu: true,
     refreshOnInstrumentChange: true,
     capabilities: { rotate: true, zoom: true },

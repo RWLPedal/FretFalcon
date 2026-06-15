@@ -2,6 +2,8 @@
 // Interfaces for the pluggable layout strategy system.
 // Both FloatingLayout (desktop) and TabbedLayout (mobile) implement LayoutStrategy.
 
+import { PanelSizing } from '../panel_sizing';
+
 export type LayoutKind = 'floating' | 'tabbed';
 
 // ─── Persistence types ─────────────────────────────────────────────────────────
@@ -42,9 +44,10 @@ export interface PanelChrome {
   /** Called after PanelHost re-renders a view into the existing contentEl (e.g.
    *  after rotate or zoom). Floating chrome triggers auto-size; tabbed is a no-op. */
   notifyContentReplaced(forceAutoSize: boolean): void;
-  /** Update the panel's min/max size constraints (floating only; tabbed is a no-op).
-   *  Used when a panel's effective orientation changes. */
-  setSizeConstraints?(c: { minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number }): void;
+  /** Update the panel's grid sizing (floating only; tabbed is a no-op). Used when a
+   *  panel's effective orientation changes; the layout re-derives px against the live
+   *  cell and re-applies the min/max constraints. */
+  setSizeConstraints?(sizing: PanelSizing | undefined): void;
   /** Remove the chrome from the DOM. Does NOT destroy the view or its contentEl.
    *  Returns the contentEl so PanelHost can reuse it when switching strategies. */
   destroy(): HTMLElement;
@@ -60,13 +63,9 @@ export interface PanelSpawnInfo {
   contentEl: HTMLElement;
   collapsed?: boolean;
   zoomActive?: boolean;
-  // Sizing hints (used by FloatingLayout; ignored by TabbedLayout)
-  defaultWidth?: number;
-  defaultHeight?: number;
-  minWidth?: number;
-  minHeight?: number;
-  maxWidth?: number;
-  maxHeight?: number;
+  /** Resolved grid footprint for this orientation (used by FloatingLayout; ignored by
+   *  TabbedLayout). px is derived from it against the live cell. */
+  sizing?: PanelSizing;
   supportsRotate?: boolean;
   supportsZoom?: boolean;
   supportsConfigToggle?: boolean;

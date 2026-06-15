@@ -55,12 +55,10 @@ export default featurePanelModule({
   displayName: "Scale",
   icon: "show_chart",
   featureTypeName: ScaleFeature.typeName,
-  defaultSize: { width: 550, height: 420 },
-  // Rotated (horizontal) the fretboard is wide and short. Sizes are set explicitly
-  // rather than swapping w/h, since the header/config row keeps its height when
-  // rotated (see rotateSize in panels/panel_sizing for the swap-fallback helper).
-  orientationSizes: {
-    horizontal: { defaultSize: { width: 820, height: 300 } },
+  size: { min: { cols: 20, rows: 25 }, default: { cols: 22, rows: 40 } },
+  sizeHorizontal: {
+    min: { cols: 32, rows: 18 },
+    default: { cols: 46, rows: 20 },
   },
   nav: {
     section: NavSection.Fretboard,

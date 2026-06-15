@@ -17,7 +17,7 @@ import {
   getBroadcastSourceViewId,
 } from "./drive_registry";
 import { isFretboardDescriptor, FloatingViewDescriptor } from "./panel_types";
-import { resolveSizing, ResolvedSizing, Orientation } from "./panel_sizing";
+import { resolveSizing, PanelSizing, Orientation } from "./panel_sizing";
 import { onEvent, emitEvent } from "../core/events";
 import { ScreenConfigManager } from "../screen_config/screen_config_manager";
 import {
@@ -183,12 +183,7 @@ export class PanelHost {
         contentEl: record.contentEl,
         collapsed: record.collapsed,
         zoomActive: record.zoomActive,
-        defaultWidth: switchSizing.defaultWidth,
-        defaultHeight: switchSizing.defaultHeight,
-        minWidth: switchSizing.minWidth,
-        minHeight: switchSizing.minHeight,
-        maxWidth: switchSizing.maxWidth,
-        maxHeight: switchSizing.maxHeight,
+        sizing: switchSizing,
         supportsRotate:
           !!desc && isFretboardDescriptor(desc) && desc.supportsRotate,
         supportsZoom:
@@ -410,12 +405,7 @@ export class PanelHost {
         contentEl,
         collapsed: options?.collapsed,
         zoomActive,
-        defaultWidth: sizing.defaultWidth,
-        defaultHeight: sizing.defaultHeight,
-        minWidth: sizing.minWidth,
-        minHeight: sizing.minHeight,
-        maxWidth: sizing.maxWidth,
-        maxHeight: sizing.maxHeight,
+        sizing,
         supportsRotate:
           isFretboardDescriptor(descriptor) && descriptor.supportsRotate,
         supportsZoom:
@@ -564,7 +554,6 @@ export class PanelHost {
       instanceEntries,
       savedPerInstance,
       allHaveGeom,
-      g.cell,
     );
 
     // Sort by zIndex so floating z-stacking matches what was saved
@@ -657,8 +646,8 @@ export class PanelHost {
 
   /** Resolve saved per-instance geometry into canonical cell rects (with zIndex):
    *  reconcile authored positions when every instance has geometry, else shelf-pack.
-   *  `cellPx` (the live grid cell size) is used only to convert default px sizes to cells
-   *  for instances that lack a saved span. */
+   *  Spans come straight from the descriptor's grid footprint (already in cells) for
+   *  instances that lack a saved span. */
   private _resolveCanonicalRects(
     entries: Array<{
       instanceId: string;
@@ -676,7 +665,6 @@ export class PanelHost {
       }
     >,
     allHaveGeom: boolean,
-    cellPx: number,
   ): Record<string, PlacedRect & { zIndex: number }> {
     const spanFor = (entry: {
       instanceId: string;
@@ -689,12 +677,8 @@ export class PanelHost {
         entry.orientationOverride,
       );
       return {
-        colSpan:
-          geom?.colSpan ??
-          Math.max(1, Math.round((sz.defaultWidth ?? 300) / cellPx)),
-        rowSpan:
-          geom?.rowSpan ??
-          Math.max(1, Math.round((sz.defaultHeight ?? 200) / cellPx)),
+        colSpan: geom?.colSpan ?? sz?.default.cols ?? 20,
+        rowSpan: geom?.rowSpan ?? sz?.default.rows ?? 12,
       };
     };
     const zFor = (id: string) => saved[id]?.zIndex ?? 100;
@@ -820,6 +804,8 @@ export class PanelHost {
   // --- Settings ---
 
   public applySettingsChange(newSettings: AppSettings): void {
+    const oldOrientation: "vertical" | "horizontal" =
+      (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
     const guitarSettingsChanged =
       JSON.stringify(this.appSettings.instrumentSettings) !==
       JSON.stringify(newSettings.instrumentSettings);
@@ -827,6 +813,10 @@ export class PanelHost {
     this.appSettings = newSettings;
 
     if (!guitarSettingsChanged && !themeChanged) return;
+
+    const newOrientation: "vertical" | "horizontal" =
+      (newSettings.instrumentSettings as any)?.orientation ?? "vertical";
+    const orientationChanged = oldOrientation !== newOrientation;
 
     const SKIP_VIEW_IDS = new Set<ViewId>([
       "instrument_floating_metronome" as ViewId,
@@ -842,6 +832,20 @@ export class PanelHost {
         record.orientationOverride ??
         (newSettings.instrumentSettings as any)?.orientation ??
         "vertical";
+      // A global orientation flip changes the effective footprint of fretboard panels
+      // that follow the global setting (no per-instance override) — adopt the new
+      // orientation's size so the panel isn't left at the previous orientation's
+      // dimensions. (The rotate button drives this directly via setSizeConstraints.)
+      if (
+        orientationChanged &&
+        record.orientationOverride === undefined &&
+        isFretboardDescriptor(descriptor)
+      ) {
+        record.chrome.setSizeConstraints?.(
+          resolveSizing(descriptor, effectiveOrientation),
+        );
+      }
+
       const zm = this._zoomMultiplierFor(
         effectiveOrientation,
         record.zoomActive ?? false,
@@ -977,11 +981,12 @@ export class PanelHost {
     return orientationOverride ?? global;
   }
 
-  /** Resolve a view's effective default/min/max px sizing for the given orientation. */
+  /** Resolve a view's effective grid footprint (default/min/max in cells) for the given
+   *  orientation. */
   private _sizingFor(
     viewId: ViewId,
     orientationOverride?: "vertical" | "horizontal",
-  ): ResolvedSizing {
+  ): PanelSizing | undefined {
     const desc = getFloatingViewDescriptor(viewId);
     return resolveSizing(desc, this._effectiveOrientation(orientationOverride));
   }

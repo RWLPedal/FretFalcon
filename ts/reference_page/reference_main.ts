@@ -19,25 +19,13 @@ import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 
 function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
   const isFretboard = !!(mod.panel.capabilities?.rotate || mod.panel.capabilities?.zoom);
-  const hz = mod.panel.orientationSizes?.horizontal;
   const base: FloatingViewDescriptor = {
     viewId: mod.id,
     displayName: mod.panel.displayName,
     icon: mod.panel.icon,
-    defaultWidth: mod.panel.defaultSize?.width,
-    defaultHeight: mod.panel.defaultSize?.height,
-    minWidth: mod.panel.minSize?.width,
-    minHeight: mod.panel.minSize?.height,
-    maxWidth: mod.panel.maxSize?.width,
-    maxHeight: mod.panel.maxSize?.height,
-    horizontal: hz ? {
-      defaultWidth: hz.defaultSize?.width,
-      defaultHeight: hz.defaultSize?.height,
-      minWidth: hz.minSize?.width,
-      minHeight: hz.minSize?.height,
-      maxWidth: hz.maxSize?.width,
-      maxHeight: hz.maxSize?.height,
-    } : undefined,
+    // Grid footprints pass straight through — px is derived later against the live cell.
+    size: mod.panel.size,
+    sizeHorizontal: mod.panel.sizeHorizontal,
     showInMenu: mod.panel.showInMenu ?? true,
     singleton: mod.panel.singleton,
     refreshOnInstrumentChange: mod.panel.refreshOnInstrumentChange,

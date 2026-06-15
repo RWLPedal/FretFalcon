@@ -10,8 +10,7 @@ const module: ViewModule = {
   panel: {
     displayName: 'Schedule',
     icon: 'event_note',
-    defaultSize: { width: 900, height: 800 },
-    minSize: { width: 600, height: 600 },
+    size: { default: { cols: 56, rows: 50 }, min: { cols: 38, rows: 38 } },
     showInMenu: false,
   },
   nav: {

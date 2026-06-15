@@ -16,6 +16,7 @@ import {
   GridGeometry, gridGeometry, fitGridGeometry, colToPx, pxToCol, rowToPx, pxToRow,
 } from '../grid_constants';
 import { reconcileLayout, ReconcileItem } from './grid_packer';
+import { PanelSizing } from '../panel_sizing';
 import type { LayoutStrategy, LayoutKind, LayoutData, PanelChrome, PanelSpawnInfo } from './layout_strategy';
 
 /** Canonical integer grid rectangle for a panel. */
@@ -24,15 +25,23 @@ export interface GridRect { col: number; row: number; colSpan: number; rowSpan: 
 // ─── FloatingChrome ───────────────────────────────────────────────────────────
 
 class FloatingChrome implements PanelChrome {
-  constructor(private wrapper: FloatingViewWrapper) {}
+  constructor(
+    private wrapper: FloatingViewWrapper,
+    private layout: FloatingLayout,
+    private instanceId: string,
+  ) {}
 
   get wrapperEl(): HTMLElement { return this.wrapper.element; }
 
   setTitle(title: string): void { this.wrapper.setTitle(title); }
   setZoomActive(active: boolean): void { this.wrapper.updateZoomButtonState(active); }
   notifyContentReplaced(forceAutoSize: boolean): void { this.wrapper.notifyContentReplaced(forceAutoSize); }
-  setSizeConstraints(c: { minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number }): void {
-    this.wrapper.setSizeConstraints(c);
+  /** Push new default dims (px) into the wrapper so a later auto-size floors to them. */
+  setDefaultDimensions(width?: number, height?: number): void { this.wrapper.setDefaultDimensions(width, height); }
+  /** Grid sizing in, px out: the layout owns the live cell, so it stores the new
+   *  footprint and re-applies it (default size + px min/max) — e.g. after an orientation flip. */
+  setSizeConstraints(sizing: PanelSizing | undefined): void {
+    this.layout.applyInstanceSizing(this.instanceId, sizing);
   }
   destroy(): HTMLElement { return this.wrapper.destroy(); }
 }
@@ -46,6 +55,9 @@ export class FloatingLayout implements LayoutStrategy {
   private chromes = new Map<string, FloatingChrome>();
   /** Canonical integer grid rect per instance — the source of truth for geometry. */
   private gridRects = new Map<string, GridRect>();
+  /** Resolved grid footprint (default/min/max in cells) per instance, kept so the px
+   *  min/max constraints can be re-derived against the live cell on resize/rotate. */
+  private instanceSizing = new Map<string, PanelSizing>();
   /** Cached live cell geometry. Updated ONLY by _recomputeGeometry (mount / resize /
    *  load), so tidy/drag/spawn never change the grid size. */
   private _geom: GridGeometry = gridGeometry(window.innerWidth, 0);
@@ -145,6 +157,10 @@ export class FloatingLayout implements LayoutStrategy {
     if (!this.area) return;
     this._recomputeGeometry();
     for (const [id, chrome] of this.chromes) {
+      // The fit cell changed, so re-derive each panel's px min/max from its grid footprint
+      // before re-placing it (the constraints clamp the rect application).
+      const sizing = this.instanceSizing.get(id);
+      if (sizing) this._applyConstraintsPx(chrome.wrapperEl, sizing, this._geom);
       const rect = this.gridRects.get(id);
       if (rect) this._applyRectPx(chrome.wrapperEl, rect, this._geom);
     }
@@ -204,6 +220,76 @@ export class FloatingLayout implements LayoutStrategy {
     if (!el.classList.contains('is-panel-collapsed')) {
       el.style.width = `${rect.colSpan * g.cell}px`;
       el.style.height = `${rect.rowSpan * g.cell}px`;
+    }
+  }
+
+  /** Convert a grid footprint to the px size fields the wrapper constructor expects.
+   *  A missing cell count (e.g. a GridSize with no `rows`) yields undefined, which the
+   *  wrapper treats as "auto-size / unconstrained". */
+  private _sizingToPx(sizing: PanelSizing | undefined, g: GridGeometry): {
+    defaultWidth?: number; defaultHeight?: number;
+    minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number;
+  } {
+    if (!sizing) return {};
+    const px = (cells?: number) => (cells != null ? cells * g.cell : undefined);
+    return {
+      defaultWidth:  px(sizing.default.cols),
+      defaultHeight: px(sizing.default.rows),
+      minWidth:      px(sizing.min?.cols),
+      minHeight:     px(sizing.min?.rows),
+      maxWidth:      px(sizing.max?.cols),
+      maxHeight:     px(sizing.max?.rows),
+    };
+  }
+
+  /** (Re-)apply a panel's grid min/max as px CSS constraints against the current cell.
+   *  An absent constraint clears the corresponding style so it doesn't linger from an
+   *  earlier orientation/cell. Default size is NOT touched here — that's the panel's live
+   *  size, governed by the canonical rect. */
+  private _applyConstraintsPx(el: HTMLElement, sizing: PanelSizing, g: GridGeometry): void {
+    const set = (prop: 'minWidth' | 'minHeight' | 'maxWidth' | 'maxHeight', cells?: number) => {
+      el.style[prop] = cells != null ? `${cells * g.cell}px` : '';
+    };
+    set('minWidth', sizing.min?.cols);
+    set('minHeight', sizing.min?.rows);
+    set('maxWidth', sizing.max?.cols);
+    set('maxHeight', sizing.max?.rows);
+  }
+
+  /** Store a panel's resolved grid footprint and re-apply it against the live cell.
+   *  Called when a panel's effective orientation changes (rotate / global orientation
+   *  flip), via {@link FloatingChrome.setSizeConstraints}. Unlike a fresh spawn — where
+   *  the footprint is handed to the wrapper constructor — an orientation flip happens on a
+   *  live panel, so we must re-derive the px size/min/max AND refresh the wrapper's stored
+   *  default dims. Otherwise a later auto-size floors to the width captured in the previous
+   *  orientation, leaving the panel at the old orientation's footprint. */
+  applyInstanceSizing(instanceId: string, sizing: PanelSizing | undefined): void {
+    if (!sizing) { this.instanceSizing.delete(instanceId); return; }
+    this.instanceSizing.set(instanceId, sizing);
+    const chrome = this.chromes.get(instanceId);
+    if (!chrome) return;
+    const el = chrome.wrapperEl;
+    const g = this._geom;
+
+    this._applyConstraintsPx(el, sizing, g);
+
+    // Adopt the new orientation's default footprint: resize the element and update the
+    // wrapper's stored defaults so a subsequent auto-size floors to the new width.
+    const px = this._sizingToPx(sizing, g);
+    chrome.setDefaultDimensions(px.defaultWidth, px.defaultHeight);
+    if (px.defaultWidth != null) el.style.width = `${px.defaultWidth}px`;
+    if (px.defaultHeight != null && !el.classList.contains('is-panel-collapsed')) {
+      el.style.height = `${px.defaultHeight}px`;
+    }
+
+    // Keep the canonical grid rect's span in step with the new default footprint.
+    const rect = this.gridRects.get(instanceId);
+    if (rect) {
+      this.gridRects.set(instanceId, {
+        ...rect,
+        colSpan: sizing.default.cols ?? rect.colSpan,
+        rowSpan: sizing.default.rows ?? rect.rowSpan,
+      });
     }
   }
 
@@ -305,13 +391,20 @@ export class FloatingLayout implements LayoutStrategy {
     // initial page-load restore refreshes the cell separately via applyRects.
     const g = this._geom;
 
+    // The descriptor footprint arrives in grid cells; derive px against the live cell for
+    // the DOM (the wrapper is px-based), and remember the grid sizing so the constraints
+    // can be re-derived when the cell changes (resize/rotate).
+    const sizing = info.sizing;
+    if (sizing) this.instanceSizing.set(info.instanceId, sizing);
+    const px = this._sizingToPx(sizing, g);
+
     const defaultPosition = (() => {
       const fallback = {
         x: g.originX + 48 + ((this.chromes.size * 20) % 300),
         y: 48 + ((this.chromes.size * 20) % 400),
       };
-      const estW = info.defaultWidth ?? 300;
-      const estH = info.defaultHeight ?? 200;
+      const estW = px.defaultWidth ?? 300;
+      const estH = px.defaultHeight ?? 200;
       return this.findSpawnPosition(estW, estH) ?? fallback;
     })();
 
@@ -333,13 +426,19 @@ export class FloatingLayout implements LayoutStrategy {
     };
 
     // Seed the canonical grid rect (corrected on the first user change / auto-size).
-    const seedW = info.size?.width ?? info.defaultWidth ?? g.cell;
-    const seedH = info.size?.height ?? info.defaultHeight ?? g.cell;
+    // A restored panel carries an explicit px size; a fresh spawn takes its grid footprint
+    // straight from the descriptor — no px round-trip.
+    const seedColSpan = info.size
+      ? Math.max(1, Math.round(info.size.width / g.cell))
+      : (sizing?.default.cols ?? 1);
+    const seedRowSpan = info.size
+      ? Math.max(1, Math.round(info.size.height / g.cell))
+      : (sizing?.default.rows ?? 1);
     this.gridRects.set(info.instanceId, {
       col: Math.max(0, Math.round(pxToCol(pos.x, g))),
       row: Math.max(0, Math.round(pxToRow(pos.y, g))),
-      colSpan: Math.max(1, Math.round(seedW / g.cell)),
-      rowSpan: Math.max(1, Math.round(seedH / g.cell)),
+      colSpan: seedColSpan,
+      rowSpan: seedRowSpan,
     });
 
     const recordAndSave = () => { this._recordRectFromEl(info.instanceId); this._onNeedsSave(); };
@@ -361,12 +460,12 @@ export class FloatingLayout implements LayoutStrategy {
       info.onClose ?? (() => {}),
       onStateChange,
       recordAndSave,
-      info.defaultWidth,
-      info.defaultHeight,
-      info.minWidth,
-      info.minHeight,
-      info.maxWidth,
-      info.maxHeight,
+      px.defaultWidth,
+      px.defaultHeight,
+      px.minWidth,
+      px.minHeight,
+      px.maxWidth,
+      px.maxHeight,
       info.onRotate,
       info.onZoom,
       info.supportsConfigToggle ? () => {
@@ -377,7 +476,7 @@ export class FloatingLayout implements LayoutStrategy {
     this.area.appendChild(wrapper.element);
     wrapper.notifyDefaultDimensions();
 
-    const chrome = new FloatingChrome(wrapper);
+    const chrome = new FloatingChrome(wrapper, this, info.instanceId);
     this.chromes.set(info.instanceId, chrome);
     return chrome;
   }
@@ -497,5 +596,6 @@ export class FloatingLayout implements LayoutStrategy {
   forgetInstance(instanceId: string): void {
     this.chromes.delete(instanceId);
     this.gridRects.delete(instanceId);
+    this.instanceSizing.delete(instanceId);
   }
 }

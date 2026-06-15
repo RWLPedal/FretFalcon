@@ -8,7 +8,7 @@ export default featurePanelModule({
   displayName: "Chord",
   icon: "grid_on",
   featureTypeName: ChordFeature.typeName,
-  defaultSize: { width: 460, height: 550 },
+  size: { min: { cols: 2, rows: 34 }, default: { cols: 29, rows: 34 } },
   nav: {
     section: NavSection.Fretboard,
     label: "Chords",

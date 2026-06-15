@@ -11,8 +11,7 @@ const module: ViewModule = {
   panel: {
     displayName: 'Metronome',
     icon: 'timer',
-    defaultSize: { width: 280, height: 120 },
-    maxSize: { width: 440, height: 220 },
+    size: { default: { cols: 18, rows: 8 }, max: { cols: 28, rows: 14 } },
     refreshOnInstrumentChange: true,
   },
   nav: {

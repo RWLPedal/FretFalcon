@@ -282,7 +282,11 @@ export class ChordEntryPanel {
   }
 
   private _refreshInferredKey(): void {
-    const inferred = inferKeyFromChords(this.entries.map(e => e.value));
+    const inferred = inferKeyFromChords(
+      this.entries.map(e => e.value),
+      this.rootNote,
+      this.mode,
+    );
     this.inferredRoot = inferred.root;
     this.inferredMode = inferred.mode;
     for (const e of this.entries) {
