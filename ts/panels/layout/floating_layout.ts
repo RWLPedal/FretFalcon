@@ -488,12 +488,14 @@ export class FloatingLayout implements LayoutStrategy {
     this._onGeometryChanged();
   }
 
-  /** Remove the chrome for an instance. Returns the contentEl for strategy switches. */
-  removeChrome(instanceId: string): HTMLElement | null {
-    const chrome = this.chromes.get(instanceId);
-    if (!chrome) return null;
+  /** Drop an instance from the layout's bookkeeping (its chrome entry + canonical
+   *  grid rect) after PanelHost has destroyed the chrome. Without this a destroyed
+   *  panel lingers as a "ghost": getPanelRects()/serializeLayout() gate on
+   *  `chromes.has(id)`, so a stale entry would still feed Tidy — de-overlapping the
+   *  visible panels around an invisible rect — and bloat the persisted layout.
+   *  Idempotent: a no-op for an unknown id. */
+  forgetInstance(instanceId: string): void {
     this.chromes.delete(instanceId);
     this.gridRects.delete(instanceId);
-    return chrome.destroy();
   }
 }
