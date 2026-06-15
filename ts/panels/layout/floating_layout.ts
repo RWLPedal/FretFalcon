@@ -85,18 +85,19 @@ export class FloatingLayout implements LayoutStrategy {
     area.style.transform = '';
     area.style.transformOrigin = '';
     this._recomputeGeometry();
-    window.addEventListener('resize', this._handleWindowResize);
-    // Collapsing/expanding the sidebar changes the content origin and cell size
-    // without firing a window 'resize', so watch the sidebar width directly.
+    // NB: the window 'resize' event is handled by PanelHost, which drives this layout's
+    // handleResize() (-> _relayoutFromGrid) on a single debounce. We deliberately do NOT
+    // add a second window listener here — two competing resize responders is what used to
+    // scatter the layout. We only watch the sidebar directly because collapsing/expanding
+    // it changes the content origin and cell size WITHOUT firing a window 'resize'.
     const sidebarEl = document.querySelector('.side-bar-container');
     if (sidebarEl && typeof ResizeObserver !== 'undefined') {
-      this._sidebarObserver = new ResizeObserver(() => this._handleWindowResize());
+      this._sidebarObserver = new ResizeObserver(() => this._scheduleRelayout());
       this._sidebarObserver.observe(sidebarEl);
     }
   }
 
   unmount(): void {
-    window.removeEventListener('resize', this._handleWindowResize);
     if (this._sidebarObserver) { this._sidebarObserver.disconnect(); this._sidebarObserver = null; }
     if (this._resizeDebounceTimer !== null) {
       clearTimeout(this._resizeDebounceTimer);
@@ -140,7 +141,11 @@ export class FloatingLayout implements LayoutStrategy {
     return this._geom;
   }
 
-  private _handleWindowResize = (): void => {
+  /** Debounced trigger for the canonical resize relayout. Used by the sidebar
+   *  ResizeObserver (sidebar collapse changes the content origin/cell without a window
+   *  'resize'). The window 'resize' event itself is routed through PanelHost ->
+   *  handleResize() so there is a single window-resize authority. */
+  private _scheduleRelayout = (): void => {
     if (this._resizeDebounceTimer !== null) clearTimeout(this._resizeDebounceTimer);
     this._resizeDebounceTimer = setTimeout(() => {
       this._resizeDebounceTimer = null;
@@ -490,7 +495,10 @@ export class FloatingLayout implements LayoutStrategy {
   }
 
   handleResize(): void {
-    this._clampAllViews();
+    // Canonical path: recompute the fit-aware cell and re-derive every panel's px from
+    // its canonical grid rect (idempotent, order-independent). NOT _clampAllViews(), whose
+    // offset-based px clamp + rect re-record corrupts the canonical rects on large shrinks.
+    this._relayoutFromGrid();
   }
 
   serializeLayout(): LayoutData {

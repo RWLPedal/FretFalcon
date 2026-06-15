@@ -220,6 +220,7 @@ export class FloatingViewWrapper {
   private resizeObserver: ResizeObserver | null = null;
   private _resizeSaveTimer: ReturnType<typeof setTimeout> | null = null;
   private _isProgrammaticResize = false;
+  private _progResizeClearTimer: ReturnType<typeof setTimeout> | null = null;
   private _firstResizeObserverFire = true;
   private defaultWidth: number;
   private _defaultHeight: number;
@@ -443,14 +444,22 @@ export class FloatingViewWrapper {
       if (this._resizeSaveTimer !== null) clearTimeout(this._resizeSaveTimer);
       this._resizeSaveTimer = setTimeout(() => {
         this._resizeSaveTimer = null;
-        if (!wasProgrammatic && moduleGridCell && this.state.size) {
-          const sw = snapCell(this.state.size.width);
-          const sh = snapCell(this.state.size.height);
-          if (sw !== this.state.size.width || sh !== this.state.size.height) {
-            this._isProgrammaticResize = true;
-            this.element.style.width = `${sw}px`;
-            this.element.style.height = `${sh}px`;
-            this.state.size = { width: sw, height: sh };
+        if (!wasProgrammatic && moduleGridCell) {
+          // Snap the INTENDED size (the inline style we set), NOT the observed border-box.
+          // The border-box is inflated by the content's CSS min-width/height; snapping that
+          // back into style would bake a too-large span into the canonical rect on re-record
+          // (the "min-floor gotcha"), drifting panels until they overlap and get reflowed.
+          const styleW = parseFloat(this.element.style.width);
+          const styleH = parseFloat(this.element.style.height);
+          if (styleW > 0 && styleH > 0) {
+            const sw = snapCell(styleW);
+            const sh = snapCell(styleH);
+            if (sw !== styleW || sh !== styleH) {
+              this._markProgrammaticResize();
+              this.element.style.width = `${sw}px`;
+              this.element.style.height = `${sh}px`;
+              this.state.size = { width: sw, height: sh };
+            }
           }
         }
         this.onSaveCallback();
@@ -573,6 +582,23 @@ export class FloatingViewWrapper {
     });
   }
 
+  /** Mark the resize the caller is ABOUT to cause as programmatic, so the ResizeObserver
+   *  doesn't treat it as a user drag (no snap, no redundant wrapper-user-resized — the
+   *  programmatic paths emit/redraw themselves). The flag is normally consumed by the
+   *  observer fire that the size change produces; but if the change is a no-op (the size
+   *  didn't actually move) no fire arrives, which historically left the flag stuck TRUE and
+   *  caused the NEXT genuine window resize to be misclassified — swallowing its
+   *  wrapper-user-resized so the view never redrew and its canvas overflowed/clipped. The
+   *  fallback timer clears it so it can never outlive the operation it was set for. */
+  private _markProgrammaticResize(): void {
+    this._isProgrammaticResize = true;
+    if (this._progResizeClearTimer !== null) clearTimeout(this._progResizeClearTimer);
+    this._progResizeClearTimer = setTimeout(() => {
+      this._progResizeClearTimer = null;
+      this._isProgrammaticResize = false;
+    }, 250);
+  }
+
   private _autoSizeToContent(force: boolean): void {
     if (!force && this.state.size) return;
 
@@ -586,7 +612,7 @@ export class FloatingViewWrapper {
     const canvasBasedWidth = canvas.width + contentPaddingH;
     const newWidth = Math.max(canvasBasedWidth, this.defaultWidth);
 
-    this._isProgrammaticResize = true;
+    this._markProgrammaticResize();
     this.element.style.width = `${newWidth}px`;
     this.element.style.height = "";
 
@@ -602,7 +628,7 @@ export class FloatingViewWrapper {
   private _adjustHeightToContent(delta: number): void {
     const currentH = this.state.size?.height ?? parseFloat(this.element.style.height || "0");
     const newHeight = Math.max(currentH + delta, 50);
-    this._isProgrammaticResize = true;
+    this._markProgrammaticResize();
     this.element.style.height = `${newHeight}px`;
     const currentWidth = this.state.size?.width ?? parseFloat(this.element.style.width || "0");
     this.state.size = { width: currentWidth, height: newHeight };
@@ -623,6 +649,10 @@ export class FloatingViewWrapper {
     if (this._resizeSaveTimer !== null) {
       clearTimeout(this._resizeSaveTimer);
       this._resizeSaveTimer = null;
+    }
+    if (this._progResizeClearTimer !== null) {
+      clearTimeout(this._progResizeClearTimer);
+      this._progResizeClearTimer = null;
     }
     // Remove all event listeners from contentElement
     this._unlistens.forEach(u => u());
