@@ -13,6 +13,8 @@ import {
 /** Defines the top-level structure of a saved schedule JSON document. */
 export interface ScheduleDocument {
   name?: string;
+  /** Schedule-wide "get ready" countdown (seconds) inserted before each interval. */
+  transitionDuration?: number;
   items: ScheduleRowJSONData[];
 }
 
@@ -38,6 +40,7 @@ function isIntervalDataJSON(item: any): item is IntervalDataJSON {
  */
 export function parseScheduleJSON(jsonString: string): {
   name?: string;
+  transitionDuration: number;
   items: ScheduleRowData[];
 } {
   let parsedData: any;
@@ -59,6 +62,11 @@ export function parseScheduleJSON(jsonString: string): {
 
   const name =
     typeof parsedData.name === "string" ? parsedData.name.trim() : undefined;
+  const transitionDuration =
+    typeof parsedData.transitionDuration === "number" &&
+    parsedData.transitionDuration > 0
+      ? Math.floor(parsedData.transitionDuration)
+      : 0;
   const items = parsedData.items;
   const rowDataArray: ScheduleRowData[] = [];
 
@@ -113,7 +121,7 @@ export function parseScheduleJSON(jsonString: string): {
     }
   });
 
-  return { name: name, items: rowDataArray };
+  return { name: name, transitionDuration, items: rowDataArray };
 }
 
 /**
@@ -122,11 +130,15 @@ export function parseScheduleJSON(jsonString: string): {
  */
 export function generateScheduleJSON(
   scheduleName: string | undefined | null,
-  rowDataArray: ScheduleRowJSONData[]
+  rowDataArray: ScheduleRowJSONData[],
+  transitionDuration: number = 0
 ): string {
   const scheduleDocument: ScheduleDocument = { items: rowDataArray };
   if (scheduleName && scheduleName.trim()) {
     scheduleDocument.name = scheduleName.trim();
+  }
+  if (transitionDuration > 0) {
+    scheduleDocument.transitionDuration = Math.floor(transitionDuration);
   }
   try {
     // The rowDataArray should already be in the correct JSON format

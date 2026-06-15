@@ -15,7 +15,10 @@
 // square rows). The persisted gridCols/rowPx fields are vestigial stamps.
 
 import { CurrentPayload } from "./screen_config_types";
-import { A_MINOR_WORKOUT_SCHEDULE_JSON } from "../schedule/api";
+import {
+  BEGINNER_WORKOUT_SCHEDULE_JSON,
+  ADVANCED_WORKOUT_SCHEDULE_JSON,
+} from "../schedule/api";
 import { GRID_COLS, ROW_PX } from "../panels/grid_constants";
 
 // ─── Built-in layouts ─────────────────────────────────────────────────────────
@@ -242,7 +245,8 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-6": {
       instanceId: "fv-6",
       viewId: "drone_view",
-      viewState: { note: "A" },
+      // Tonic pedal matching the backing track's C-major key.
+      viewState: { note: "C" },
     },
     "fv-7": {
       instanceId: "fv-7",
@@ -304,67 +308,79 @@ export const BACKING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
-// ─── Practice layout schedule data ───────────────────────────────────────────
+// ─── Practice layouts (schedule-driven) ──────────────────────────────────────
 
-const _MINOR_WORKOUT_SCHEDULE = A_MINOR_WORKOUT_SCHEDULE_JSON;
-
-/** Practice layout: schedule (play mode) drives an Any view that renders the
- *  current interval's feature. A metronome below the Any view is also linked. */
-export const PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
-  instances: {
-    "fv-1": {
-      instanceId: "fv-1",
-      viewId: "schedule_floating_view",
-      viewState: { mode: "play", scheduleJSON: _MINOR_WORKOUT_SCHEDULE },
-    },
-    "fv-2": {
-      instanceId: "fv-2",
-      viewId: "any_floating_view",
-      viewState: {},
-    },
-    "fv-3": {
-      instanceId: "fv-3",
-      viewId: "instrument_floating_metronome",
-      viewState: {},
-    },
-  },
-  links: [
-    {
-      id: "link-1",
-      sourceInstanceId: "fv-1",
-      sourceHandle: "right" as const,
-      targetInstanceId: "fv-2",
-      targetHandle: "left" as const,
-    },
-    {
-      id: "link-2",
-      sourceInstanceId: "fv-3",
-      sourceHandle: "top" as const,
-      targetInstanceId: "fv-2",
-      targetHandle: "bottom" as const,
-    },
-  ],
-  layout: {
-    floating: {
-      gridCols: GRID_COLS,
-      rowPx: ROW_PX,
-      nextZIndex: 105,
-      perInstance: {
-        // Schedule — left, tall
-        "fv-1": { col: 1, row: 0, colSpan: 36, rowSpan: 57, zIndex: 100 },
-        // Any view — right column, top (col 50..96, flush to the right edge like the
-        // other layouts; a wider span would overflow GRID_COLS and break tidy/border).
-        "fv-2": { col: 43, row: 0, colSpan: 46, rowSpan: 42, zIndex: 101 },
-        // Metronome — right column, below Any view
-        "fv-3": { col: 43, row: 45, colSpan: 27, rowSpan: 12, zIndex: 102 },
+/** Builds a schedule-driven practice layout: a schedule panel (play mode) on the
+ *  left drives an Any view that renders the current interval's feature; a metronome
+ *  below the Any view is also linked. The two presets differ only by their schedule. */
+function makePracticeLayout(
+  scheduleJSON: string,
+  metronomeBpm: number,
+): Readonly<CurrentPayload> {
+  return Object.freeze({
+    instances: {
+      "fv-1": {
+        instanceId: "fv-1",
+        viewId: "schedule_floating_view",
+        viewState: { mode: "play", scheduleJSON },
+      },
+      "fv-2": {
+        instanceId: "fv-2",
+        viewId: "any_floating_view",
+        viewState: {},
+      },
+      "fv-3": {
+        instanceId: "fv-3",
+        viewId: "instrument_floating_metronome",
+        viewState: { bpm: metronomeBpm },
       },
     },
-  },
-});
+    links: [
+      {
+        id: "link-1",
+        sourceInstanceId: "fv-1",
+        sourceHandle: "right" as const,
+        targetInstanceId: "fv-2",
+        targetHandle: "left" as const,
+      },
+      {
+        id: "link-2",
+        sourceInstanceId: "fv-3",
+        sourceHandle: "top" as const,
+        targetInstanceId: "fv-2",
+        targetHandle: "bottom" as const,
+      },
+    ],
+    layout: {
+      floating: {
+        gridCols: GRID_COLS,
+        rowPx: ROW_PX,
+        nextZIndex: 105,
+        perInstance: {
+          // Schedule — left, full height (≥ its 38-col min width)
+          "fv-1": { col: 1, row: 0, colSpan: 40, rowSpan: 57, zIndex: 100 },
+          // Any view — fills the right region, flush to the right edge
+          "fv-2": { col: 44, row: 0, colSpan: 52, rowSpan: 42, zIndex: 101 },
+          // Metronome — right column, below the Any view
+          "fv-3": { col: 44, row: 45, colSpan: 27, rowSpan: 12, zIndex: 102 },
+        },
+      },
+    },
+  });
+}
 
-/** Triad practice layout: drum machine drives a Nearby Triads reference panel
- *  and a multi-layer fretboard. A timer sits below the drum machine. */
-export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+/** Beginner practice: open ("cowboy") chords + the first pentatonic, schedule-driven. */
+export const PRACTICE_BEGINNER_LAYOUT: Readonly<CurrentPayload> =
+  makePracticeLayout(BEGINNER_WORKOUT_SCHEDULE_JSON, 50);
+
+/** Advanced practice: 7th/9th chord transitions, triad voice leading, modal scales. */
+export const PRACTICE_ADVANCED_LAYOUT: Readonly<CurrentPayload> =
+  makePracticeLayout(ADVANCED_WORKOUT_SCHEDULE_JSON, 100);
+
+/** Voice Leading layout: a backing track drives a Nearby Triads reference panel
+ *  (smooth movement between chord shapes) and a multi-layer fretboard. A timer
+ *  sits below the drum machine. */
+export const VOICE_LEADING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   instances: {
     "fv-1": {
       instanceId: "fv-1",
@@ -544,6 +560,135 @@ export const TRIAD_PRACTICE_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
+/** Harmony Explorer: an interactive theory lab with no backing track. The Circle
+ *  of Fifths drives a Scale, a Chord diagram, and a Chord Progression — click a key
+ *  on the circle and every panel follows. Demonstrates the link/drive system. */
+export const HARMONY_EXPLORER_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+  instances: {
+    "fv-1": {
+      instanceId: "fv-1",
+      viewId: "circle_of_fifths",
+      viewState: {},
+    },
+    "fv-2": {
+      instanceId: "fv-2",
+      viewId: "instrument_scale",
+      viewState: { featureTypeName: "Scale", config: ["driven", "driven"] },
+    },
+    "fv-3": {
+      instanceId: "fv-3",
+      viewId: "instrument_chord",
+      viewState: { featureTypeName: "Chord", config: ["driven", "driven"] },
+    },
+    "fv-4": {
+      instanceId: "fv-4",
+      viewId: "instrument_chord_progression",
+      viewState: {
+        featureTypeName: "Chord Progression",
+        config: ["driven", "driven", "0", "3", "4"],
+      },
+    },
+  },
+  links: [
+    {
+      id: "link-1",
+      sourceInstanceId: "fv-1",
+      sourceHandle: "right" as const,
+      targetInstanceId: "fv-2",
+      targetHandle: "left" as const,
+    },
+    {
+      id: "link-2",
+      sourceInstanceId: "fv-1",
+      sourceHandle: "right" as const,
+      targetInstanceId: "fv-3",
+      targetHandle: "left" as const,
+    },
+    {
+      id: "link-3",
+      sourceInstanceId: "fv-1",
+      sourceHandle: "bottom" as const,
+      targetInstanceId: "fv-4",
+      targetHandle: "top" as const,
+    },
+  ],
+  layout: {
+    floating: {
+      gridCols: GRID_COLS,
+      rowPx: ROW_PX,
+      nextZIndex: 105,
+      perInstance: {
+        // Circle of Fifths — top-left (driver)
+        "fv-1": { col: 1, row: 1, colSpan: 32, rowSpan: 32, zIndex: 101 },
+        // Chord Progression — below the circle (root + mode driven from the key)
+        "fv-4": { col: 1, row: 34, colSpan: 32, rowSpan: 24, zIndex: 102 },
+        // Scale — wide horizontal panel, top-right (driven)
+        "fv-2": { col: 34, row: 1, colSpan: 62, rowSpan: 22, zIndex: 103 },
+        // Chord — wide horizontal panel stacked below the scale (driven)
+        "fv-3": { col: 34, row: 24, colSpan: 62, rowSpan: 34, zIndex: 104 },
+      },
+    },
+  },
+});
+
+/** Strumming: a rhythm-practice layout. The Strum pattern builder drives a Drone so
+ *  the pedal tone is plucked in time, a Chord Progression shows the chords to strum,
+ *  and a Capo helps transpose the open-chord shapes. */
+export const STRUMMING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+  instances: {
+    "fv-1": {
+      instanceId: "fv-1",
+      viewId: "strum_view",
+      viewState: {},
+    },
+    "fv-2": {
+      instanceId: "fv-2",
+      viewId: "drone_view",
+      // Tonic pedal in G; the linked strum articulates it rhythmically.
+      viewState: { note: "G" },
+    },
+    "fv-3": {
+      instanceId: "fv-3",
+      viewId: "instrument_chord_progression",
+      viewState: {
+        featureTypeName: "Chord Progression",
+        config: ["G", "MAJOR", "0", "3", "4", "5"],
+      },
+    },
+    "fv-4": {
+      instanceId: "fv-4",
+      viewId: "capo_view",
+      viewState: {},
+    },
+  },
+  links: [
+    {
+      id: "link-1",
+      sourceInstanceId: "fv-1",
+      sourceHandle: "bottom" as const,
+      targetInstanceId: "fv-2",
+      targetHandle: "top" as const,
+    },
+  ],
+  layout: {
+    floating: {
+      gridCols: GRID_COLS,
+      rowPx: ROW_PX,
+      nextZIndex: 105,
+      perInstance: {
+        // Strum pattern — top-left (driver)
+        "fv-1": { col: 1, row: 1, colSpan: 44, rowSpan: 14, zIndex: 104 },
+        // Drone — below the strum (strum-articulated pedal tone)
+        "fv-2": { col: 1, row: 16, colSpan: 28, rowSpan: 6, zIndex: 103 },
+        // Capo — bottom-left
+        "fv-4": { col: 1, row: 24, colSpan: 22, rowSpan: 30, zIndex: 102 },
+        // Chord Progression — right column, the chords to strum
+        "fv-3": { col: 46, row: 1, colSpan: 50, rowSpan: 57, zIndex: 101 },
+      },
+    },
+  },
+});
+
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export interface DefaultConfigEntry {
@@ -557,8 +702,11 @@ export const DEFAULT_CONFIGS: Readonly<Record<string, DefaultConfigEntry>> =
     empty: { default: EMPTY_CONFIG },
     reference: { default: REFERENCE_LAYOUT },
     backing: { default: BACKING_LAYOUT },
-    practice: { default: PRACTICE_LAYOUT },
-    triad_practice: { default: TRIAD_PRACTICE_LAYOUT },
+    voice_leading: { default: VOICE_LEADING_LAYOUT },
+    practice_beginner: { default: PRACTICE_BEGINNER_LAYOUT },
+    practice_advanced: { default: PRACTICE_ADVANCED_LAYOUT },
+    harmony_explorer: { default: HARMONY_EXPLORER_LAYOUT },
+    strumming: { default: STRUMMING_LAYOUT },
   });
 
 /** Ordered list of presets to show in UI pickers. "empty" is intentionally
@@ -569,6 +717,9 @@ export const DEFAULT_CONFIG_OPTIONS: ReadonlyArray<{
 }> = [
   { key: "reference", label: "Reference" },
   { key: "backing", label: "Backing track" },
-  { key: "practice", label: "Practice" },
-  { key: "triad_practice", label: "Triad Practice" },
+  { key: "voice_leading", label: "Voice Leading" },
+  { key: "practice_beginner", label: "Practice — Beginner" },
+  { key: "practice_advanced", label: "Practice — Advanced" },
+  { key: "harmony_explorer", label: "Harmony Explorer" },
+  { key: "strumming", label: "Strumming" },
 ];

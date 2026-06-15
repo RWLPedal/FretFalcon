@@ -270,7 +270,7 @@ export class SchedulePlaybackView {
 
     intervals.forEach((interval, i) => {
       const li = this._createUpcomingItem(
-        (interval.task || '(Untitled)') + (interval.isIntroActive() ? ' (Warmup)' : ''),
+        interval.task || '(Untitled)',
         interval.duration,
         i === 0,
         interval.feature?.typeName ?? null,

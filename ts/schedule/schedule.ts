@@ -190,8 +190,7 @@ export class Schedule {
 
 
   setDisplayTask(interval: Interval): void {
-    const suffix = interval.isIntroActive() ? " (Warmup)" : "";
-    this.display.setTask(interval.task + suffix, interval.color);
+    this.display.setTask(interval.task, interval.color);
     this.display.setCurrentCategoryName(interval.categoryName);
 
     if (interval.feature) {

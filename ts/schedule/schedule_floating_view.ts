@@ -97,7 +97,7 @@ export class ScheduleFloatingView extends BaseView {
     );
 
     // Relabel the apply button for floating-view context
-    this.editor.setApplyButtonLabel('Apply & Play');
+    this.editor.setApplyButtonLabel('Apply');
 
     // Restore persisted schedule if available (overrides last-run from localStorage)
     if (this.initialState?.scheduleJSON) {

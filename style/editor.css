@@ -161,7 +161,7 @@
 #editor-controls .button:hover .material-icons {
   color: var(--text-primary);
 }
-/* Apply & Play button — high-specificity override so it wins over the general .button rule */
+/* Apply button — high-specificity override so it wins over the general .button rule */
 #editor-controls #set-schedule-control {
   background-color: var(--accent) !important;
   color: #fff !important;
@@ -828,6 +828,33 @@
   color: var(--text-muted);
   padding-left: 4px;
   white-space: nowrap;
+}
+.schedule-transition-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  padding-left: 4px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.schedule-transition-input {
+  width: 3em;
+  font-size: 0.7rem;
+  padding: 1px 4px;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  /* The box is too small for the number spinner — hide the up/down arrows. */
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.schedule-transition-input::-webkit-outer-spin-button,
+.schedule-transition-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 .editor-header-actions {
   display: flex;

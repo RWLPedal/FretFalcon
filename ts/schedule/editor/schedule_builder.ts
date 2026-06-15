@@ -20,6 +20,8 @@ export class ScheduleBuilder {
   private errorDisplay: ErrorDisplay;
   private configEntriesContainerEl: HTMLElement;
   private scheduleName: string = '';
+  /** Schedule-wide "get ready" countdown (seconds) prepended to every interval. */
+  private transitionDuration: number = 0;
 
   constructor(
     rowManager: RowManager,
@@ -34,6 +36,12 @@ export class ScheduleBuilder {
   /** Sets the schedule name to be assigned to the built Schedule object. */
   public setScheduleName(name: string): void {
     this.scheduleName = name;
+  }
+
+  /** Sets the schedule-wide transition (intro) duration, in seconds, applied to
+   *  every interval as a brief "get ready" countdown. */
+  public setTransitionDuration(seconds: number): void {
+    this.transitionDuration = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
   }
 
   /**
@@ -147,7 +155,7 @@ export class ScheduleBuilder {
           // 4. Create Interval and add to Schedule
           const interval = new Interval(
             durationSeconds,
-            0,
+            this.transitionDuration,
             intervalData.task ||
               intervalData.featureTypeName ||
               `Interval ${index + 1}`, // Task name fallback

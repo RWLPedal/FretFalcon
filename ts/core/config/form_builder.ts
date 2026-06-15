@@ -119,7 +119,13 @@ export class FormBuilder<C> {
       const compatible = field.drivable.kinds.some(k => kinds.has(k));
       widget.setDrivenVisible(hasLinks && compatible, hasLinks && compatible && hasNext);
       if (hasLinks && compatible) {
-        widget.autoSelectDriven();
+        // Only auto-follow fields the user left as a plain literal. An explicit
+        // driven / driven_next sentinel (e.g. a "next chord" panel) must be preserved —
+        // setDrivenVisible already restored it onto the <select> above.
+        const cv = this.config[key];
+        if (cv.mode !== 'driven' && cv.mode !== 'drivenNext') {
+          widget.autoSelectDriven();
+        }
       }
     }
   }

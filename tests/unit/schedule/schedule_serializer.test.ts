@@ -84,4 +84,19 @@ describe('generateScheduleJSON', () => {
     expect(json).toContain('\n')
     expect(json).toContain('  ')
   })
+
+  it('includes transitionDuration when greater than zero', () => {
+    const parsed = JSON.parse(generateScheduleJSON('Test', [intervalRow], 10))
+    expect(parsed.transitionDuration).toBe(10)
+  })
+
+  it('omits transitionDuration when zero (the default)', () => {
+    expect(JSON.parse(generateScheduleJSON('Test', [intervalRow], 0)).transitionDuration).toBeUndefined()
+    expect(JSON.parse(generateScheduleJSON('Test', [intervalRow])).transitionDuration).toBeUndefined()
+  })
+
+  it('floors a fractional transitionDuration', () => {
+    const parsed = JSON.parse(generateScheduleJSON('Test', [intervalRow], 10.7))
+    expect(parsed.transitionDuration).toBe(10)
+  })
 })

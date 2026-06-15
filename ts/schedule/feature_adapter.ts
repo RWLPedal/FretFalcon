@@ -29,10 +29,14 @@ class ScheduleFeatureWrapper implements Feature {
 
   constructor(
     private readonly inner: Feature,
-    extraViews: View[]
+    extraViews: View[],
+    config?: ReadonlyArray<string>
   ) {
     this.typeName = inner.typeName;
-    this.config = inner.config;
+    // Spec-created features are constructed with an empty config array, so prefer
+    // the original schedule args when provided. This keeps the emitted FeatureSignal
+    // (config: [...feature.config]) accurate so linked views render the right interval.
+    this.config = config ?? inner.config;
     this.maxCanvasHeight = inner.maxCanvasHeight;
     this.views = [...(inner.views ?? []), ...extraViews];
   }
@@ -72,10 +76,13 @@ export function createScheduleFeature(
     feature = descriptor.createFeature(config, settings, maxCanvasHeight, categoryName);
   }
 
+  const extraViews: View[] = [];
   if (intervalSettings.metronomeBpm > 0) {
-    const metronomeView = new MetronomeView(intervalSettings.metronomeBpm, audioController);
-    return new ScheduleFeatureWrapper(feature, [metronomeView]);
+    extraViews.push(new MetronomeView(intervalSettings.metronomeBpm, audioController));
   }
 
-  return feature;
+  // Always wrap so the feature exposes the original legacy config. Spec-created
+  // features drop it (constructed with []), which would otherwise make linked
+  // views such as AnyFloatingView fall back to feature defaults every interval.
+  return new ScheduleFeatureWrapper(feature, extraViews, config);
 }

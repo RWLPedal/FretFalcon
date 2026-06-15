@@ -6,7 +6,7 @@ import { getFeatureSpec } from '../../core/config/feature_spec_registry';
 import { legacyCodec } from '../../core/config/codec';
 import { resolveConfig } from '../../core/config/resolve';
 import { emptyDrivenState } from '../../core/config/spec';
-import { DriveSignal, SignalKind, FeatureSignal, SignalSink } from '../../panels/link_types';
+import { DriveSignal, SignalKind, SignalState, FeatureSignal, SignalSink } from '../../panels/link_types';
 import { InstrumentSettings } from '../../fretboard/fretboard_settings';
 
 const PLACEHOLDER_UNLINKED = 'Connect a Schedule to display features here';
@@ -49,9 +49,13 @@ export class AnyFloatingView extends BaseView implements SignalSink {
 
   receiveSignals(signals: DriveSignal[], _meta: { sourceInstanceId: string; linkId: string | null }): void {
     for (const signal of signals) {
-      if (signal.kind === SignalKind.Feature) {
-        this._handleFeatureSignal(signal as FeatureSignal);
-      }
+      if (signal.kind !== SignalKind.Feature) continue;
+      const featureSignal = signal as FeatureSignal;
+      // The Any view renders the CURRENT interval only. The schedule also emits a
+      // next-state preview signal after each current one; ignore it here so it does
+      // not clobber the current feature (an "up next" panel could opt into it).
+      if (featureSignal.state === SignalState.Next) continue;
+      this._handleFeatureSignal(featureSignal);
     }
   }
 

@@ -4,7 +4,8 @@
  *
  * Privileged callers: modules/schedule_panel, screen_config/default_configs
  */
-export { A_MINOR_WORKOUT_SCHEDULE_JSON } from './presets/a_minor_workout';
+export { BEGINNER_WORKOUT_SCHEDULE_JSON } from './presets/beginner_workout';
+export { ADVANCED_WORKOUT_SCHEDULE_JSON } from './presets/advanced_workout';
 
 import { View } from '../core/view';
 import { AppSettings } from '../settings';

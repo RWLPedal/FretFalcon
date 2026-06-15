@@ -51,6 +51,9 @@ export class ScheduleEditor {
   private scheduleNameDisplayEl!: HTMLElement | null;
   private currentMode: EditorMode = EditorMode.Config;
   private scheduleName: string = DEFAULT_SCHEDULE_NAME;
+  /** Schedule-wide "get ready" countdown (seconds) before each interval. */
+  private transitionDuration: number = 5;
+  private transitionInputEl!: HTMLInputElement | null;
   private defaultCategoryName: string | null = null;
 
   constructor(
@@ -132,6 +135,7 @@ export class ScheduleEditor {
     this.setEditorMode(this.currentMode, true);
     this._loadInitialState();
     this._updateScheduleNameDisplay();
+    this._updateTransitionDisplay();
 
     if (this.currentMode === EditorMode.Config) {
       if (this.uiManager.textEl.value.trim().length > 0) {
@@ -151,6 +155,7 @@ export class ScheduleEditor {
   private _findNameEditElements(): void {
     this.scheduleNameDisplayEl =
       this.containerEl.querySelector<HTMLElement>('#schedule-name-display');
+    this.transitionInputEl = this.uiManager.transitionInputEl ?? null;
   }
 
   private _updateScheduleNameDisplay(): void {
@@ -159,15 +164,34 @@ export class ScheduleEditor {
     }
   }
 
+  private _updateTransitionDisplay(): void {
+    if (this.transitionInputEl) {
+      this.transitionInputEl.value = String(this.transitionDuration);
+    }
+  }
+
   private _attachNameEditHandlers(): void {
-    if (!this.scheduleNameDisplayEl) return;
-    this.scheduleNameDisplayEl.addEventListener('blur', () => {
-      const newName = this.scheduleNameDisplayEl!.textContent?.trim() ?? '';
-      if (newName && newName !== this.scheduleName) {
-        this.scheduleName = newName;
-      }
-      this._updateScheduleNameDisplay();
-    });
+    if (this.scheduleNameDisplayEl) {
+      this.scheduleNameDisplayEl.addEventListener('blur', () => {
+        const newName = this.scheduleNameDisplayEl!.textContent?.trim() ?? '';
+        if (newName && newName !== this.scheduleName) {
+          this.scheduleName = newName;
+        }
+        this._updateScheduleNameDisplay();
+      });
+    }
+
+    if (this.transitionInputEl) {
+      const commit = () => {
+        const raw = Math.floor(Number(this.transitionInputEl!.value));
+        const clamped = Number.isFinite(raw) ? Math.min(60, Math.max(0, raw)) : 0;
+        this.transitionDuration = clamped;
+        this._updateTransitionDisplay();
+        // Keep the code view in sync when it is the active editor.
+        if (this.currentMode === EditorMode.JSON) this.syncConfigToJSONView();
+      };
+      this.transitionInputEl.addEventListener('change', commit);
+    }
   }
 
   // ─── Mode switching ───────────────────────────────────────────────────────
@@ -200,7 +224,9 @@ export class ScheduleEditor {
     try {
       const parsedDoc = parseScheduleJSON(this.uiManager.textEl.value);
       this.scheduleName = parsedDoc.name || DEFAULT_SCHEDULE_NAME;
+      this.transitionDuration = parsedDoc.transitionDuration;
       this._updateScheduleNameDisplay();
+      this._updateTransitionDisplay();
       this.uiManager.populateConfigUI(
         this._buildRowElement.bind(this),
         parsedDoc.items
@@ -373,7 +399,9 @@ export class ScheduleEditor {
     this._clearConfigEntries();
     this.uiManager.textEl.value = '';
     this.scheduleName = DEFAULT_SCHEDULE_NAME;
+    this.transitionDuration = 5;
     this._updateScheduleNameDisplay();
+    this._updateTransitionDisplay();
     this.selectionManager.clearSelection(true);
     this.clipboardManager.clearClipboard();
 
@@ -413,17 +441,19 @@ export class ScheduleEditor {
     const rowDataArray = Array.from(rows)
       .map(row => this.rowManager.getRowData(row))
       .filter((d): d is ScheduleRowJSONData => d !== null);
-    return generateScheduleJSON(this.scheduleName, rowDataArray);
+    return generateScheduleJSON(this.scheduleName, rowDataArray, this.transitionDuration);
   }
 
   public setScheduleJSON(jsonString: string, skipSync: boolean = false): void {
     try {
       const parsedDoc = parseScheduleJSON(jsonString);
       this.scheduleName = parsedDoc.name || DEFAULT_SCHEDULE_NAME;
+      this.transitionDuration = parsedDoc.transitionDuration;
       let prettyJson = jsonString;
       try { prettyJson = JSON.stringify(JSON.parse(jsonString), null, 2); } catch {}
       this.uiManager.textEl.value = prettyJson;
       this._updateScheduleNameDisplay();
+      this._updateTransitionDisplay();
       this.errorDisplay.removeMessage();
 
       if (!skipSync && this.currentMode === EditorMode.Config) {
@@ -482,6 +512,7 @@ export class ScheduleEditor {
       if (this.errorDisplay.hasMessage()) return null;
     }
     this.scheduleBuilder.setScheduleName(this.scheduleName);
+    this.scheduleBuilder.setTransitionDuration(this.transitionDuration);
     return this.scheduleBuilder.buildSchedule(
       displayController,
       this.audioController,

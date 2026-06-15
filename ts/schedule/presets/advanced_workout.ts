@@ -1,0 +1,122 @@
+/**
+ * Bundled "Advanced Workout" practice schedule JSON.
+ * A session for the developing player: 7th/9th chord-transition drills (ii–V–I and
+ * its relative minor), triad voice leading, modal scales, and arpeggios/triads.
+ *
+ * Quarantined here so nothing outside ts/schedule/ needs to hold schedule data.
+ */
+export const ADVANCED_WORKOUT_SCHEDULE_JSON: string = JSON.stringify(
+  {
+    name: "Advanced Workout",
+    // Schedule-wide "get ready" countdown (seconds) before every interval.
+    transitionDuration: 5,
+    items: [
+      { rowType: "group", level: 1, name: "Warmup", color: "--note-root" },
+      {
+        rowType: "interval",
+        duration: "2:00",
+        task: "Chromatic 1-2-3-4 — name each note",
+        categoryName: "Instrument",
+        featureTypeName: "Notes",
+        featureArgsList: ["None"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "7th & 9th Changes", color: "--note-third" },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "Cmaj7 — the I of a ii–V–I; economical voicings",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["C", "Major 7"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "Dm7 — the ii; voice-lead out of Cmaj7",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["D", "Minor 7"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "G7 — resolve the tritone into Cmaj7",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["G", "Dom 7"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "Cmaj9 — add the 9th, keep it compact",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["C", "Major 9"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "Am9 — slide from Cmaj9, minimal movement",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["A", "Minor 9"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Voice Leading", color: "--note-fifth" },
+      {
+        rowType: "interval",
+        duration: "4:00",
+        task: "Triad voice leading at fret 5 — nearest I, IV, V",
+        categoryName: "Instrument",
+        featureTypeName: "Nearby Triads",
+        featureArgsList: ["C", "MAJOR", "reference", "fret:5", "none", "0", "3", "4"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Scales", color: "--note-sixth" },
+      {
+        rowType: "interval",
+        duration: "4:00",
+        task: "D Dorian — target the natural 6th",
+        categoryName: "Instrument",
+        featureTypeName: "Scale",
+        featureArgsList: ["Dorian", "D"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "A harmonic minor — lean on the raised 7th",
+        categoryName: "Instrument",
+        featureTypeName: "Scale",
+        featureArgsList: ["Harmonic Minor", "A"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Arpeggios & Triads", color: "--note-seventh" },
+      {
+        rowType: "interval",
+        duration: "4:00",
+        task: "Gmaj7 arpeggio — land on chord tones",
+        categoryName: "Instrument",
+        featureTypeName: "Arpeggio",
+        featureArgsList: ["G", "Maj 7"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "B diminished triads — vii° of C, all inversions",
+        categoryName: "Instrument",
+        featureTypeName: "Triad Shapes",
+        featureArgsList: ["B", "Diminished"],
+        intervalSettings: {},
+      },
+    ],
+  },
+  null,
+  2,
+);

@@ -1,0 +1,112 @@
+/**
+ * Bundled "Beginner Workout" practice schedule JSON.
+ * A first-steps session: a fretboard warmup, the core open ("cowboy") chords,
+ * a chord-change drill, and the first lead-guitar scale.
+ *
+ * Quarantined here so nothing outside ts/schedule/ needs to hold schedule data.
+ */
+export const BEGINNER_WORKOUT_SCHEDULE_JSON: string = JSON.stringify(
+  {
+    name: "Beginner Workout",
+    // Schedule-wide "get ready" countdown (seconds) before every interval.
+    transitionDuration: 5,
+    items: [
+      { rowType: "group", level: 1, name: "Warmup", color: "--note-root" },
+      {
+        rowType: "interval",
+        duration: "2:00",
+        task: "Find every natural note — say each one aloud",
+        categoryName: "Instrument",
+        featureTypeName: "Notes",
+        featureArgsList: ["None"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Open Chords", color: "--note-third" },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "E minor — two fingers, let it ring",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["E", "Minor"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "A minor — keep your knuckles arched",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["A", "Minor"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "E major — one finger added to Em",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["E", "Major"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "A major — three fingers in one fret",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["A", "Major"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "D major — strum from the D string down",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["D", "Major"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "1:30",
+        task: "G major — pinky on the high E",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["G", "Major"],
+        intervalSettings: {},
+      },
+      {
+        rowType: "interval",
+        duration: "2:00",
+        task: "C major — mind the long stretch",
+        categoryName: "Instrument",
+        featureTypeName: "Chord",
+        featureArgsList: ["C", "Major"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Changes", color: "--note-fifth" },
+      {
+        rowType: "interval",
+        duration: "3:00",
+        task: "G–C–D — switch cleanly, no pauses",
+        categoryName: "Instrument",
+        featureTypeName: "Chord Progression",
+        featureArgsList: ["G", "MAJOR", "0", "3", "4"],
+        intervalSettings: {},
+      },
+      { rowType: "group", level: 1, name: "Lead", color: "--note-seventh" },
+      {
+        rowType: "interval",
+        duration: "4:00",
+        task: "A minor pentatonic, pos. 1 — both directions",
+        categoryName: "Instrument",
+        featureTypeName: "Scale",
+        featureArgsList: ["Minor Pentatonic", "A"],
+        intervalSettings: {},
+      },
+    ],
+  },
+  null,
+  2,
+);

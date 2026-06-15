@@ -24,6 +24,7 @@ export class EditorUIManager {
   // Header elements
   public scheduleNameDisplayEl!: HTMLElement;
   public scheduleStatsEl!: HTMLElement;
+  public transitionInputEl!: HTMLInputElement;
   public modeToggleEl!: HTMLButtonElement;
 
   // For ErrorDisplay compatibility (referenced in schedule_editor.ts)
@@ -78,6 +79,28 @@ export class EditorUIManager {
     this.scheduleStatsEl = document.createElement('span');
     this.scheduleStatsEl.classList.add('schedule-stats');
     headerLeft.appendChild(this.scheduleStatsEl);
+
+    // Schedule-wide "get ready" transition between intervals.
+    const transitionWrap = document.createElement('label');
+    transitionWrap.classList.add('schedule-transition-control');
+    transitionWrap.title =
+      'Seconds of "get ready" countdown inserted before each interval (0 = none)';
+    const transitionLabel = document.createElement('span');
+    transitionLabel.classList.add('schedule-transition-label');
+    transitionLabel.textContent = 'Transition';
+    this.transitionInputEl = document.createElement('input');
+    this.transitionInputEl.type = 'number';
+    this.transitionInputEl.min = '0';
+    this.transitionInputEl.max = '60';
+    this.transitionInputEl.step = '1';
+    this.transitionInputEl.classList.add('schedule-transition-input');
+    const transitionUnit = document.createElement('span');
+    transitionUnit.classList.add('schedule-transition-unit');
+    transitionUnit.textContent = 's';
+    transitionWrap.appendChild(transitionLabel);
+    transitionWrap.appendChild(this.transitionInputEl);
+    transitionWrap.appendChild(transitionUnit);
+    headerLeft.appendChild(transitionWrap);
 
     header.appendChild(headerLeft);
 

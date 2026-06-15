@@ -55,9 +55,10 @@ const module: ViewModule = {
       },
     ],
   },
-  createView(_ctx: ViewContext) {
+  createView(_ctx: ViewContext, state?: unknown) {
     const audioController = new AudioController();
-    return new MetronomeView(120, audioController);
+    const bpm = (state as any)?.bpm;
+    return new MetronomeView(typeof bpm === 'number' && bpm > 0 ? bpm : 120, audioController);
   },
 };
 
