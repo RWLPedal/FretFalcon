@@ -467,7 +467,7 @@ eval("{\n// ts/fretboard/fretboard_config.ts\n// FretboardConfig: sizing and sca
 (__unused_webpack_module, exports, __webpack_require__) {
 
 "use strict";
-eval("{\nObject.defineProperty(exports, \"__esModule\", ({ value: true }));\nexports.DEFAULT_INSTRUMENT_SETTINGS = void 0;\nconst instruments_1 = __webpack_require__(/*! ./instruments */ \"./fretboard/instruments.ts\");\n/** Default values for Instrument settings. */\nexports.DEFAULT_INSTRUMENT_SETTINGS = {\n    instrument: instruments_1.InstrumentName.Guitar,\n    handedness: \"right\",\n    orientation: \"vertical\",\n    tuning: \"Standard\",\n    colorScheme: \"interval\",\n    labelDisplay: \"interval\",\n};\n\n\n//# sourceURL=webpack:///./fretboard/fretboard_settings.ts?\n}");
+eval("{\nObject.defineProperty(exports, \"__esModule\", ({ value: true }));\nexports.DEFAULT_INSTRUMENT_SETTINGS = void 0;\nconst instruments_1 = __webpack_require__(/*! ./instruments */ \"./fretboard/instruments.ts\");\n/** Default values for Instrument settings. */\nexports.DEFAULT_INSTRUMENT_SETTINGS = {\n    instrument: instruments_1.InstrumentName.Guitar,\n    handedness: \"right\",\n    orientation: \"horizontal\",\n    tuning: \"Standard\",\n    colorScheme: \"interval\",\n    labelDisplay: \"interval\",\n};\n\n\n//# sourceURL=webpack:///./fretboard/fretboard_settings.ts?\n}");
 
 /***/ },
 
@@ -7264,7 +7264,7 @@ select.is-driven {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 6.5px;
+  font-size: 8px;
   font-weight: 700;
   color: rgba(255, 255, 255, 0.95);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);

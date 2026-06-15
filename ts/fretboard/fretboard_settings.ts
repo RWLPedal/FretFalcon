@@ -22,7 +22,7 @@ export interface InstrumentSettings {
 export const DEFAULT_INSTRUMENT_SETTINGS: InstrumentSettings = {
   instrument: InstrumentName.Guitar,
   handedness: "right",
-  orientation: "vertical",
+  orientation: "horizontal",
   tuning: "Standard",
   colorScheme: "interval",
   labelDisplay: "interval",
