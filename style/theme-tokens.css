@@ -1,9 +1,19 @@
 /*
  * FretFalcon — Design Tokens
- * Three themes: warm · dark · forest
+ * Five themes: warm · moss · sherbet · sigil · neon
  *
- * Apply [data-theme="warm|dark|forest"] to <html> or <body>.
+ * Apply [data-theme="warm|moss|sherbet|sigil|neon"] to <html> or <body>.
  */
+
+/* ── Chord-diagram marker fills ──────────────────────────────────────────
+   Read by the canvas renderer via getComputedStyle on <html> (so they must
+   live at :root, not on body like the --clr-* bridges). Defaults preserve
+   the prior look — barre = secondary note hue, root marker = danger red —
+   so each theme can soften them independently (see sherbet). */
+:root {
+  --chord-barre: var(--note-second);
+  --chord-root: var(--danger);
+}
 
 /* ───────────────────────────────────────
    WARM — Parchment · Slate Blue · Amber
@@ -329,160 +339,130 @@
   opacity: 0.82;
 }
 
-/* ───────────────────────────────────────
-   DARK — Near-black · Crimson · Amber Gold
-   ─────────────────────────────────────── */
-:root[data-theme="dark"] {
-  --bg: #241c16; /* warm faded cream-brown */
-  --panel-bg: #2e251c; /* sun-warmed card */
-  --sidebar-bg: #1c150f; /* shaded edge */
-  --settings-bg: #322820;
-  --input-bg: #32271a;
-  --border: #5c4430; /* faded plastic seam */
-  --text-primary: #ece0be; /* bleached ivory */
-  --text-muted: #9c8369; /* milky coffee */
-  --text-sidebar: #cdb48e; /* café au lait */
-
-  --accent: oklch(0.66 0.1 48); /* sun-faded terracotta — primary */
-  --accent-dim: oklch(0.74 0.07 55);
-  --accent-warm: oklch(0.74 0.08 80); /* faded ochre gold — secondary */
-
-  --note-root: oklch(0.66 0.1 48); /* faded terracotta */
-  --note-second: oklch(0.72 0.04 110); /* pale dust */
-  --note-third: oklch(0.62 0.07 122); /* sun-faded sage */
-  --note-fourth: oklch(0.6 0.08 40); /* faded brick */
-  --note-fifth: oklch(0.74 0.08 80); /* faded ochre */
-  --note-sixth: oklch(0.5 0.06 90); /* olive drab */
-  --note-seventh: oklch(0.42 0.04 70); /* warm grey-brown */
-  --danger: oklch(0.55 0.13 30); /* faded brick red */
-  --note-pivot: oklch(
-    0.7 0.13 70
-  ); /* muted gold — pivot / common-tone highlight */
-
-  --pad-off: #3f3020;
-  --shadow: 0 4px 16px rgba(0, 0, 0, 0.42);
-  --shadow-panel: 0 8px 24px rgba(0, 0, 0, 0.42);
-
+/* ─────────────────────────────────────────────────────────
+   SHERBET — Pastel Pop · "Sherbet Swirl"
+   Vanilla-cream sherbet ground, candy diagonal stripes,
+   chunky soft outlines, pill-round panels, gradient
+   pink→lilac→mint headers. Bubbly rounded face (Fredoka).
+   ───────────────────────────────────────────────────────── */
+:root[data-theme="sherbet"] {
+  --bg: #fbf2e6;                /* vanilla cream */
+  --panel-bg: #ffffff;          /* clean sugar white */
+  --sidebar-bg: #f6e6f0;        /* pale pink margin */
+  --settings-bg: #fcf2f8;
+  --input-bg: #fcf2f8;
+  --border: #e8c7e8;            /* soft lavender outline (thick) */
+  --text-primary: #4e3f59;      /* soft plum ink */
+  --text-muted: #a78fb0;        /* faded lilac */
+  --text-sidebar: #7c6886;      /* grape */
+  --accent: oklch(0.7 0.18 352); /* bubblegum pink — primary */
+  --accent-dim: oklch(0.62 0.16 352);
+  --accent-warm: oklch(0.68 0.14 300); /* lavender — secondary */
+  --note-root: oklch(0.7 0.18 352); /* bubblegum pink */
+  --note-second: oklch(0.78 0.13 65); /* apricot */
+  --note-third: oklch(0.74 0.14 165); /* mint */
+  --note-fourth: oklch(0.72 0.11 235); /* sky blue */
+  --note-fifth: oklch(0.68 0.14 300); /* lavender */
+  --note-sixth: oklch(0.8 0.12 95); /* butter */
+  --note-seventh: oklch(0.66 0.15 18); /* coral */
+  --danger: oklch(0.62 0.2 18); /* strawberry red */
+  --note-pivot: oklch(0.74 0.2 350); /* vivid bubblegum — pivot / common-tone */
+  --chord-barre: oklch(0.7 0.07 330); /* soft mauve — toned-down barre */
+  --chord-root: oklch(0.64 0.13 14); /* dusty rose — toned-down root marker */
+  --pad-off: #f4eaf7;
+  --shadow: 0 2px 14px rgba(214, 140, 190, 0.18);
+  --shadow-panel: 0 10px 30px rgba(214, 140, 190, 0.2);
   /* multifret layer fills */
-  --layer-scale: oklch(0.4 0.03 60 / 0.55); /* faded brown base */
-  --layer-chord: oklch(0.6 0.1 42 / 0.72); /* terracotta */
-  --layer-notes: oklch(0.72 0.09 72 / 0.78); /* faded honey */
-  --layer-driven: oklch(0.64 0.07 115 / 0.8); /* faded sage */
-
-  /* drum machine palette — sun-bleached but distinct */
-  --dm-palette-1: oklch(0.66 0.1 48); /* terracotta */
-  --dm-palette-2: oklch(0.74 0.08 80); /* faded ochre */
-  --dm-palette-3: oklch(0.62 0.07 122); /* sage */
-  --dm-palette-4: oklch(0.58 0.06 200); /* faded teal */
-  --dm-palette-5: oklch(0.58 0.07 350); /* dusty mauve */
-  --dm-palette-6: oklch(0.52 0.06 60); /* warm brown */
-  --dm-palette-7: oklch(0.55 0.06 250); /* muted slate-blue */
-
-  /* heavier film grain than the other dark themes */
-  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)' opacity='0.095'/%3E%3C/svg%3E");
+  --layer-scale: oklch(0.86 0.04 320 / 0.5); /* pale sugar — base scale */
+  --layer-chord: oklch(0.7 0.18 352 / 0.72); /* pink — chord */
+  --layer-notes: oklch(0.74 0.14 165 / 0.78); /* mint — notes */
+  --layer-driven: oklch(0.68 0.14 300 / 0.82); /* lavender — driven */
+  /* drum machine palette */
+  --dm-palette-1: oklch(0.7 0.18 352); /* bubblegum pink */
+  --dm-palette-2: oklch(0.68 0.14 300); /* lavender */
+  --dm-palette-3: oklch(0.74 0.14 165); /* mint */
+  --dm-palette-4: oklch(0.72 0.11 235); /* sky blue */
+  --dm-palette-5: oklch(0.78 0.13 65); /* apricot */
+  --dm-palette-6: oklch(0.66 0.15 18); /* coral */
+  --dm-palette-7: oklch(0.8 0.12 95); /* butter */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 }
 
-/* ── BODY: warm daylight wash + centre-spot vignette + heavy grain ── */
-:root[data-theme="dark"] body {
+/* ── BODY: pastel glows + diagonal sherbet stripes ── */
+:root[data-theme="sherbet"] body {
   background-color: var(--bg);
   background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0,
-      transparent 7px,
-      rgba(255, 220, 150, 0.012) 7px,
-      rgba(255, 220, 150, 0.012) 8px
+    var(--grain),
+    radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      rgba(243, 123, 178, 0.1),
+      transparent 60%
     ),
     radial-gradient(
-      ellipse 70% 50% at 60% 0%,
-      rgba(231, 196, 120, 0.1) 0%,
+      ellipse 60% 45% at 8% 108%,
+      rgba(91, 207, 166, 0.1),
       transparent 55%
     ),
     radial-gradient(
-      ellipse 120% 95% at 50% 42%,
-      transparent 42%,
-      rgba(0, 0, 0, 0.3) 100%
+      ellipse 60% 45% at 95% 105%,
+      rgba(178, 149, 238, 0.1),
+      transparent 55%
     ),
-    var(--grain);
+    repeating-linear-gradient(135deg, #fbefe6 0 26px, #fbf1f4 26px 52px);
 }
 
-/* ── PANELS: matte sun-warmed card, soft rounded, faded wood rim ── */
-:root[data-theme="dark"] .floating-view-wrapper {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 240, 175, 0.09),
-    var(--shadow-panel);
+/* ── PANELS: chunky soft lavender outline + pill-round corners ──
+   The 3px ring is a box-shadow spread, not a border, so it sits OUTSIDE the
+   border-box and expands symmetrically on all four sides. A layout border
+   (content-box) would only push the right/bottom edges past the grid line. */
+:root[data-theme="sherbet"] .floating-view-wrapper {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 0 0 3px var(--border), var(--shadow-panel);
 }
-:root[data-theme="dark"] .floating-view-wrapper:hover {
-  box-shadow:
-    inset 0 1px 0 rgba(255, 236, 200, 0.05),
-    0 12px 30px rgba(0, 0, 0, 0.5);
+:root[data-theme="sherbet"] .floating-view-wrapper:hover {
+  box-shadow: 0 0 0 3px var(--border), 0 14px 38px rgba(214, 140, 190, 0.3);
 }
 
-/* ── PANEL HEADER: rounded lowercase Quicksand, faded rule ── */
-:root[data-theme="dark"] .floating-view-titlebar {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 236, 200, 0.07) 0%,
-    transparent 100%
-  );
-  border-bottom: 1px solid rgba(231, 196, 120, 0.14);
-  padding: 6px 11px;
+/* ── PANEL HEADER: pink→lilac→mint swirl + Fredoka title ── */
+:root[data-theme="sherbet"] .floating-view-titlebar {
+  background: linear-gradient(90deg, #fbd3e8 0%, #e7d6f8 55%, #cff1e6 100%);
+  border-bottom: 2px solid var(--border);
+  padding: 7px 12px;
+  text-transform: none;
 }
-:root[data-theme="dark"] .floating-view-title-text {
-  font-family: "Quicksand", "DM Sans", sans-serif;
-  font-style: normal;
+:root[data-theme="sherbet"] .floating-view-title-text {
+  font-family: "Fredoka", "DM Sans", system-ui, sans-serif;
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.01em;
-  text-transform: lowercase;
-  color: var(--text-primary);
+  text-transform: none;
+  color: #6e5a78;
 }
 
-/* ── SIDEBAR: rounded type, soft warm gradient ── */
-:root[data-theme="dark"] .side-bar-container {
+/* ── SIDEBAR: pale pink margin, Fredoka nav, candy active pill ── */
+:root[data-theme="sherbet"] .side-bar-container {
   background: linear-gradient(
     180deg,
     var(--sidebar-bg) 0%,
-    color-mix(in oklch, var(--sidebar-bg) 80%, black) 100%
+    color-mix(in oklch, var(--sidebar-bg) 86%, var(--accent-warm)) 100%
   );
-  border-top: 2px solid oklch(0.42 0.09 32);
-  border-right: 1px solid var(--border);
-  box-shadow:
-    inset -4px 0 12px rgba(0, 0, 0, 0.3),
-    inset 3px 0 6px rgba(255, 200, 100, 0.025);
+  border-right: 2px solid var(--border);
 }
-:root[data-theme="dark"] .sidebar-section-label {
-  font-family: "Quicksand", "DM Sans", sans-serif;
-  text-transform: lowercase;
-  letter-spacing: 0.04em;
-  opacity: 0.52;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
-}
-:root[data-theme="dark"] .sidebar-nav-btn {
-  font-family: "Quicksand", "DM Sans", sans-serif;
+:root[data-theme="sherbet"] .sidebar-nav-btn {
+  font-family: "Fredoka", "DM Sans", system-ui, sans-serif;
   font-weight: 500;
-  border-radius: 9px;
-  opacity: 0.72;
 }
-:root[data-theme="dark"] .sidebar-nav-btn.is-active {
-  opacity: 1;
-}
-/* active = soft rounded pill with faded label border, no slab bar */
-:root[data-theme="dark"] .sidebar-nav-btn.is-active {
+:root[data-theme="sherbet"] .sidebar-nav-btn.is-active {
   background: color-mix(in oklch, var(--accent) 16%, transparent);
-  border: 1px solid color-mix(in oklch, var(--accent) 32%, transparent);
   color: var(--accent);
-}
-:root[data-theme="dark"] .sidebar-nav-btn.is-active::before {
-  display: none;
+  border-radius: 18px;
 }
 
-/* ── SCROLLBAR: magnetic-tape strip ── */
-:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: oklch(0.42 0.09 32);
-  border-radius: 1px;
+/* ── SCROLLBAR: bubblegum thumb ── */
+:root[data-theme="sherbet"] ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklch, var(--accent) 45%, var(--border));
+  border-radius: 6px;
 }
 
 /* ───────────────────────────────────────

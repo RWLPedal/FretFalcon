@@ -465,7 +465,9 @@ export class Fretboard {
     const scaleFactor = this.config.scaleFactor;
     const noteRadius = this.config.noteRadiusPx;
     const padding = 2 * scaleFactor;
-    const noteAltColor = getComputedStyle(document.documentElement).getPropertyValue('--note-second').trim() || '#777';
+    const docStyle = getComputedStyle(document.documentElement);
+    const noteAltColor = docStyle.getPropertyValue('--chord-barre').trim()
+      || docStyle.getPropertyValue('--note-second').trim() || '#777';
 
     this.barresToRender.forEach((barre) => {
       const displayFret = barre.fret - this.startFret;

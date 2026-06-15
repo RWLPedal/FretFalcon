@@ -262,13 +262,17 @@ export class ChordDiagramView extends BaseView {
         : this.chordLabelDisplay === "notes"
         ? (String(this.chord.rootKey) || "R")
         : "R";
+      const docStyle = getComputedStyle(document.documentElement);
+      const rootFill = docStyle.getPropertyValue('--chord-root').trim()
+        || docStyle.getPropertyValue('--danger').trim()
+        || '#a83232';
       const rootDot: NoteRenderData = {
         fret: rFret,
         stringIndex: rStr,
         noteName: String(this.chord.rootKey) || "R",
         intervalLabel: "R",
         displayLabel: rootLabel,
-        fillColor: getComputedStyle(document.documentElement).getPropertyValue('--danger').trim() || '#a83232',
+        fillColor: rootFill,
         strokeColor: "transparent",
         strokeWidth: 0,
         radiusOverride: this.fretboardConfig.noteRadiusPx * 0.72,

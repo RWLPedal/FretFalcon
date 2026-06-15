@@ -383,7 +383,7 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
 .theme-swatch.is-active { outline-color: var(--text-primary); }
 .theme-swatch--warm   { background: #C4902A; border-color: #B07A18; }
 .theme-swatch--moss   { background: #5a7a50; border-color: #5a7a50; }
-.theme-swatch--dark   { background: #C03820; border-color: #8A2010; }
+.theme-swatch--sherbet { background: #F48FC2; border-color: #D96CA8; }
 .theme-swatch--sigil  { background: #151b2e; border-color: #2A7A5C; }
 .theme-swatch--neon   { background: #8b30ff; border-color: #8b30ff; }
 
