@@ -173,17 +173,6 @@
 :root[data-theme="moss"] .sidebar-header {
   border-bottom: 1px dashed var(--border);
 }
-:root[data-theme="moss"] .sidebar-app-name {
-  font-family: "EB Garamond", serif;
-  font-style: italic;
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: 0.005em;
-}
-:root[data-theme="moss"] .sidebar-app-icon {
-  font-size: 20px;
-  transform: translateY(-1px);
-}
 :root[data-theme="moss"] .sidebar-section-label {
   font-family: "EB Garamond", serif;
   font-style: italic;
@@ -463,11 +452,6 @@
   box-shadow:
     inset -4px 0 12px rgba(0, 0, 0, 0.3),
     inset 3px 0 6px rgba(255, 200, 100, 0.025);
-}
-:root[data-theme="dark"] .sidebar-app-name {
-  font-family: "Quicksand", "DM Sans", sans-serif;
-  font-weight: 700;
-  letter-spacing: 0.005em;
 }
 :root[data-theme="dark"] .sidebar-section-label {
   font-family: "Quicksand", "DM Sans", sans-serif;

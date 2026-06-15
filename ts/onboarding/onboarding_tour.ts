@@ -13,6 +13,7 @@ import {
   SIDEBAR_CONTAINER_CLASS,
   SIDEBAR_LAYOUT_PICKER_CLASS,
 } from "../reference_page/sidebar_view";
+import { brandLockupHtml } from "../branding";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -157,11 +158,8 @@ function buildWelcome(): void {
 
   const hero = el("div", "onb-card-hero");
   hero.innerHTML = `
-        <div class="onb-eyebrow">
-            <span class="material-icons">music_note</span>
-            <span>FRETFALCON</span>
-        </div>
-        <h1 class="onb-headline">A workbench for <em>working things out</em> on the fretboard.</h1>
+        <div class="onb-brand">${brandLockupHtml("lg")}</div>
+        <h1 class="onb-headline">Helping you <em>see the fretboard with clarity</em>.</h1>
         <p class="onb-lede">Not a course and not a song library — a living board of chord shapes, scales and practice tools you arrange to fit whatever you're playing.</p>
     `;
 
@@ -229,23 +227,27 @@ function openTourViews(onReady: () => void): void {
     return;
   }
 
-  const GAP    = GRID_UNIT * 4;   // 4 grid squares between panels
-  const TOP    = snap(60);
+  const GAP = GRID_UNIT * 4; // 4 grid squares between panels
+  const TOP = snap(60);
   const CIRCLE_X = snap(220);
   const CIRCLE_W = snap(360);
-  const CHORD_X  = snap(CIRCLE_X + CIRCLE_W + GAP);
+  const CHORD_X = snap(CIRCLE_X + CIRCLE_W + GAP);
 
   // Close any existing panels so the tour starts from a clean canvas
   manager.closeAllViews();
 
   // spawnView returns the instanceId immediately — no title search needed,
   // since view titles change asynchronously during render.
-  const circleId = manager.spawnView('circle_of_fifths', { position: { x: CIRCLE_X, y: TOP } });
-  const chordId  = manager.spawnView('instrument_chord',  { position: { x: CHORD_X,  y: TOP } });
+  const circleId = manager.spawnView("circle_of_fifths", {
+    position: { x: CIRCLE_X, y: TOP },
+  });
+  const chordId = manager.spawnView("instrument_chord", {
+    position: { x: CHORD_X, y: TOP },
+  });
 
   const linkManager = manager.getLinkManager();
   if (circleId && chordId && linkManager) {
-    linkManager.createLink(circleId, 'right', chordId, 'left');
+    linkManager.createLink(circleId, "right", chordId, "left");
   }
 
   // One rAF so panels have painted before the tour spotlight positions itself

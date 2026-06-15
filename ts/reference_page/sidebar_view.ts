@@ -11,6 +11,7 @@ import { getNavSectionGroups } from './nav_registry';
 import { InstrumentName } from '../fretboard/instruments';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 import { getViewIcon } from '../panels/panel_registry';
+import { brandLockupHtml } from '../branding';
 
 export class SidebarView {
     private container: HTMLElement;
@@ -52,8 +53,7 @@ export class SidebarView {
 
         let html = `
             <div class="sidebar-header">
-                <span class="material-icons sidebar-app-icon">music_note</span>
-                <span class="sidebar-app-name">FretFalcon</span>
+                ${brandLockupHtml('sm')}
                 <button id="help-tour-btn" class="sidebar-help-btn" title="Take the tour">
                     <span class="material-icons">help_outline</span>
                 </button>

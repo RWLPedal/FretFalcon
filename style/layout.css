@@ -179,21 +179,73 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 14px 14px 12px;
+  padding: 14px 2px 12px 8px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
 }
-.sidebar-app-icon {
-  color: var(--accent);
-  font-size: 1.05rem;
+/* ── Brand lockup ──────────────────────────────────────────────────────────
+   Shared falcon mark + two-tone FRETFALCON wordmark. Used small in the sidebar
+   header (.brand--sm) and large in the onboarding welcome popup (.brand--lg).
+   Markup is produced by brandLockupHtml() in ts/branding.ts. */
+.brand {
+  display: inline-flex;
+  align-items: center;
+}
+.brand-logo {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  flex-shrink: 0;
+  color: var(--accent-warm); /* falcon silhouette uses currentColor; matches .ff-falcon */
+}
+.brand-logo svg {
+  width: auto;
+  display: block;
+}
+.brand-name {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+}
+/* Compact "FF" monogram, revealed only when the sidebar is collapsed. */
+.brand-monogram {
+  display: none;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
   line-height: 1;
 }
-.sidebar-app-name {
-  font-family: 'DM Sans', sans-serif;
-  font-weight: 600;
-  font-size: 0.9rem;
+/* Wordmark colors, drawn from each theme's own palette:
+   FRET = primary text color, FALCON = warm accent. */
+.ff-fret {
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+}
+.ff-falcon {
+  color: var(--accent-warm);
+}
+/* Small — sidebar header */
+.brand--sm {
+  gap: 8px;
+}
+.brand--sm .brand-logo svg {
+  height: 26px;
+}
+.brand--sm .brand-name {
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+.brand--sm .brand-monogram {
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+/* Large — onboarding welcome popup */
+.brand--lg {
+  gap: 14px;
+}
+.brand--lg .brand-logo svg {
+  height: 54px;
+}
+.brand--lg .brand-name {
+  font-size: 2rem;
+  letter-spacing: 0.01em;
 }
 .sidebar-help-btn {
   margin-left: auto;
@@ -384,8 +436,18 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
 }
 
 /* Sidebar collapsed state */
-.side-bar-container.is-collapsed .sidebar-app-name {
+.side-bar-container.is-collapsed .brand-name,
+.side-bar-container.is-collapsed .brand-logo,
+.side-bar-container.is-collapsed .sidebar-help-btn {
   display: none;
+}
+.side-bar-container.is-collapsed .sidebar-header {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+.side-bar-container.is-collapsed .brand-monogram {
+  display: inline-flex;
 }
 .side-bar-container.is-collapsed .sidebar-section-label {
   height: 1px;

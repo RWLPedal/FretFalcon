@@ -61,22 +61,8 @@
   border-bottom: 1px solid var(--border);
 }
 
-.onb-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-family: 'DM Mono', monospace;
-  font-size: 0.65rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent-warm);
-  margin-bottom: 12px;
-}
-
-.onb-eyebrow .material-icons {
-  font-size: 14px;
-  color: var(--accent-warm);
+.onb-brand {
+  margin-bottom: 18px;
 }
 
 .onb-headline {
