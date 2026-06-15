@@ -2,24 +2,35 @@ import { FloatingViewInstanceState } from "./panel_types";
 import { emitEvent, onEvent } from '../core/events';
 
 // --- Grid Snap ---
-/** The canonical grid cell size in pixels. Used for both visual snap-to-grid
- *  and coordinate serialization in save files. Import this from the manager
- *  to keep a single source of truth. */
+/** Legacy constant kept for onboarding imports. Decoupled from storage/snap logic. */
 export const GRID_UNIT = 12;
 
 export const FLOATING_VIEW_WRAPPER_CLASS = 'floating-view-wrapper';
 export const FLOATING_VIEW_TITLEBAR_CLASS = 'floating-view-titlebar';
 export const FLOATING_VIEW_RESIZE_HANDLE_CLASS = 'floating-view-resize-handle';
 
-let moduleGridSize: number | null = null;
+interface GridCell { w: number; h: number }
+let moduleGridCell: GridCell | null = null;
 
-export function setFloatingViewGridSize(size: number | null): void {
-  moduleGridSize = size;
+/** Left edge of the content region (sidebar right edge), in px. Panels can't be
+ *  dragged left of this, so they never disappear behind the sidebar. */
+let moduleContentOriginX = 0;
+
+/** Enable or disable snap-to-grid. Pass a cell { w, h } to snap; null to disable. */
+export function setFloatingViewGridSize(cell: GridCell | null): void {
+  moduleGridCell = cell;
 }
 
-function snapToGrid(v: number): number {
-  if (!moduleGridSize) return v;
-  return Math.round(v / moduleGridSize) * moduleGridSize;
+/** Set the content-region left edge (px) used to clamp dragging. */
+export function setFloatingViewContentOriginX(px: number): void {
+  moduleContentOriginX = Math.max(0, px);
+}
+
+function snapX(v: number): number {
+  return moduleGridCell ? Math.round(v / moduleGridCell.w) * moduleGridCell.w : v;
+}
+function snapY(v: number): number {
+  return moduleGridCell ? Math.round(v / moduleGridCell.h) * moduleGridCell.h : v;
 }
 // --- End Grid Snap ---
 
@@ -48,10 +59,11 @@ function doDrag(e: MouseEvent) {
   const parentRect = parent.getBoundingClientRect();
   const elemRect = draggedElement.getBoundingClientRect();
 
-  const clampedX = Math.max(0, Math.min(newX, parentRect.width - elemRect.width));
+  const maxX = Math.max(moduleContentOriginX, parentRect.width - elemRect.width);
+  const clampedX = Math.max(moduleContentOriginX, Math.min(newX, maxX));
   const clampedY = Math.max(0, Math.min(newY, parentRect.height - elemRect.height));
-  newX = snapToGrid(clampedX);
-  newY = snapToGrid(clampedY);
+  newX = snapX(clampedX);
+  newY = snapY(clampedY);
 
   draggedElement.style.left = `${newX}px`;
   draggedElement.style.top = `${newY}px`;
@@ -87,6 +99,8 @@ interface _ResizeState {
   startTop: number;
   minWidth: number;
   minHeight: number;
+  maxWidth: number;
+  maxHeight: number;
   onDone: (left: number, top: number) => void;
 }
 
@@ -112,6 +126,8 @@ function startCornerResize(
     startTop: parseFloat(element.style.top || '0'),
     minWidth: parseFloat(style.minWidth) || 150,
     minHeight: parseFloat(style.minHeight) || 50,
+    maxWidth: parseFloat(style.maxWidth) || Infinity,
+    maxHeight: parseFloat(style.maxHeight) || Infinity,
     onDone,
   };
   document.body.style.userSelect = 'none';
@@ -122,9 +138,12 @@ function startCornerResize(
 function _doCornerResize(e: MouseEvent): void {
   if (!_resizeState) return;
   const { element, corner, startMouseX, startMouseY, startWidth, startHeight,
-          startLeft, startTop, minWidth, minHeight } = _resizeState;
+          startLeft, startTop, minWidth, minHeight, maxWidth, maxHeight } = _resizeState;
   const dx = e.clientX - startMouseX;
   const dy = e.clientY - startMouseY;
+
+  const clampW = (w: number) => Math.min(maxWidth, Math.max(minWidth, w));
+  const clampH = (h: number) => Math.min(maxHeight, Math.max(minHeight, h));
 
   let newWidth = startWidth;
   let newHeight = startHeight;
@@ -132,19 +151,19 @@ function _doCornerResize(e: MouseEvent): void {
   let newTop = startTop;
 
   if (corner === 'br') {
-    newWidth = Math.max(minWidth, startWidth + dx);
-    newHeight = Math.max(minHeight, startHeight + dy);
+    newWidth = clampW(startWidth + dx);
+    newHeight = clampH(startHeight + dy);
   } else if (corner === 'bl') {
-    newWidth = Math.max(minWidth, startWidth - dx);
-    newHeight = Math.max(minHeight, startHeight + dy);
+    newWidth = clampW(startWidth - dx);
+    newHeight = clampH(startHeight + dy);
     newLeft = startLeft + (startWidth - newWidth);
   } else if (corner === 'tr') {
-    newWidth = Math.max(minWidth, startWidth + dx);
-    newHeight = Math.max(minHeight, startHeight - dy);
+    newWidth = clampW(startWidth + dx);
+    newHeight = clampH(startHeight - dy);
     newTop = startTop + (startHeight - newHeight);
   } else {
-    newWidth = Math.max(minWidth, startWidth - dx);
-    newHeight = Math.max(minHeight, startHeight - dy);
+    newWidth = clampW(startWidth - dx);
+    newHeight = clampH(startHeight - dy);
     newLeft = startLeft + (startWidth - newWidth);
     newTop = startTop + (startHeight - newHeight);
   }
@@ -161,11 +180,11 @@ function _stopCornerResize(): void {
   document.body.style.userSelect = '';
   if (!_resizeState) return;
   const { element, onDone } = _resizeState;
-  if (moduleGridSize) {
-    element.style.width  = `${snapToGrid(parseFloat(element.style.width))}px`;
-    element.style.height = `${snapToGrid(parseFloat(element.style.height))}px`;
-    element.style.left   = `${snapToGrid(parseFloat(element.style.left))}px`;
-    element.style.top    = `${snapToGrid(parseFloat(element.style.top))}px`;
+  if (moduleGridCell) {
+    element.style.width  = `${snapX(parseFloat(element.style.width))}px`;
+    element.style.height = `${snapY(parseFloat(element.style.height))}px`;
+    element.style.left   = `${snapX(parseFloat(element.style.left))}px`;
+    element.style.top    = `${snapY(parseFloat(element.style.top))}px`;
   }
   onDone(parseFloat(element.style.left), parseFloat(element.style.top));
   _resizeState = null;
@@ -216,6 +235,8 @@ export class FloatingViewWrapper {
     defaultHeight?: number,
     minWidth?: number,
     minHeight?: number,
+    maxWidth?: number,
+    maxHeight?: number,
     onRotate?: () => void,
     onZoom?: () => void,
     onConfigToggle?: () => void
@@ -240,6 +261,8 @@ export class FloatingViewWrapper {
     this.element.style.zIndex = `${state.zIndex}`;
     if (minWidth)  this.element.style.minWidth  = `${minWidth}px`;
     if (minHeight) this.element.style.minHeight = `${minHeight}px`;
+    if (maxWidth)  this.element.style.maxWidth  = `${maxWidth}px`;
+    if (maxHeight) this.element.style.maxHeight = `${maxHeight}px`;
     if (state.size) {
       this.element.style.width = `${state.size.width}px`;
       this.element.style.height = `${state.size.height}px`;
@@ -410,9 +433,9 @@ export class FloatingViewWrapper {
       if (this._resizeSaveTimer !== null) clearTimeout(this._resizeSaveTimer);
       this._resizeSaveTimer = setTimeout(() => {
         this._resizeSaveTimer = null;
-        if (!wasProgrammatic && moduleGridSize && this.state.size) {
-          const sw = snapToGrid(this.state.size.width);
-          const sh = snapToGrid(this.state.size.height);
+        if (!wasProgrammatic && moduleGridCell && this.state.size) {
+          const sw = snapX(this.state.size.width);
+          const sh = snapY(this.state.size.height);
           if (sw !== this.state.size.width || sh !== this.state.size.height) {
             this._isProgrammaticResize = true;
             this.element.style.width = `${sw}px`;
@@ -491,6 +514,20 @@ export class FloatingViewWrapper {
 
   public setTitle(title: string): void {
     this.titleTextEl.textContent = title;
+  }
+
+  /** Update the CSS min/max size constraints (e.g. after the panel's effective
+   *  orientation changes). Omitted dimensions clear the corresponding constraint. */
+  public setSizeConstraints(c: {
+    minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number;
+  }): void {
+    const apply = (prop: 'minWidth' | 'minHeight' | 'maxWidth' | 'maxHeight', v?: number) => {
+      this.element.style[prop] = v ? `${v}px` : '';
+    };
+    apply('minWidth', c.minWidth);
+    apply('minHeight', c.minHeight);
+    apply('maxWidth', c.maxWidth);
+    apply('maxHeight', c.maxHeight);
   }
 
   public updateZoomButtonState(active: boolean): void {

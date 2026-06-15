@@ -1,25 +1,26 @@
 import { describe, it, expect } from 'vitest'
 import { migrate, MigrationError, FutureVersionError } from '../../../ts/screen_config/migrations'
 import { CURRENT_SCREEN_CONFIG_VERSION } from '../../../ts/screen_config/screen_config_types'
+import { GRID_COLS, ROW_PX } from '../../../ts/panels/grid_constants'
 
-const CURRENT = CURRENT_SCREEN_CONFIG_VERSION // 3
+const CURRENT = CURRENT_SCREEN_CONFIG_VERSION // 4
 
-// ─── V3 shape helpers ────────────────────────────────────────────────────────
+// ─── V4 shape helpers ────────────────────────────────────────────────────────
 
-const emptyV3 = {
+const emptyV4 = {
   instances: {},
   links: [],
-  layout: { floating: { referenceGrid: { cols: 80, rows: 60 }, nextZIndex: 100, perInstance: {} } },
+  layout: { floating: { gridCols: GRID_COLS, rowPx: ROW_PX, nextZIndex: 100, perInstance: {} } },
   customTunings: {},
 }
 
 describe('migrate — unversioned (V0) blobs', () => {
   it('fills in defaults for an empty object', () => {
     const result = migrate({})
-    expect(result).toMatchObject(emptyV3)
+    expect(result).toMatchObject(emptyV4)
   })
 
-  it('preserves referenceGrid and nextZIndex from V0 through migration', () => {
+  it('preserves nextZIndex from V0 payload through migration chain', () => {
     const v0 = {
       referenceGrid: { cols: 120, rows: 90 },
       nextZIndex: 200,
@@ -29,12 +30,16 @@ describe('migrate — unversioned (V0) blobs', () => {
       links: [],
     }
     const result = migrate(v0)
-    expect(result.layout?.floating?.referenceGrid).toEqual({ cols: 120, rows: 90 })
-    expect(result.layout?.floating?.nextZIndex).toBe(200)
+    // Instances survive
     expect(Object.keys(result.instances!)).toHaveLength(1)
     expect(result.instances!['fv-1'].viewId).toBe('timer')
-    expect(result.layout?.floating?.perInstance['fv-1'].gridPosition).toEqual({ col: 2, row: 3 })
-    expect(result.layout?.floating?.perInstance['fv-1'].zIndex).toBe(201)
+    // V4 floating layout: positions reset, but nextZIndex preserved
+    expect(result.layout?.floating?.gridCols).toBe(GRID_COLS)
+    expect(result.layout?.floating?.rowPx).toBe(ROW_PX)
+    expect(result.layout?.floating?.nextZIndex).toBe(200)
+    expect(result.layout?.floating?.perInstance).toEqual({})
+    // referenceGrid is dropped in V4
+    expect((result.layout?.floating as any)?.referenceGrid).toBeUndefined()
   })
 
   it('treats null as a V0 blob and throws MigrationError (migration cannot read null fields)', () => {
@@ -42,8 +47,8 @@ describe('migrate — unversioned (V0) blobs', () => {
   })
 })
 
-describe('migrate — V2 → V3', () => {
-  it('splits openViews into instances + layout.floating.perInstance', () => {
+describe('migrate — V2 → V4 (full chain)', () => {
+  it('instances and links survive V2→V4; positions are reset', () => {
     const v2Payload = {
       referenceGrid: { cols: 113, rows: 64 },
       nextZIndex: 120,
@@ -83,19 +88,11 @@ describe('migrate — V2 → V3', () => {
     })
     expect(result.instances['fv-2'].viewId).toBe('floating_timer')
 
-    // layout.floating should have grid data
-    expect(result.layout?.floating?.referenceGrid).toEqual({ cols: 113, rows: 64 })
+    // V4 layout: positions reset, schema changed
+    expect(result.layout?.floating?.gridCols).toBe(GRID_COLS)
+    expect(result.layout?.floating?.rowPx).toBe(ROW_PX)
     expect(result.layout?.floating?.nextZIndex).toBe(120)
-    expect(result.layout?.floating?.perInstance['fv-1']).toEqual({
-      gridPosition: { col: 17, row: 1 },
-      gridSize: { cols: 48, rows: 23 },
-      zIndex: 118,
-    })
-    expect(result.layout?.floating?.perInstance['fv-2']).toEqual({
-      gridPosition: { col: 70, row: 1 },
-      gridSize: undefined,
-      zIndex: 119,
-    })
+    expect(result.layout?.floating?.perInstance).toEqual({})
 
     // links and customTunings pass through
     expect(result.links).toHaveLength(1)
@@ -116,18 +113,49 @@ describe('migrate — V2 → V3', () => {
   })
 })
 
+describe('migrate — V3 → V4', () => {
+  it('resets floating positions but preserves instances, links, tabbed, customTunings', () => {
+    const v3Payload = {
+      instances: { 'fv-1': { instanceId: 'fv-1', viewId: 'timer', viewState: null } },
+      links: [{ id: 'link-1', sourceInstanceId: 'fv-1', sourceHandle: 'right', targetInstanceId: 'fv-2', targetHandle: 'left' }],
+      layout: {
+        floating: { referenceGrid: { cols: 80, rows: 60 }, nextZIndex: 130, perInstance: {
+          'fv-1': { gridPosition: { col: 10, row: 5 }, gridSize: { cols: 20, rows: 15 }, zIndex: 110 },
+        } },
+        tabbed: { order: ['fv-1'], activeId: 'fv-1' },
+      },
+      customTunings: { Guitar: [] },
+    }
+
+    const result = migrate({ version: 3, payload: v3Payload })
+
+    expect(result.instances['fv-1'].viewId).toBe('timer')
+    expect(result.links).toHaveLength(1)
+    expect(result.layout?.tabbed).toEqual({ order: ['fv-1'], activeId: 'fv-1' })
+    expect(result.customTunings).toEqual({ Guitar: [] })
+
+    // Floating positions reset
+    expect(result.layout?.floating?.gridCols).toBe(GRID_COLS)
+    expect(result.layout?.floating?.rowPx).toBe(ROW_PX)
+    expect(result.layout?.floating?.nextZIndex).toBe(130)
+    expect(result.layout?.floating?.perInstance).toEqual({})
+    // Old referenceGrid key gone
+    expect((result.layout?.floating as any)?.referenceGrid).toBeUndefined()
+  })
+})
+
 describe('migrate — versioned envelopes', () => {
-  it('passes through a current-version (V3) payload unchanged', () => {
+  it('passes through a current-version (V4) payload unchanged', () => {
     const payload = {
       instances: { 'fv-1': { instanceId: 'fv-1', viewId: 'timer', viewState: null } },
       links: [],
-      layout: { floating: { referenceGrid: { cols: 80, rows: 60 }, nextZIndex: 100, perInstance: {} } },
+      layout: { floating: { gridCols: GRID_COLS, rowPx: ROW_PX, nextZIndex: 100, perInstance: {} } },
       customTunings: { Guitar: [{ name: 'Drop D', notes: [52, 57, 62, 67, 71, 76] }] },
     }
     expect(migrate({ version: CURRENT, payload })).toEqual(payload)
   })
 
-  it('migrates a V1 envelope to V3 (V1→V2→V3)', () => {
+  it('migrates a V1 envelope to V4 (V1→V2→V3→V4)', () => {
     const v1Payload = {
       referenceGrid: { cols: 80, rows: 60 },
       openViews: {},
@@ -135,9 +163,9 @@ describe('migrate — versioned envelopes', () => {
       links: [],
     }
     const result = migrate({ version: 1, payload: v1Payload })
-    // Should end up as V3
     expect(result.instances).toBeDefined()
-    expect(result.layout?.floating?.referenceGrid).toEqual({ cols: 80, rows: 60 })
+    expect(result.layout?.floating?.gridCols).toBe(GRID_COLS)
+    expect(result.layout?.floating?.rowPx).toBe(ROW_PX)
     expect(result.customTunings).toEqual({})
   })
 
@@ -145,7 +173,7 @@ describe('migrate — versioned envelopes', () => {
     const result = migrate({ version: 0, payload: {} })
     expect(result.instances).toBeDefined()
     expect(result.links).toEqual([])
-    expect(result.layout?.floating).toBeDefined()
+    expect(result.layout?.floating?.gridCols).toBe(GRID_COLS)
   })
 })
 

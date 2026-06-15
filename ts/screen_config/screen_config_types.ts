@@ -14,7 +14,7 @@ export type { LinkRecord };
 /** The schema version this build of the app reads and writes. Bump when the
  *  payload shape changes in a breaking way, and add a migration step in
  *  migrations.ts. See SCREEN_CONFIG_FORMAT.md for the full checklist. */
-export const CURRENT_SCREEN_CONFIG_VERSION = 3;
+export const CURRENT_SCREEN_CONFIG_VERSION = 4;
 
 // ─── V0: legacy (unversioned) ─────────────────────────────────────────────────
 
@@ -106,12 +106,47 @@ export interface V3Payload {
   customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>;
 }
 
+// ─── V4: column/row/span geometry, gridCols + rowPx replace referenceGrid ─────
+// User-saved layouts are intentionally NOT preserved across V3→V4 — panels
+// survive but are re-packed on first load. Only built-in default_configs need
+// to be hand-authored in V4 format.
+
+/** Floating-layout geometry for a single panel instance (V4 flat span model). */
+export interface V4FloatingPerInstance {
+  col: number;
+  row: number;
+  colSpan?: number;
+  rowSpan?: number;
+  zIndex: number;
+}
+
+/** All floating-layout state needed to restore positions and z-order (V4). */
+export interface V4FloatingLayout {
+  /** Constant column count the layout was authored against (always 32). */
+  gridCols: number;
+  /** Fixed row-height in pixels (always 16). */
+  rowPx: number;
+  nextZIndex: number;
+  perInstance: Record<string, V4FloatingPerInstance>;
+}
+
+export interface V4Payload {
+  /** Layout-independent data for each open panel instance (same shape as V3). */
+  instances: Record<string, V3PersistedViewEntry>;
+  links: LinkRecord[];
+  layout: {
+    floating?: V4FloatingLayout;
+    tabbed?: V3TabbedLayout;
+  };
+  customTunings?: Partial<Record<string, { name: string; notes: number[] }[]>>;
+}
+
 // ─── Current version alias ────────────────────────────────────────────────────
 
 /** The payload type at the current schema version. Update this alias (and only
  *  this alias) when bumping to a new version — the rest of the app uses
  *  CurrentPayload and remains unaffected. */
-export type CurrentPayload = V3Payload;
+export type CurrentPayload = V4Payload;
 
 // ─── Storage envelope ─────────────────────────────────────────────────────────
 

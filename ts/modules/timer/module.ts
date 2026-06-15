@@ -14,8 +14,9 @@ const module: ViewModule = {
   panel: {
     displayName: "Timer",
     icon: "alarm",
-    defaultSize: { width: 300, height: 110 },
+    defaultSize: { width: 230, height: 110 },
     minSize: { width: 195, height: 105 },
+    maxSize: { width: 460, height: 200 },
   },
   nav: {
     section: NavSection.PracticeTools,

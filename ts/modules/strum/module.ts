@@ -12,6 +12,7 @@ const module: ViewModule = {
     displayName: "Strum",
     icon: "music_note",
     defaultSize: { width: 470, height: 160 },
+    maxSize: { width: 720, height: 280 },
   },
   nav: {
     section: NavSection.PracticeTools,
@@ -55,12 +56,7 @@ const module: ViewModule = {
     ],
   },
   createView(_ctx: ViewContext, state?: unknown) {
-    const audioController = new AudioController(
-      document.querySelector("#intro-end-sound") as HTMLAudioElement,
-      document.querySelector("#interval-end-sound") as HTMLAudioElement,
-      document.querySelector("#metronome-sound") as HTMLAudioElement,
-      document.querySelector("#metronome-accent-sound") as HTMLAudioElement,
-    );
+    const audioController = new AudioController();
     return new StrumView(
       state as Partial<StrumViewState> | undefined,
       audioController,

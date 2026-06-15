@@ -1,47 +1,61 @@
 import { volumeManager } from "./sounds/volume_manager";
 
 export class AudioController {
-  introEndSoundEl: HTMLAudioElement | null;
-  intervalEndSoundEl: HTMLAudioElement | null;
-  metronomeAudioEl: HTMLAudioElement | null;
-  accentMetronomeAudioEl: HTMLAudioElement | null;
-
-  constructor(
-    introEndSoundEl: HTMLAudioElement | null,
-    intervalEndSoundEl: HTMLAudioElement | null,
-    metronomeAudioEl: HTMLAudioElement | null,
-    accentMetronomeAudioEl: HTMLAudioElement | null,
-  ) {
-    this.introEndSoundEl = introEndSoundEl;
-    this.intervalEndSoundEl = intervalEndSoundEl;
-    this.metronomeAudioEl = metronomeAudioEl;
-    this.accentMetronomeAudioEl = accentMetronomeAudioEl;
-
+  private playClick(freq: number, decay: number, vol: number): void {
+    try {
+      const ctx = volumeManager.getAudioContext();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(vol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + decay);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + decay + 0.01);
+    } catch (e) {
+      console.warn('AudioController: click error', e);
+    }
   }
 
-  private playSound(audioElement: HTMLAudioElement | null): void {
-    if (audioElement) {
-      audioElement.currentTime = 0;
-      audioElement.play().catch((e) => console.error("Audio play failed:", e));
-    } else {
-      console.warn("Attempted to play null audio element.");
+  private playBell(freq: number, decay: number, vol: number): void {
+    try {
+      const ctx = volumeManager.getAudioContext();
+      const now = ctx.currentTime;
+      // Fundamental + one upper partial for a bell-like timbre
+      for (const [f, v] of [[freq, 1.0], [freq * 2.76, 0.35]] as [number, number][]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = f;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(vol * v, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + decay * (f === freq ? 1 : 0.6));
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + decay + 0.01);
+      }
+    } catch (e) {
+      console.warn('AudioController: bell error', e);
     }
   }
 
   playIntroEnd(): void {
-    this.playSound(this.introEndSoundEl);
+    this.playBell(1046, 2.0, volumeManager.getVolume() * 0.5);
   }
 
   playIntervalEnd(): void {
-    this.playSound(this.intervalEndSoundEl);
+    this.playBell(880, 1.5, volumeManager.getVolume() * 0.5);
   }
 
   playMetronomeClick(): void {
-    this.playSound(this.metronomeAudioEl);
+    this.playClick(1200, 0.05, volumeManager.getVolume() * 0.6);
   }
 
   playAccentMetronomeClick(): void {
-    this.playSound(this.accentMetronomeAudioEl);
+    this.playClick(1800, 0.07, volumeManager.getVolume() * 0.8);
   }
 
   // ─── Strum synthesis ─────────────────────────────────────────────────────────

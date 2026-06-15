@@ -15,6 +15,19 @@ export interface FloatingViewDescriptor {
   defaultHeight?: number; // Optional default height
   minWidth?: number; // Optional minimum width (enforced via CSS min-width)
   minHeight?: number; // Optional minimum height (enforced via CSS min-height)
+  maxWidth?: number; // Optional maximum width (enforced via CSS max-width)
+  maxHeight?: number; // Optional maximum height (enforced via CSS max-height)
+  /** Per-orientation size overrides for the HORIZONTAL (rotated) layout. The flat
+   *  default/min/max fields above describe the vertical orientation; any field
+   *  omitted here falls back to its vertical value. See panel_sizing.resolveSizing. */
+  horizontal?: {
+    defaultWidth?: number;
+    defaultHeight?: number;
+    minWidth?: number;
+    minHeight?: number;
+    maxWidth?: number;
+    maxHeight?: number;
+  };
   showInMenu?: boolean; // Optional: If false, won't be shown in spawnable view lists. Defaults to true.
   /** When true, opening the view while it is already open focuses the existing instance instead of spawning a second. */
   singleton?: boolean;

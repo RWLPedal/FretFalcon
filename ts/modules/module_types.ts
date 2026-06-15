@@ -26,6 +26,18 @@ export interface ViewContext {
   // Phase 5 will add: constraints, sink registration handle
 }
 
+// ─── Orientation sizing ─────────────────────────────────────────────────────────
+
+/** Per-orientation size overrides. Currently only `horizontal` (the rotated layout)
+ *  is overridable; vertical uses the flat defaultSize/minSize/maxSize. */
+export interface OrientationSizes {
+  horizontal?: {
+    defaultSize?: { width: number; height?: number };
+    minSize?: { width: number; height: number };
+    maxSize?: { width: number; height: number };
+  };
+}
+
 // ─── ViewModule ───────────────────────────────────────────────────────────────
 
 export interface ViewModule<S = unknown> {
@@ -37,6 +49,12 @@ export interface ViewModule<S = unknown> {
     /** Initial panel size; omit height to let the panel auto-size vertically. */
     defaultSize?: { width: number; height?: number };
     minSize?: { width: number; height: number };
+    maxSize?: { width: number; height: number };
+    /** Optional per-orientation size overrides. The flat defaultSize/minSize/maxSize
+     *  describe the vertical (default) orientation; `orientationSizes.horizontal`
+     *  overrides them when the panel is rotated to horizontal. Each field falls back
+     *  to its vertical value when omitted. */
+    orientationSizes?: OrientationSizes;
     singleton?: boolean;
     /** When false, excluded from spawnable-panel picker menus. Defaults to true. */
     showInMenu?: boolean;
@@ -85,6 +103,8 @@ export interface FeaturePanelModuleOpts {
   featureTypeName: string;
   defaultSize?: { width: number; height?: number };
   minSize?: { width: number; height: number };
+  maxSize?: { width: number; height: number };
+  orientationSizes?: OrientationSizes;
   showInMenu?: boolean;
   nav?: ViewModule['nav'];
   drive?: ViewModule['drive'];
@@ -98,6 +118,8 @@ export function featurePanelModule(opts: FeaturePanelModuleOpts): ViewModule {
       icon: opts.icon,
       defaultSize: opts.defaultSize,
       minSize: opts.minSize,
+      maxSize: opts.maxSize,
+      orientationSizes: opts.orientationSizes,
       showInMenu: opts.showInMenu ?? false,
       refreshOnInstrumentChange: true,
       capabilities: { rotate: true, zoom: true, configToggle: true },

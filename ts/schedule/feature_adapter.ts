@@ -72,9 +72,7 @@ export function createScheduleFeature(
     feature = descriptor.createFeature(config, settings, maxCanvasHeight, categoryName);
   }
 
-  if (intervalSettings.metronomeBpm > 0
-    && audioController.metronomeAudioEl
-    && audioController.accentMetronomeAudioEl) {
+  if (intervalSettings.metronomeBpm > 0) {
     const metronomeView = new MetronomeView(intervalSettings.metronomeBpm, audioController);
     return new ScheduleFeatureWrapper(feature, [metronomeView]);
   }

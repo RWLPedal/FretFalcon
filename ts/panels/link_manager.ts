@@ -488,6 +488,21 @@ export class LinkManager {
     });
   }
 
+  /** Run a rAF loop redrawing link arrows every frame for `durationMs` ms.
+   *  Used during the Cleanup animation so arrows track panels mid-transition. */
+  public beginReflowRedraw(durationMs: number): void {
+    const deadline = performance.now() + durationMs;
+    const tick = () => {
+      this.overlay.redrawAll(
+        this.links,
+        id => this.getWrapperEl(id),
+        link => this.getArrowMeta(link)
+      );
+      if (performance.now() < deadline) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
   // ─── Event routing helpers ─────────────────────────────────────────────────
 
   private resolveSourceInstanceId(event: Event): string | null {

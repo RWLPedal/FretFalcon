@@ -19,8 +19,10 @@ import {
   V1Payload,
   V2Payload,
   V3Payload,
+  V4Payload,
   VersionedScreenConfig,
 } from "./screen_config_types";
+import { GRID_COLS, ROW_PX } from "../panels/grid_constants";
 
 // ─── Error types ──────────────────────────────────────────────────────────────
 
@@ -91,6 +93,25 @@ function migrateV2ToV3(v2: V2Payload): V3Payload {
   };
 }
 
+/** V3 → V4: lossy — positions are reset; instances/links/tabbed/customTunings survive.
+ *  Users' open panels will be re-packed by the restore packer on next load. */
+function migrateV3ToV4(v3: V3Payload): V4Payload {
+  return {
+    instances: v3.instances ?? {},
+    links: v3.links ?? [],
+    layout: {
+      floating: {
+        gridCols: GRID_COLS,
+        rowPx: ROW_PX,
+        nextZIndex: v3.layout?.floating?.nextZIndex ?? 100,
+        perInstance: {},
+      },
+      tabbed: v3.layout?.tabbed,
+    },
+    customTunings: v3.customTunings,
+  };
+}
+
 // ─── Migration chain ──────────────────────────────────────────────────────────
 
 // Index N transforms payload_N → payload_N+1.
@@ -98,6 +119,7 @@ const MIGRATIONS: Array<(payload: unknown) => unknown> = [
   (p) => migrateV0ToV1(p as V0Payload),
   (p) => migrateV1ToV2(p as V1Payload),
   (p) => migrateV2ToV3(p as V2Payload),
+  (p) => migrateV3ToV4(p as V3Payload),
 ];
 
 // ─── Envelope detection ───────────────────────────────────────────────────────

@@ -87,13 +87,15 @@ export class SidebarView {
         html += `
             <div class="sidebar-footer">
                 <div class="sidebar-layout-picker">
-                    <label class="sidebar-theme-label" for="sidebar-layout-select">Layout</label>
                     <div class="select is-fullwidth">
                         <select id="sidebar-layout-select">
-                            <option value="">— select —</option>
+                            <option value="">— Layout —</option>
                             ${DEFAULT_CONFIG_OPTIONS.map(o => `<option value="default:${o.key}">${o.label}</option>`).join('')}
                         </select>
                     </div>
+                    <button id="cleanup-layout-button" class="topbar-icon-button" title="Tidy up panels">
+                        <span class="material-icons">auto_awesome_mosaic</span>
+                    </button>
                 </div>
                 <div class="sidebar-theme-picker">
                     <span class="sidebar-theme-label">Theme</span>
@@ -201,6 +203,13 @@ export class SidebarView {
 
         if (this.floatingViewManager) {
             const manager = this.floatingViewManager;
+
+            const cleanupBtn = document.getElementById('cleanup-layout-button');
+            if (cleanupBtn) {
+                cleanupBtn.addEventListener('click', () => {
+                    manager.cleanupLayout();
+                });
+            }
 
             const saveBtn = document.getElementById('save-layout-button');
             if (saveBtn) {

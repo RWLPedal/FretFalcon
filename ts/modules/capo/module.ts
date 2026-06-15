@@ -11,6 +11,7 @@ const module: ViewModule = {
     displayName: 'Capo',
     icon: 'adjust',
     defaultSize: { width: 240, height: 350 },
+    maxSize: { width: 380, height: 540 },
   },
   nav: {
     section: NavSection.Fretboard,

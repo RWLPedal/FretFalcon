@@ -12,6 +12,7 @@ const module: ViewModule = {
     displayName: 'Metronome',
     icon: 'timer',
     defaultSize: { width: 280, height: 120 },
+    maxSize: { width: 440, height: 220 },
     refreshOnInstrumentChange: true,
   },
   nav: {
@@ -56,12 +57,7 @@ const module: ViewModule = {
     ],
   },
   createView(_ctx: ViewContext) {
-    const audioController = new AudioController(
-      document.querySelector('#intro-end-sound') as HTMLAudioElement,
-      document.querySelector('#interval-end-sound') as HTMLAudioElement,
-      document.querySelector('#metronome-sound') as HTMLAudioElement,
-      document.querySelector('#metronome-accent-sound') as HTMLAudioElement,
-    );
+    const audioController = new AudioController();
     return new MetronomeView(120, audioController);
   },
 };

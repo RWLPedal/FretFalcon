@@ -12,13 +12,14 @@ import { VIEW_MODULES } from '../modules/manifest';
 import { ViewModule } from '../modules/module_types';
 import { registerNavEntry } from './nav_registry';
 import { FloatingViewDescriptor, FretboardFloatingViewDescriptor } from '../panels/panel_types';
-import { setFloatingViewGridSize, GRID_UNIT } from '../panels/panel_wrapper';
+import { setFloatingViewGridSize, setFloatingViewContentOriginX, GRID_UNIT } from '../panels/panel_wrapper';
 import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 
 
 function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
   const isFretboard = !!(mod.panel.capabilities?.rotate || mod.panel.capabilities?.zoom);
+  const hz = mod.panel.orientationSizes?.horizontal;
   const base: FloatingViewDescriptor = {
     viewId: mod.id,
     displayName: mod.panel.displayName,
@@ -27,6 +28,16 @@ function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
     defaultHeight: mod.panel.defaultSize?.height,
     minWidth: mod.panel.minSize?.width,
     minHeight: mod.panel.minSize?.height,
+    maxWidth: mod.panel.maxSize?.width,
+    maxHeight: mod.panel.maxSize?.height,
+    horizontal: hz ? {
+      defaultWidth: hz.defaultSize?.width,
+      defaultHeight: hz.defaultSize?.height,
+      minWidth: hz.minSize?.width,
+      minHeight: hz.minSize?.height,
+      maxWidth: hz.maxSize?.width,
+      maxHeight: hz.maxSize?.height,
+    } : undefined,
     showInMenu: mod.panel.showInMenu ?? true,
     singleton: mod.panel.singleton,
     refreshOnInstrumentChange: mod.panel.refreshOnInstrumentChange,
@@ -79,6 +90,9 @@ class ReferencePage {
 
         const screenConfigManager = new ScreenConfigManager('floatingViewStates_reference', 'reference');
         this.floatingViewManager = new FloatingViewManager(this.settings, screenConfigManager);
+        // Re-paint the grid background + drag-snap whenever the geometry callback fires
+        // (page load / resize). The cell itself is viewport-derived and layout-independent.
+        this.floatingViewManager.setGeometryChangedCallback(() => this._applyGrid());
 
         // Wire up the link/drive system
         const viewAreaEl = document.getElementById('floating-view-area');
@@ -119,7 +133,16 @@ class ReferencePage {
         this.floatingViewManager.setSettingsCallback(() => this.settingsManager.open());
 
         this.applySettings();
-        this.floatingViewManager.restoreViewsFromState();
+        // Initial page load: refresh the viewport-derived grid cell now that the sidebar
+        // has rendered (its width feeds the cell + content origin).
+        this.floatingViewManager.restoreViewsFromState({ recomputeCell: true });
+
+        // Recompute grid cell size when the window resizes (keeps snap aligned with grid)
+        let _gridResizeTimer: ReturnType<typeof setTimeout> | null = null;
+        window.addEventListener('resize', () => {
+            if (_gridResizeTimer !== null) clearTimeout(_gridResizeTimer);
+            _gridResizeTimer = setTimeout(() => { _gridResizeTimer = null; this._applyGrid(); }, 150);
+        });
 
         initOnboarding(this.floatingViewManager);
     }
@@ -176,9 +199,26 @@ class ReferencePage {
     private _applyGrid(): void {
         const viewAreaEl = document.getElementById('floating-view-area');
         if (!viewAreaEl) return;
+        // Use the live (viewport-derived) geometry so the grid background + drag-snap
+        // match the cell the panels are rendered at.
+        const g = this.floatingViewManager.getGridGeometry();
+        // Keep panels out from behind the sidebar regardless of the grid overlay.
+        setFloatingViewContentOriginX(g.originX);
+
         const enabled = !!this.settings.showGrid;
         viewAreaEl.classList.toggle('grid-active', enabled);
-        setFloatingViewGridSize(enabled ? GRID_UNIT : null);
+        if (enabled) {
+            // Square snap + square graph-paper, aligned to the content origin.
+            setFloatingViewGridSize({ w: g.cell, h: g.cell });
+            viewAreaEl.style.setProperty('--grid-cell-w', `${g.cell}px`);
+            viewAreaEl.style.setProperty('--grid-cell-h', `${g.cell}px`);
+            viewAreaEl.style.setProperty('--grid-origin-x', `${g.originX}px`);
+        } else {
+            setFloatingViewGridSize(null);
+            viewAreaEl.style.removeProperty('--grid-cell-w');
+            viewAreaEl.style.removeProperty('--grid-cell-h');
+            viewAreaEl.style.removeProperty('--grid-origin-x');
+        }
     }
 }
 

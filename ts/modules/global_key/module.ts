@@ -31,6 +31,7 @@ const module: ViewModule = {
     icon: "cell_tower",
     defaultSize: { width: 300, height: 80 },
     minSize: { width: 240, height: 80 },
+    maxSize: { width: 460, height: 140 },
     singleton: true,
   },
   nav: {

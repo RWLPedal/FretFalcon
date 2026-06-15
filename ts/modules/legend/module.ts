@@ -20,6 +20,7 @@ const module: ViewModule = {
     displayName: 'Legend',
     icon: 'palette',
     defaultSize: { width: 180 },   // no height — the panel auto-sizes vertically
+    maxSize: { width: 280, height: 1000 },
     refreshOnInstrumentChange: true,
   },
   nav: {

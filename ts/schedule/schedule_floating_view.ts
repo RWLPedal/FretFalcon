@@ -37,12 +37,7 @@ export class ScheduleFloatingView extends BaseView {
     this.initialState = initialState;
     this.appSettings = appSettings;
     this.adapter = new ScheduleDisplayAdapter();
-    this.audioController = new AudioController(
-      document.querySelector('#intro-end-sound') as HTMLAudioElement | null,
-      document.querySelector('#interval-end-sound') as HTMLAudioElement | null,
-      document.querySelector('#metronome-sound') as HTMLAudioElement | null,
-      document.querySelector('#metronome-accent-sound') as HTMLAudioElement | null,
-    );
+    this.audioController = new AudioController();
     if (initialState?.mode === 'play' || initialState?.mode === 'edit') {
       this.mode = initialState.mode;
     }

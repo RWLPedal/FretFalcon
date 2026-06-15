@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "practempo",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/preview-server.js"],
+      "port": 4000,
+      "autoPort": true
+    }
+  ]
+}

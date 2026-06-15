@@ -10,10 +10,12 @@ import { SignalSink } from './link_types';
 import { getFloatingViewDescriptor, getViewIcon, getViewIconByFeatureType } from './panel_registry';
 import { getFeatureTypeNameByViewId, getBroadcastSourceViewId } from './drive_registry';
 import { isFretboardDescriptor, FloatingViewDescriptor } from './panel_types';
+import { resolveSizing, ResolvedSizing, Orientation } from './panel_sizing';
 import { onEvent, emitEvent } from '../core/events';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
-import { CurrentPayload, V3Payload } from '../screen_config/screen_config_types';
-import { GRID_UNIT } from './panel_wrapper';
+import { CurrentPayload, V4Payload } from '../screen_config/screen_config_types';
+import { GRID_COLS, DESIGN_ROWS, GridGeometry, fitGridGeometry, colToPx, rowToPx } from './grid_constants';
+import { packShelves, reconcileLayout, tidyLayout, ReconcileItem, PlacedRect } from './layout/grid_packer';
 import { FloatingLayout } from './layout/floating_layout';
 import { TabbedLayout } from './layout/tabbed_layout';
 import type { LayoutStrategy, PanelChrome } from './layout/layout_strategy';
@@ -50,12 +52,18 @@ export class PanelHost {
   private currentStrategy: LayoutStrategy;
   private _mql: MediaQueryList;
   private _resizeDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set by the page so the grid background + drag-snap can re-sync to the live
+   *  (fit-aware) cell size after a load / resize / tidy. */
+  private _onGeometryChanged: () => void = () => {};
 
   constructor(appSettings: AppSettings, screenConfigManager: ScreenConfigManager) {
     this.appSettings = appSettings;
     this.screenConfigManager = screenConfigManager;
 
-    this.floatingLayout = new FloatingLayout(() => this.saveState());
+    this.floatingLayout = new FloatingLayout(
+      () => this.saveState(),
+      () => this._onGeometryChanged(),
+    );
     this.tabbedLayout = new TabbedLayout(
       (viewId) => this.spawnView(viewId),
       (i) => this.toggleTabbedLink(i),
@@ -130,6 +138,7 @@ export class PanelHost {
         const featureTypeName = (record.viewState as any)?.featureTypeName;
         if (featureTypeName) switchIcon = getViewIconByFeatureType(featureTypeName) ?? switchIcon;
       }
+      const switchSizing = resolveSizing(desc, this._effectiveOrientation(record.orientationOverride));
       record.chrome = newStrategy.createChrome({
         instanceId: record.instanceId,
         title: desc?.displayName ?? record.viewId,
@@ -137,10 +146,12 @@ export class PanelHost {
         contentEl: record.contentEl,
         collapsed: record.collapsed,
         zoomActive: record.zoomActive,
-        defaultWidth: desc?.defaultWidth,
-        defaultHeight: desc?.defaultHeight,
-        minWidth: desc?.minWidth,
-        minHeight: desc?.minHeight,
+        defaultWidth: switchSizing.defaultWidth,
+        defaultHeight: switchSizing.defaultHeight,
+        minWidth: switchSizing.minWidth,
+        minHeight: switchSizing.minHeight,
+        maxWidth: switchSizing.maxWidth,
+        maxHeight: switchSizing.maxHeight,
         supportsRotate: !!desc && isFretboardDescriptor(desc) && desc.supportsRotate,
         supportsZoom: !!desc && isFretboardDescriptor(desc) && desc.supportsZoom,
         supportsConfigToggle: desc?.supportsConfigToggle,
@@ -176,6 +187,14 @@ export class PanelHost {
 
   public setLinkManager(lm: LinkManager): void { this.linkManager = lm; }
   public getLinkManager(): LinkManager | null { return this.linkManager; }
+
+  /** Live fit-aware grid geometry (cell size + content origin). The page uses this to
+   *  paint the grid background and configure drag-snap at the same scale as the panels. */
+  public getGridGeometry(): GridGeometry { return this.floatingLayout.currentGeometry(); }
+
+  /** Register a callback invoked whenever the live cell size may have changed
+   *  (load / resize / tidy), so the grid background + drag-snap stay in sync. */
+  public setGeometryChangedCallback(cb: () => void): void { this._onGeometryChanged = cb; }
 
   /** Toggle a link between tab[i] and tab[i+1]. */
   public toggleTabbedLink(i: number): void {
@@ -312,6 +331,8 @@ export class PanelHost {
         if (featureTypeName) resolvedIcon = getViewIconByFeatureType(featureTypeName) ?? resolvedIcon;
       }
 
+      const sizing = resolveSizing(descriptor, effectiveOrientation);
+
       const chrome = this.currentStrategy.createChrome({
         instanceId,
         title: options?.title ?? descriptor.displayName,
@@ -319,10 +340,12 @@ export class PanelHost {
         contentEl,
         collapsed: options?.collapsed,
         zoomActive,
-        defaultWidth: descriptor.defaultWidth,
-        defaultHeight: descriptor.defaultHeight,
-        minWidth: descriptor.minWidth,
-        minHeight: descriptor.minHeight,
+        defaultWidth: sizing.defaultWidth,
+        defaultHeight: sizing.defaultHeight,
+        minWidth: sizing.minWidth,
+        minHeight: sizing.minHeight,
+        maxWidth: sizing.maxWidth,
+        maxHeight: sizing.maxHeight,
         supportsRotate: isFretboardDescriptor(descriptor) && descriptor.supportsRotate,
         supportsZoom: isFretboardDescriptor(descriptor) && descriptor.supportsZoom,
         supportsConfigToggle: descriptor.supportsConfigToggle,
@@ -406,7 +429,10 @@ export class PanelHost {
     [...this.instances.keys()].forEach(id => this.destroyView(id));
   }
 
-  public restoreViewsFromState(): void {
+  /** Rebuild all panels from persisted state. `recomputeCell` is passed only by the
+   *  initial page load — it refreshes the viewport-derived grid cell once the sidebar
+   *  has rendered. Named-layout / import loads leave the grid size untouched. */
+  public restoreViewsFromState(opts?: { recomputeCell?: boolean }): void {
     const area = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!area) return;
 
@@ -424,19 +450,29 @@ export class PanelHost {
       );
     }
 
-    const scale = floatingData
-      ? this._computeRestoreScale(floatingData.referenceGrid)
-      : 1.0;
-
-    // Restore in zIndex order so floating z-stacking matches what was saved
-    const sortedEntries = Object.values(saved.instances).sort((a, b) => {
-      const aZ = floatingData?.perInstance[a.instanceId]?.zIndex ?? 100;
-      const bZ = floatingData?.perInstance[b.instanceId]?.zIndex ?? 100;
-      return aZ - bZ;
-    });
-
     const vpW = area.clientWidth || window.innerWidth;
     const vpH = area.clientHeight || window.innerHeight;
+    const sidebarEl = document.querySelector('.side-bar-container');
+    const sidebarWidth = sidebarEl ? sidebarEl.getBoundingClientRect().width : 0;
+    // The grid cell is a fixed function of the viewport (the GRID_COLS × DESIGN_ROWS
+    // design space scaled to fit) — identical for every layout, so loading a layout
+    // never changes the grid size. Matches FloatingLayout's cached geometry.
+    const g = fitGridGeometry(vpW, sidebarWidth, vpH, DESIGN_ROWS);
+
+    // Resolve the canonical cell layout: reconcile the authored positions (preserve
+    // each panel's column, push overlaps straight down), or shelf-pack instances that
+    // lack saved geometry. The result is machine-independent (in grid cells).
+    const savedPerInstance = floatingData?.perInstance ?? {};
+    const instanceEntries = Object.values(saved.instances);
+    const allHaveGeom = instanceEntries.every(e => savedPerInstance[e.instanceId]);
+    const canonical = this._resolveCanonicalRects(instanceEntries, savedPerInstance, allHaveGeom, g.cell);
+
+    // Sort by zIndex so floating z-stacking matches what was saved
+    const sortedEntries = instanceEntries.sort((a, b) => {
+      const aZ = canonical[a.instanceId]?.zIndex ?? 100;
+      const bZ = canonical[b.instanceId]?.zIndex ?? 100;
+      return aZ - bZ;
+    });
 
     for (const entry of sortedEntries) {
       if (!getFloatingViewDescriptor(entry.viewId)) {
@@ -444,7 +480,7 @@ export class PanelHost {
         continue;
       }
 
-      // Global Key (broadcast source) is hidden from mobile — skip restoring it in tabbed mode.
+      // Global Key (broadcast source) is hidden from mobile — skip in tabbed mode.
       if (this.currentStrategy === this.tabbedLayout) {
         const broadcastViewId = getBroadcastSourceViewId();
         if (broadcastViewId && entry.viewId === broadcastViewId) continue;
@@ -454,27 +490,17 @@ export class PanelHost {
         const numericId = parseInt(entry.instanceId.replace('fv-', ''), 10);
         if (!isNaN(numericId)) this.nextInstanceId = Math.max(this.nextInstanceId, numericId + 1);
 
-        let position: { x: number; y: number } | undefined;
-        let size: { width: number; height: number } | undefined;
-        let zIndex: number | undefined;
-
-        const geom = floatingData?.perInstance[entry.instanceId];
-        if (geom) {
-          const rawX = geom.gridPosition.col * scale * GRID_UNIT;
-          const rawY = geom.gridPosition.row * scale * GRID_UNIT;
-          if (geom.gridSize) {
-            const rawW = Math.round(geom.gridSize.cols * scale * GRID_UNIT);
-            const rawH = Math.round(geom.gridSize.rows * scale * GRID_UNIT);
-            size = { width: rawW, height: rawH };
-            position = { x: Math.max(0, Math.min(rawX, vpW - rawW)), y: Math.max(0, Math.min(rawY, vpH - rawH)) };
-          } else {
-            position = { x: Math.max(0, Math.min(rawX, vpW - 150)), y: Math.max(0, Math.min(rawY, vpH - 50)) };
-          }
-          zIndex = geom.zIndex;
-        }
+        const rect = canonical[entry.instanceId];
+        // Position only lower-bounded (no upper clamp — the fit cell keeps it on-screen,
+        // and clamping a tall panel upward is what used to cause overlaps). Size derives
+        // from the canonical span; CSS min/max on the wrapper handles the rest.
+        const position = rect
+          ? { x: Math.max(g.originX, colToPx(rect.col, g)), y: Math.max(0, rowToPx(rect.row, g)) }
+          : undefined;
+        const size = rect ? { width: rect.colSpan * g.cell, height: rect.rowSpan * g.cell } : undefined;
 
         this._createPanel(entry.instanceId, entry.viewId as ViewId, entry.viewState, {
-          position, size, zIndex,
+          position, size, zIndex: rect?.zIndex,
           collapsed: entry.collapsed,
           orientationOverride: entry.orientationOverride,
           zoomActive: entry.zoomActive,
@@ -484,6 +510,18 @@ export class PanelHost {
       }
     }
 
+    // Finalize: set the canonical rects authoritatively and re-render at the fit cell
+    // (floating only — tabbed ignores geometry).
+    if (this.currentStrategy === this.floatingLayout) {
+      const rectsOnly: Record<string, { col: number; row: number; colSpan: number; rowSpan: number }> = {};
+      for (const [id, r] of Object.entries(canonical)) {
+        if (this.instances.has(id)) rectsOnly[id] = { col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan };
+      }
+      // Only the initial page load refreshes the cell (once the sidebar has rendered);
+      // named-layout / import loads keep the current viewport-derived grid size.
+      this.floatingLayout.applyRects(rectsOnly, { recomputeCell: opts?.recomputeCell });
+    }
+
     this.currentStrategy.applyLayoutData(saved.layout);
     this.linkManager?.initialize(saved.links ?? []);
     if (this.currentStrategy === this.tabbedLayout) {
@@ -491,13 +529,47 @@ export class PanelHost {
     }
   }
 
-  private _computeRestoreScale(refGrid: { cols: number; rows: number }): number {
-    const area = document.getElementById(FLOATING_VIEW_AREA_ID);
-    const vpW = area?.clientWidth ?? window.innerWidth;
-    const vpH = area?.clientHeight ?? window.innerHeight;
-    const currCols = Math.max(1, Math.round(vpW / GRID_UNIT));
-    const currRows = Math.max(1, Math.round(vpH / GRID_UNIT));
-    return Math.min(currCols / refGrid.cols, currRows / refGrid.rows);
+  /** Resolve saved per-instance geometry into canonical cell rects (with zIndex):
+   *  reconcile authored positions when every instance has geometry, else shelf-pack.
+   *  `cellPx` (the live grid cell size) is used only to convert default px sizes to cells
+   *  for instances that lack a saved span. */
+  private _resolveCanonicalRects(
+    entries: Array<{ instanceId: string; viewId: string; orientationOverride?: 'vertical' | 'horizontal' }>,
+    saved: Record<string, { col: number; row: number; colSpan?: number; rowSpan?: number; zIndex: number }>,
+    allHaveGeom: boolean,
+    cellPx: number,
+  ): Record<string, PlacedRect & { zIndex: number }> {
+    const spanFor = (entry: { instanceId: string; viewId: string; orientationOverride?: 'vertical' | 'horizontal' }) => {
+      const geom = saved[entry.instanceId];
+      const sz = this._sizingFor(entry.viewId as ViewId, entry.orientationOverride);
+      return {
+        colSpan: geom?.colSpan ?? Math.max(1, Math.round((sz.defaultWidth ?? 300) / cellPx)),
+        rowSpan: geom?.rowSpan ?? Math.max(1, Math.round((sz.defaultHeight ?? 200) / cellPx)),
+      };
+    };
+    const zFor = (id: string) => saved[id]?.zIndex ?? 100;
+    const out: Record<string, PlacedRect & { zIndex: number }> = {};
+
+    if (allHaveGeom) {
+      const items: ReconcileItem[] = entries.map(e => {
+        const { colSpan, rowSpan } = spanFor(e);
+        const geom = saved[e.instanceId]!;
+        return { id: e.instanceId, col: geom.col, row: geom.row, colSpan, rowSpan };
+      });
+      const reconciled = reconcileLayout(items);
+      for (const e of entries) {
+        const r = reconciled[e.instanceId];
+        if (r) out[e.instanceId] = { ...r, zIndex: zFor(e.instanceId) };
+      }
+    } else {
+      const items = entries.map(e => ({ id: e.instanceId, ...spanFor(e) }));
+      const packed = packShelves(items, GRID_COLS);
+      for (const it of items) {
+        const pos = packed[it.id] ?? { col: 0, row: 0 };
+        out[it.id] = { col: pos.col, row: pos.row, colSpan: it.colSpan, rowSpan: it.rowSpan, zIndex: zFor(it.id) };
+      }
+    }
+    return out;
   }
 
   // --- Rotate / Zoom ---
@@ -510,6 +582,11 @@ export class PanelHost {
     const globalOrientation = (this.appSettings.instrumentSettings as any)?.orientation ?? 'vertical';
     const current: 'vertical' | 'horizontal' = record.orientationOverride ?? globalOrientation;
     record.orientationOverride = current === 'vertical' ? 'horizontal' : 'vertical';
+
+    // Re-apply size constraints for the new orientation (CSS min/max) before the view
+    // re-renders and auto-sizes into them.
+    const sizing = resolveSizing(descriptor, record.orientationOverride);
+    record.chrome.setSizeConstraints?.(sizing);
 
     const zm = this._zoomMultiplierFor(record.orientationOverride, record.zoomActive ?? false);
     this._recreateViewInPlace(record, descriptor, this._buildOverriddenSettings(record.orientationOverride, zm), true);
@@ -589,7 +666,7 @@ export class PanelHost {
   // --- Import / Export / Named Layouts ---
 
   public exportStateJson(): string {
-    const payload: V3Payload = this._buildPayload();
+    const payload: CurrentPayload = this._buildPayload();
     if (this.appSettings.customTunings) payload.customTunings = this.appSettings.customTunings;
     return this.screenConfigManager.exportJson(payload);
   }
@@ -601,8 +678,8 @@ export class PanelHost {
     [...this.instances.keys()].forEach(id => this.destroyView(id));
     this.nextInstanceId = 1;
 
-    if ((migrated as V3Payload).customTunings && onCustomTuningsImported) {
-      onCustomTuningsImported((migrated as V3Payload).customTunings as AppSettings["customTunings"]);
+    if (migrated.customTunings && onCustomTuningsImported) {
+      onCustomTuningsImported(migrated.customTunings as AppSettings["customTunings"]);
     }
 
     this.screenConfigManager.saveAutoSave(migrated);
@@ -610,23 +687,45 @@ export class PanelHost {
   }
 
   public loadNamedLayout(name: string): void {
-    const area = document.getElementById(FLOATING_VIEW_AREA_ID);
-    const cols = area ? Math.max(1, Math.round(area.clientWidth / GRID_UNIT)) : 80;
-    const payload = this.screenConfigManager.loadNamed(name, cols);
+    const payload = this.screenConfigManager.loadNamed(name);
     if (!payload) { console.error(`PanelHost: no layout found for "${name}"`); return; }
 
     [...this.instances.keys()].forEach(id => this.destroyView(id));
     this.nextInstanceId = 1;
 
     this.screenConfigManager.saveAutoSave(payload);
+    // restoreViewsFromState reconciles (preserve-X push-down) + fits to the viewport.
     this.restoreViewsFromState();
+  }
+
+  /** Tidy the open floating panels: remove overlaps, leave a border + gaps, and pull
+   *  the arrangement to the top-left — preserving the current layout (never resizes or
+   *  scatters). Overlaps are cleared by sliding panels DOWN or RIGHT, whichever is the
+   *  smaller move and fits, so horizontal space is used instead of stacking everything
+   *  vertically. No-op in tabbed mode. Reads each panel's ACTUAL rendered footprint so
+   *  it reflects what's on screen. */
+  public cleanupLayout(opts?: { animate?: boolean }): void {
+    if (this.currentStrategy !== this.floatingLayout) return;
+
+    // Seed from the live DOM footprints, not stale spans.
+    this.floatingLayout.syncRectsFromDom();
+    const rects = this.floatingLayout.getPanelRects();
+
+    const items: ReconcileItem[] = [];
+    for (const [id, rect] of rects) {
+      items.push({ id, col: rect.col, row: rect.row, colSpan: rect.colSpan, rowSpan: rect.rowSpan });
+    }
+
+    const tidied = tidyLayout(items);
+    this.floatingLayout.applyRects(tidied, { animate: opts?.animate ?? true, linkManager: this.linkManager });
+    this.saveState();
   }
 
   // --- Persistence helpers ---
 
-  private _buildPayload(): V3Payload {
+  private _buildPayload(): CurrentPayload {
     const layoutData = this.currentStrategy.serializeLayout();
-    const instances: V3Payload['instances'] = {};
+    const instances: CurrentPayload['instances'] = {};
     for (const [id, record] of this.instances) {
       instances[id] = {
         instanceId: id,
@@ -644,11 +743,23 @@ export class PanelHost {
     this.screenConfigManager.saveAutoSave(this._buildPayload());
   }
 
-  private _loadState(): V3Payload | null {
-    return this.screenConfigManager.loadAutoSave() as V3Payload | null;
+  private _loadState(): CurrentPayload | null {
+    return this.screenConfigManager.loadAutoSave();
   }
 
   // --- Shared math ---
+
+  /** The orientation a panel renders at: its per-instance override, else the global. */
+  private _effectiveOrientation(orientationOverride?: 'vertical' | 'horizontal'): Orientation {
+    const global = (this.appSettings.instrumentSettings as any)?.orientation ?? 'vertical';
+    return orientationOverride ?? global;
+  }
+
+  /** Resolve a view's effective default/min/max px sizing for the given orientation. */
+  private _sizingFor(viewId: ViewId, orientationOverride?: 'vertical' | 'horizontal'): ResolvedSizing {
+    const desc = getFloatingViewDescriptor(viewId);
+    return resolveSizing(desc, this._effectiveOrientation(orientationOverride));
+  }
 
   private _zoomMultiplierFor(orientation: 'vertical' | 'horizontal', zoomActive: boolean): number {
     if (!zoomActive) return 1.0;

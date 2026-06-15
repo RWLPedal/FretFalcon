@@ -6,15 +6,19 @@ export type LayoutKind = 'floating' | 'tabbed';
 
 // ─── Persistence types ─────────────────────────────────────────────────────────
 
+/** V4 flat span model — matches V4FloatingPerInstance in screen_config_types. */
 export interface FloatingPerInstance {
-  gridPosition: { col: number; row: number };
-  gridSize?: { cols: number; rows: number };
+  col: number;
+  row: number;
+  colSpan?: number;
+  rowSpan?: number;
   zIndex: number;
 }
 
 export interface LayoutData {
   floating?: {
-    referenceGrid: { cols: number; rows: number };
+    gridCols: number;
+    rowPx: number;
     nextZIndex: number;
     perInstance: Record<string, FloatingPerInstance>;
   };
@@ -38,6 +42,9 @@ export interface PanelChrome {
   /** Called after PanelHost re-renders a view into the existing contentEl (e.g.
    *  after rotate or zoom). Floating chrome triggers auto-size; tabbed is a no-op. */
   notifyContentReplaced(forceAutoSize: boolean): void;
+  /** Update the panel's min/max size constraints (floating only; tabbed is a no-op).
+   *  Used when a panel's effective orientation changes. */
+  setSizeConstraints?(c: { minWidth?: number; minHeight?: number; maxWidth?: number; maxHeight?: number }): void;
   /** Remove the chrome from the DOM. Does NOT destroy the view or its contentEl.
    *  Returns the contentEl so PanelHost can reuse it when switching strategies. */
   destroy(): HTMLElement;
@@ -58,6 +65,8 @@ export interface PanelSpawnInfo {
   defaultHeight?: number;
   minWidth?: number;
   minHeight?: number;
+  maxWidth?: number;
+  maxHeight?: number;
   supportsRotate?: boolean;
   supportsZoom?: boolean;
   supportsConfigToggle?: boolean;

@@ -12,6 +12,7 @@ const module: ViewModule = {
     icon: 'graphic_eq',
     defaultSize: { width: 320, height: 80 },
     minSize: { width: 310, height: 80 },
+    maxSize: { width: 480, height: 140 },
   },
   nav: {
     section: NavSection.PracticeTools,

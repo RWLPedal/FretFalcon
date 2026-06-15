@@ -294,6 +294,11 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
   width: 0.5em;
   height: 0.5em;
 }
+.sidebar-layout-picker .topbar-icon-button {
+  flex-shrink: 0;
+  font-size: 1rem;
+  padding: 2px 3px;
+}
 
 .sidebar-theme-picker {
   display: flex;
@@ -436,8 +441,12 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
 
 /* ─── Floating View System ───────────────────────────────────────────────── */
 #floating-view-area {
-  /* Must match GRID_UNIT constant in floating_view_wrapper.ts */
-  --grid-unit: 12px;
+  /* --grid-cell-w / --grid-cell-h (square) and --grid-origin-x are set by
+     reference_main._applyGrid() at runtime to match the live GridGeometry. The
+     fallbacks keep a sane square look before the first paint. */
+  --grid-cell-w: 40px;
+  --grid-cell-h: 40px;
+  --grid-origin-x: 0px;
   position: absolute;
   top: 0;
   left: 0;
@@ -451,9 +460,11 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
 }
 #floating-view-area.grid-active {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--border) 50%, transparent) 1px, transparent 1px),
+    linear-gradient(color-mix(in srgb, var(--border) 30%, transparent) 1px, transparent 1px),
     linear-gradient(90deg, color-mix(in srgb, var(--border) 50%, transparent) 1px, transparent 1px);
-  background-size: var(--grid-unit) var(--grid-unit);
+  background-size: var(--grid-cell-w) var(--grid-cell-h);
+  /* Align the graph-paper to the content origin (sidebar right edge). */
+  background-position: var(--grid-origin-x) 0;
 }
 
 .floating-view-wrapper {
@@ -471,6 +482,7 @@ body.dark-theme .dropdown-item.has-checkbox label.checkbox:hover {
   width: 250px;
 }
 .floating-view-wrapper.is-dragging { opacity: 0.85; }
+.floating-view-wrapper.is-reflowing { transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
 .floating-view-wrapper.is-panel-collapsed { min-height: 0; }
 .floating-view-wrapper.is-panel-collapsed .floating-view-content { display: none; }
 
