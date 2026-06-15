@@ -15,6 +15,7 @@ import { FloatingViewDescriptor, FretboardFloatingViewDescriptor } from '../pane
 import { setFloatingViewGridSize, setFloatingViewContentOriginX, GRID_UNIT } from '../panels/panel_wrapper';
 import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
+import { consumeLayoutParam, consumeLeftyParam } from './url_params';
 
 
 function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
@@ -74,6 +75,24 @@ class ReferencePage {
         }
 
         this.settings = loadSettings();
+
+        // A ?lefty URL param flips the handedness preference (left-handed fretboards);
+        // ?lefty=false forces right-handed. Apply-once: persist the flip so it sticks
+        // across reloads (the param is stripped from the URL by consumeLeftyParam), then
+        // everything below — views, settings modal, sidebar — reads the updated value.
+        const handedness = consumeLeftyParam();
+        if (handedness && handedness !== this.settings.instrumentSettings.handedness) {
+            this.settings = {
+                ...this.settings,
+                instrumentSettings: { ...this.settings.instrumentSettings, handedness },
+            };
+            try {
+                localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(this.settings));
+            } catch (e) {
+                console.error("Failed to persist handedness from URL param:", e);
+            }
+        }
+
         this.themeManager = new ThemeManager(this.settings.theme);
 
         const screenConfigManager = new ScreenConfigManager('floatingViewStates_reference', 'reference');
@@ -119,6 +138,14 @@ class ReferencePage {
 
         // Give TabbedLayout (mobile) access to the settings modal.
         this.floatingViewManager.setSettingsCallback(() => this.settingsManager.open());
+
+        // A ?layout=<preset> URL param (e.g. /?layout=reference) opens the page on a
+        // built-in starter layout. It overwrites the auto-save for this load only — the
+        // param is stripped from the URL (apply-once) so a later reload keeps the user's
+        // edits instead of resetting to the preset. Unknown keys fall through to the
+        // normal auto-save restore below.
+        const urlLayout = consumeLayoutParam(screenConfigManager);
+        if (urlLayout) screenConfigManager.saveAutoSave(urlLayout);
 
         this.applySettings();
         // Initial page load: refresh the viewport-derived grid cell now that the sidebar
