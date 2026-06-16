@@ -115,7 +115,7 @@ npm run start   # serves at localhost:4000
 To build the single deployable file (`dist/index.html`):
 
 ```bash
-node build.js
+node build_html
 ```
 
 **Build dependencies:** Node.js and npm. 

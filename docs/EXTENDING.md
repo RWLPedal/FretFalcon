@@ -193,7 +193,7 @@ export interface View {
 ## 4. Build
 
 ```
-node build.js
+node build_html
 ```
 
 The manifest (`ts/modules/manifest.ts`) uses webpack's `require.context` to
@@ -204,30 +204,30 @@ registered automatically.
 
 ## ViewModule reference
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | yes | Unique `ViewId`, e.g. `viewId('instrument_my_feature')` |
-| `panel.displayName` | yes | Human-readable name shown in title bar |
-| `panel.icon` | yes | Material Icons name |
-| `panel.defaultSize` | no | `{ width, height }` in pixels |
-| `panel.minSize` | no | Minimum `{ width, height }` in pixels |
-| `panel.showInMenu` | no | Show in spawnable-view picker (default `true`) |
-| `panel.singleton` | no | Prevent opening more than one instance |
-| `panel.refreshOnInstrumentChange` | no | Recreate on instrument/settings change |
-| `panel.capabilities.rotate` | no | Show rotate button in title bar |
-| `panel.capabilities.zoom` | no | Show zoom button in title bar |
-| `panel.capabilities.configToggle` | no | Show config toggle (⚙) button |
-| `panel.featureTypeName` | no | Feature type name (for feature panels) |
-| `nav` | no | Adds a button to the sidebar/mobile nav |
-| `nav.section` | yes (if nav) | One of: `fretboard`, `practice_tools`, `sound`, `schedule`, `utilities`, `extensions` |
-| `nav.label` | yes (if nav) | Button text |
-| `nav.visibility` | no | `desktop`, `mobile`, or `both` (default `both`) |
-| `nav.requiredInstruments` | no | Instrument names that show the button |
-| `drive.sources` | no | Drive source descriptors — signals this view can emit |
-| `drive.targets` | no | Drive target slots — declares inputs for the link panel UI |
-| `drive.broadcast` | no | `true` to broadcast signals to all panels (Global Key pattern) |
-| `state.decode` | no | Decodes persisted state for type-safe `createView` |
-| `createView` | yes | Factory: `(ctx: ViewContext, state?) => View` |
+| Field                             | Required     | Description                                                                           |
+| --------------------------------- | ------------ | ------------------------------------------------------------------------------------- |
+| `id`                              | yes          | Unique `ViewId`, e.g. `viewId('instrument_my_feature')`                               |
+| `panel.displayName`               | yes          | Human-readable name shown in title bar                                                |
+| `panel.icon`                      | yes          | Material Icons name                                                                   |
+| `panel.defaultSize`               | no           | `{ width, height }` in pixels                                                         |
+| `panel.minSize`                   | no           | Minimum `{ width, height }` in pixels                                                 |
+| `panel.showInMenu`                | no           | Show in spawnable-view picker (default `true`)                                        |
+| `panel.singleton`                 | no           | Prevent opening more than one instance                                                |
+| `panel.refreshOnInstrumentChange` | no           | Recreate on instrument/settings change                                                |
+| `panel.capabilities.rotate`       | no           | Show rotate button in title bar                                                       |
+| `panel.capabilities.zoom`         | no           | Show zoom button in title bar                                                         |
+| `panel.capabilities.configToggle` | no           | Show config toggle (⚙) button                                                         |
+| `panel.featureTypeName`           | no           | Feature type name (for feature panels)                                                |
+| `nav`                             | no           | Adds a button to the sidebar/mobile nav                                               |
+| `nav.section`                     | yes (if nav) | One of: `fretboard`, `practice_tools`, `sound`, `schedule`, `utilities`, `extensions` |
+| `nav.label`                       | yes (if nav) | Button text                                                                           |
+| `nav.visibility`                  | no           | `desktop`, `mobile`, or `both` (default `both`)                                       |
+| `nav.requiredInstruments`         | no           | Instrument names that show the button                                                 |
+| `drive.sources`                   | no           | Drive source descriptors — signals this view can emit                                 |
+| `drive.targets`                   | no           | Drive target slots — declares inputs for the link panel UI                            |
+| `drive.broadcast`                 | no           | `true` to broadcast signals to all panels (Global Key pattern)                        |
+| `state.decode`                    | no           | Decodes persisted state for type-safe `createView`                                    |
+| `createView`                      | yes          | Factory: `(ctx: ViewContext, state?) => View`                                         |
 
 ---
 
@@ -235,23 +235,23 @@ registered automatically.
 
 Each key in `ConfigSpec<C>` is a `FieldSpec<T>` with these properties:
 
-| Property | Required | Description |
-|----------|----------|-------------|
-| `label` | yes | Label shown above the field in the config UI |
-| `codec` | yes | `FieldCodec<T>` — serialise/deserialise to/from `string` |
-| `default` | yes | Default value when no saved config exists |
-| `ui` | yes | UI widget: `select`, `toggle`, `number`, `toggle-buttons`, or `custom` |
-| `drivable` | no | Declares which signal kinds can drive this field and how to resolve them |
-| `controls` | no | `'chords'` — hides sibling chord fields when this field changes |
+| Property   | Required | Description                                                              |
+| ---------- | -------- | ------------------------------------------------------------------------ |
+| `label`    | yes      | Label shown above the field in the config UI                             |
+| `codec`    | yes      | `FieldCodec<T>` — serialise/deserialise to/from `string`                 |
+| `default`  | yes      | Default value when no saved config exists                                |
+| `ui`       | yes      | UI widget: `select`, `toggle`, `number`, `toggle-buttons`, or `custom`   |
+| `drivable` | no       | Declares which signal kinds can drive this field and how to resolve them |
+| `controls` | no       | `'chords'` — hides sibling chord fields when this field changes          |
 
 Built-in codecs (from `ts/core/config/codecs.ts`):
 
-| Codec | Type | Notes |
-|-------|------|-------|
-| `enumCodec(values)` | `string` | Validates against a fixed list |
-| `numberCodec` | `number` | `Number()` parse |
-| `booleanCodec` | `boolean` | `'true'` / `'false'` |
-| `stringArrayCodec` | `string[]` | Only valid as `legacyVariadicTail` |
+| Codec               | Type       | Notes                              |
+| ------------------- | ---------- | ---------------------------------- |
+| `enumCodec(values)` | `string`   | Validates against a fixed list     |
+| `numberCodec`       | `number`   | `Number()` parse                   |
+| `booleanCodec`      | `boolean`  | `'true'` / `'false'`               |
+| `stringArrayCodec`  | `string[]` | Only valid as `legacyVariadicTail` |
 
 ---
 
@@ -275,11 +275,11 @@ or `mobile/*` — these are internal implementation details.
 
 ## NavSectionId values
 
-| Constant | Value | Sidebar label |
-|----------|-------|---------------|
-| `NavSection.Fretboard` | `'fretboard'` | Reference |
+| Constant                   | Value              | Sidebar label  |
+| -------------------------- | ------------------ | -------------- |
+| `NavSection.Fretboard`     | `'fretboard'`      | Reference      |
 | `NavSection.PracticeTools` | `'practice_tools'` | Practice Tools |
-| `NavSection.Sound` | `'sound'` | Sound |
-| `NavSection.Schedule` | `'schedule'` | Schedule |
-| `NavSection.Utilities` | `'utilities'` | Utilities |
-| `NavSection.Extensions` | `'extensions'` | Extensions |
+| `NavSection.Sound`         | `'sound'`          | Sound          |
+| `NavSection.Schedule`      | `'schedule'`       | Schedule       |
+| `NavSection.Utilities`     | `'utilities'`      | Utilities      |
+| `NavSection.Extensions`    | `'extensions'`     | Extensions     |

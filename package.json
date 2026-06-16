@@ -1,0 +1,16 @@
+{
+  "scripts": {
+    "start": "npm start --prefix ts",
+    "test": "vitest run --config tests/vitest.config.ts",
+    "test:watch": "vitest --config tests/vitest.config.ts",
+    "build": "node build_html.js",
+    "typecheck": "tsc --noEmit -p ts"
+  },
+  "dependencies": {
+    "tsify": "^5.0.4"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.0",
+    "webpack-cli": "^7.0.3"
+  }
+}
