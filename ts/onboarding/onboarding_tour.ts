@@ -211,7 +211,7 @@ function buildWelcome(): void {
     "onb-btn-secondary",
     `Read intro<span class="material-icons">open_in_new</span>`,
   ) as HTMLAnchorElement;
-  introLink.href = "https://fretfalcon.com/intro.html";
+  introLink.href = "https://fretfalcon.com/welcome.html";
   introLink.target = "_blank";
   introLink.rel = "noopener noreferrer";
 

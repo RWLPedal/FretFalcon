@@ -568,7 +568,8 @@ export const HARMONY_EXPLORER_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
     "fv-1": {
       instanceId: "fv-1",
       viewId: "circle_of_fifths",
-      viewState: {},
+      // Start on C major so the linked panels populate immediately on load.
+      viewState: { root: "C", mode: "MAJOR" },
     },
     "fv-2": {
       instanceId: "fv-2",

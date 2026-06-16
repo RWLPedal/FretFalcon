@@ -26,8 +26,16 @@ const mainCSS = resolveCSS(path.join(ROOT, 'style/style.css'))
 
 const bundleJS = fs.readFileSync(path.join(ROOT, 'js/reference_bundle.js'), 'utf8');
 
+// Inline the favicon as a data URI so the built file stays self-contained.
+const faviconSVG = fs.readFileSync(path.join(ROOT, 'favicon.svg'), 'utf8');
+const faviconDataUri = 'data:image/svg+xml,' + encodeURIComponent(faviconSVG);
 
 let html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+html = html.replace(
+  '<link rel="icon" type="image/svg+xml" href="favicon.svg">',
+  `<link rel="icon" type="image/svg+xml" href="${faviconDataUri}">`
+);
 
 html = html.replace(
   '<link rel="stylesheet" href="style/theme-tokens.css">',

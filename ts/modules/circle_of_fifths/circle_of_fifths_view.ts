@@ -302,6 +302,12 @@ export class CircleOfFifthsView extends BaseView {
 
     this._update();
     this._saveState();
+
+    // Broadcast the current selection once after mount so linked targets (Scale,
+    // Chord, Progression, …) populate on load instead of waiting for a click.
+    // Deferred to a microtask so the panel is attached and its links initialized
+    // before the signal is routed; _emitKeySelected() no-ops if destroyed first.
+    queueMicrotask(() => this._emitKeySelected());
   }
 
   private _buildSvg(): SVGSVGElement {

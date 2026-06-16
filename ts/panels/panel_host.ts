@@ -806,6 +806,7 @@ export class PanelHost {
   public applySettingsChange(newSettings: AppSettings): void {
     const oldOrientation: "vertical" | "horizontal" =
       (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
+    const oldInstrument = (this.appSettings.instrumentSettings as any)?.instrument;
     const guitarSettingsChanged =
       JSON.stringify(this.appSettings.instrumentSettings) !==
       JSON.stringify(newSettings.instrumentSettings);
@@ -817,6 +818,12 @@ export class PanelHost {
     const newOrientation: "vertical" | "horizontal" =
       (newSettings.instrumentSettings as any)?.orientation ?? "vertical";
     const orientationChanged = oldOrientation !== newOrientation;
+    // Only an instrument swap (different string count → different fretboard dimensions)
+    // changes a panel's intrinsic content footprint. Handedness, tuning, colour scheme
+    // and label display are pure repaints at the same size — re-render in place without
+    // re-fitting, so they don't snap panels off their authored layout spans.
+    const instrumentChanged =
+      oldInstrument !== (newSettings.instrumentSettings as any)?.instrument;
 
     const SKIP_VIEW_IDS = new Set<ViewId>([
       "instrument_floating_metronome" as ViewId,
@@ -836,11 +843,9 @@ export class PanelHost {
       // that follow the global setting (no per-instance override) — adopt the new
       // orientation's size so the panel isn't left at the previous orientation's
       // dimensions. (The rotate button drives this directly via setSizeConstraints.)
-      if (
-        orientationChanged &&
-        record.orientationOverride === undefined &&
-        isFretboardDescriptor(descriptor)
-      ) {
+      const orientationFlipped =
+        orientationChanged && record.orientationOverride === undefined;
+      if (orientationFlipped && isFretboardDescriptor(descriptor)) {
         record.chrome.setSizeConstraints?.(
           resolveSizing(descriptor, effectiveOrientation),
         );
@@ -850,11 +855,15 @@ export class PanelHost {
         effectiveOrientation,
         record.zoomActive ?? false,
       );
+      // Re-fit to content only when the panel's intrinsic footprint actually changed
+      // (instrument swap or an effective-orientation flip). Otherwise keep the panel at
+      // its current authored size — a pure repaint, e.g. a handedness mirror.
+      const footprintChanged = instrumentChanged || orientationFlipped;
       this._recreateViewInPlace(
         record,
         descriptor,
         this._buildOverriddenSettings(record.orientationOverride, zm),
-        guitarSettingsChanged,
+        footprintChanged,
       );
     }
 
