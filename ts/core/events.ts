@@ -20,6 +20,11 @@ export interface FeatureStateChangedDetail {
   config?: ReadonlyArray<string>;
   // TimerView
   duration?: number;
+  focusSeconds?: number;
+  restSeconds?: number;
+  rounds?: number;
+  countIn?: 0 | 3 | 5;
+  chime?: boolean;
   // StrumView (carries _v:1 sentinel)
   _v?: 1;
   // DroneView
@@ -30,9 +35,9 @@ export interface FeatureStateChangedDetail {
   // GlobalKeyView
   rootNote?: string;
   scaleKey?: string;
-  // CircleOfFifthsView
+  // CircleOfFifthsView (DiatonicMode) — also reused by TimerView ('simple' | 'intervals' | 'stopwatch')
   root?: string;
-  mode?: DiatonicMode;
+  mode?: DiatonicMode | "simple" | "intervals" | "stopwatch";
   // BackingTrackView / ScheduleFloatingView — open-ended blobs
   [key: string]: unknown;
 }

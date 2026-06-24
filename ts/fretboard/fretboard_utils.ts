@@ -1,5 +1,6 @@
 import { Scale } from "../music/scales";
 import { NoteName } from "../music/music_types";
+import { ChordType, CHORD_TYPE_INTERVALS } from "../music/chords";
 
 // Feature configuration constants
 export const START_PX = 35;
@@ -115,6 +116,38 @@ export function getIntervalLabel(offset: number): string {
     11: "7", // Major Seventh (often denoted M7, but using 7 for brevity)
   };
   return labels[offset % 12] ?? "?"; // Use modulo 12 and handle unexpected offsets
+}
+
+/**
+ * Labels for compound (octave-extended) intervals, keyed by semitones from root.
+ * These can't be derived by `getIntervalLabel` because it folds everything into a
+ * single octave — a 9th (14) and a 2nd (2) share a pitch class. Labels are ASCII
+ * (b/# not ♭/♯) to match the palette keys and the `pretty()` helpers in views.
+ */
+const EXTENSION_LABELS: { [semitones: number]: string } = {
+  13: "b9", 14: "9", 15: "#9",
+  17: "11", 18: "#11",
+  20: "b13", 21: "13",
+};
+
+/**
+ * Interval label for a chord tone, disambiguating octave extensions by consulting
+ * the chord's intended interval set: the note a `Cadd9` places at pitch class 2 is
+ * a "9", but a `Csus2` puts a real "2" there. `pitchClass` is the note's distance
+ * from the root (reduced to 0–11). Falls back to the plain pitch-class label when
+ * the chord type is unknown or the pitch class isn't an extension of that chord.
+ *
+ * This is the generic replacement for per-chord-type "relabel 2 as 9" special
+ * cases — extend it by adding extensions to CHORD_TYPE_INTERVALS / EXTENSION_LABELS.
+ */
+export function chordToneIntervalLabel(pitchClass: number, chordType: ChordType): string {
+  const pc = ((pitchClass % 12) + 12) % 12;
+  const intervals = CHORD_TYPE_INTERVALS[chordType];
+  const match = intervals?.find((iv) => iv % 12 === pc);
+  if (match !== undefined && match >= 12) {
+    return EXTENSION_LABELS[match] ?? getIntervalLabel(pc);
+  }
+  return getIntervalLabel(pc);
 }
 
 /**

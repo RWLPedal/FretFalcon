@@ -24,6 +24,8 @@ export interface NoteRenderData {
   fillColor?: string | string[];
   strokeColor?: string | string[];
   strokeWidth?: number;
+  /** Explicit colour for the note's label text/icon (e.g. for transparent-fill dotted markers). */
+  labelColor?: string;
   icon?: NoteIcon;
   colorSchemeOverride?: FretboardColorScheme;
   radiusOverride?: number;
@@ -713,6 +715,7 @@ export class Fretboard {
             fgColor = getComputedStyle(document.documentElement)
               .getPropertyValue('--text-primary').trim() || '#333';
           }
+          if (noteData.labelColor) fgColor = noteData.labelColor;
 
           if (noteData.dashed) ctx.setLineDash([4, 3]);
           if (isDonut) {

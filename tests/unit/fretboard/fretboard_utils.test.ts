@@ -3,10 +3,12 @@ import {
   getKeyIndex,
   getChordTones,
   getIntervalLabel,
+  chordToneIntervalLabel,
   getNotesInScale,
   NOTE_NAMES_FROM_A,
 } from '../../../ts/fretboard/fretboard_utils'
 import { scales } from '../../../ts/music/scales'
+import { ChordType } from '../../../ts/music/chords'
 import { NoteName } from '../../../ts/music/music_types'
 
 // A-indexed semitone positions (0=A, 3=C, 7=E, etc.)
@@ -69,6 +71,35 @@ describe('getIntervalLabel', () => {
   it('wraps values >= 12 via modulo', () => {
     expect(getIntervalLabel(12)).toBe(getIntervalLabel(0))
     expect(getIntervalLabel(15)).toBe(getIntervalLabel(3))
+  })
+})
+
+describe('chordToneIntervalLabel', () => {
+  it('reads pitch class 2 as a 9th in extension chords, not a 2nd', () => {
+    expect(chordToneIntervalLabel(2, ChordType.ADD9)).toBe('9')
+    expect(chordToneIntervalLabel(2, ChordType.MINOR_ADD9)).toBe('9')
+    expect(chordToneIntervalLabel(2, ChordType.MAJ9)).toBe('9')
+    expect(chordToneIntervalLabel(2, ChordType.MIN9)).toBe('9')
+  })
+
+  it('keeps pitch class 2 as a real 2nd where the chord intends one', () => {
+    expect(chordToneIntervalLabel(2, ChordType.SUS2)).toBe('2')
+  })
+
+  it('falls back to the plain label when the pitch class is not part of the chord', () => {
+    expect(chordToneIntervalLabel(2, ChordType.MAJOR)).toBe('2')
+    expect(chordToneIntervalLabel(2, ChordType.MINOR)).toBe('2')
+  })
+
+  it('leaves chord tones inside the octave unchanged', () => {
+    expect(chordToneIntervalLabel(0, ChordType.ADD9)).toBe('R')
+    expect(chordToneIntervalLabel(4, ChordType.ADD9)).toBe('3')
+    expect(chordToneIntervalLabel(7, ChordType.ADD9)).toBe('5')
+    expect(chordToneIntervalLabel(3, ChordType.MINOR_ADD9)).toBe('b3')
+  })
+
+  it('accepts a raw compound interval (14) the same as its pitch class (2)', () => {
+    expect(chordToneIntervalLabel(14, ChordType.ADD9)).toBe('9')
   })
 })
 

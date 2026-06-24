@@ -58,7 +58,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #4caf50;
+  background: var(--accent);
   flex-shrink: 0;
 }
 
@@ -432,4 +432,48 @@
   color: var(--text-muted);
   width: 100%;
   margin-top: 4px;
+}
+
+/* ─── Disabled controls (e.g. single-option tuning select) ─────────────── */
+.settings-modal-body select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.settings-modal-body .select.is-fullwidth:has(select:disabled)::after {
+  opacity: 0.4;
+}
+
+/* ─── Mobile layout ─────────────────────────────────────────────────────
+   The settings rows are a fixed 140px label + flexible control on desktop.
+   On narrow screens that leaves the control column too tight, which clipped
+   segmented controls (overflow:hidden) so options like "8-string"/"Tenor"
+   became unreachable. Stack the label above a full-width control, and let
+   segmented + radio controls fill the row and wrap instead of clipping. */
+@media (max-width: 768px) {
+  .settings-row,
+  .settings-modal-body .tuning-editor .field.is-horizontal {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .settings-row-label,
+  .settings-modal-body .tuning-editor .field-label.is-normal {
+    flex: none;
+  }
+
+  .settings-row-control {
+    width: 100%;
+  }
+
+  .settings-segmented {
+    display: flex;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .settings-segmented-btn {
+    flex: 1 1 auto;
+    text-align: center;
+  }
 }

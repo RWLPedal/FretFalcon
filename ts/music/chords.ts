@@ -23,6 +23,28 @@ export enum ChordType {
   OTHER = "Other",
 }
 
+/**
+ * Canonical semitone intervals from the root for each chord quality. Extensions
+ * exceed 11 (e.g. the 9th is 14, not 2) so that interval-labelling code can tell
+ * a 9th from a 2nd, an 11th from a 4th, a 13th from a 6th — a pitch class alone
+ * is ambiguous. See `chordToneIntervalLabel` in fretboard_utils.
+ */
+export const CHORD_TYPE_INTERVALS: Record<ChordType, number[]> = {
+  [ChordType.MAJOR]: [0, 4, 7],
+  [ChordType.MINOR]: [0, 3, 7],
+  [ChordType.DIM]: [0, 3, 6],
+  [ChordType.DOM7]: [0, 4, 7, 10],
+  [ChordType.MAJ7]: [0, 4, 7, 11],
+  [ChordType.MIN7]: [0, 3, 7, 10],
+  [ChordType.MAJ9]: [0, 4, 7, 11, 14],
+  [ChordType.MIN9]: [0, 3, 7, 10, 14],
+  [ChordType.SUS2]: [0, 2, 7],
+  [ChordType.SUS4]: [0, 5, 7],
+  [ChordType.ADD9]: [0, 4, 7, 14],
+  [ChordType.MINOR_ADD9]: [0, 3, 7, 14],
+  [ChordType.OTHER]: [],
+};
+
 /** Display order for chord types in the UI. */
 export const CHORD_TYPE_SORT_ORDER: ChordType[] = [
   ChordType.MAJOR,
@@ -55,6 +77,9 @@ export class Chord {
   readonly rootKey: NoteName;
   /** Shape name for moveable chords (e.g. "E-Shape"). Undefined for open/library chords. */
   shapeName?: string;
+  /** CAGED voicing letter for moveable shapes (e.g. "E", "A", "D", "C"). Undefined for
+   * non-CAGED helper shapes; only tagged shapes participate in the voicing selector. */
+  voicing?: string;
   /** String index holding the root note. Only set for moveable-shape chords. */
   rootStringIndex?: number;
   /** Frets above the barre fret where the root note sits. Only set for moveable-shape chords. */
@@ -94,6 +119,7 @@ export class Chord {
     rootStringIndex: number,
     openRootKey: NoteName,
     rootFretOffset?: number,
+    voicing?: string,
   ): Chord {
     const t = new Chord(
       shapeName,
@@ -104,6 +130,7 @@ export class Chord {
       openRootKey,
     );
     t.shapeName = shapeName;
+    t.voicing = voicing;
     t.rootStringIndex = rootStringIndex;
     t.rootFretOffset = rootFretOffset;
     return t;

@@ -100,7 +100,8 @@ export const NOTE_PALETTE_INDEX: Readonly<Record<string, number>> = {
 
 /**
  * Maps every interval label to a palette index.
- * Enharmonic intervals (d5 / #4, b6 / #5) share one palette slot.
+ * Enharmonic intervals (d5 / #4, b6 / #5) share one palette slot, as do octave
+ * extensions and their simple-interval equivalents (9 with 2, 11 with 4, 13 with 6).
  */
 export const INTERVAL_PALETTE_INDEX: Readonly<Record<string, number>> = {
   R:    0,
@@ -117,6 +118,14 @@ export const INTERVAL_PALETTE_INDEX: Readonly<Record<string, number>> = {
   "6":  9,
   b7:   10,
   "7":  11,
+  // Compound (octave-extended) intervals share a colour tier with their simple form.
+  b9:   1,
+  "9":  2,
+  "#9": 4,
+  "11": 5,
+  "#11": 6,
+  b13:  8,
+  "13": 9,
 };
 
 // ---------------------------------------------------------------------------

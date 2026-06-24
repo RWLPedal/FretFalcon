@@ -2,10 +2,6 @@ import { ViewModule, ViewContext, viewId } from "../module_types";
 import { NavSection } from "../../core/ids";
 import { TimerView } from "./timer_view";
 import { SignalKind } from "../../panels/link_types";
-import {
-  registerDriveSource,
-  registerDriveTarget,
-} from "../../panels/drive_registry";
 
 const TIMER_ID = viewId("floating_timer");
 
@@ -14,7 +10,9 @@ const module: ViewModule = {
   panel: {
     displayName: "Timer",
     icon: "alarm",
-    size: { default: { cols: 14, rows: 7 }, min: { cols: 12, rows: 7 }, max: { cols: 29, rows: 13 } },
+    // Short/wide main face (status lives in the title bar, so the body is just the
+    // bar + controls); `max` is tall enough to fit the inline config when open.
+    size: { default: { cols: 24, rows: 8 }, min: { cols: 20, rows: 7 }, max: { cols: 40, rows: 24 } },
   },
   nav: {
     section: NavSection.PracticeTools,
@@ -40,7 +38,8 @@ const module: ViewModule = {
     ],
   },
   createView(_ctx: ViewContext, state?: unknown): TimerView {
-    return new TimerView((state as any)?.duration ?? 300);
+    // TimerView normalizes the blob (and accepts a legacy `{ duration }` shape).
+    return new TimerView(state);
   },
 };
 

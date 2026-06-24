@@ -7,16 +7,6 @@ function semitoneToNoteName(semitone: number): string {
   return NOTE_NAMES[((semitone % 12) + 12) % 12];
 }
 
-function noteNameToSemitone(name: string): number | null {
-  const idx = NOTE_NAMES.findIndex(n => n.toLowerCase() === name.toLowerCase().replace("bb", "#").replace("b", "#").replace("##", "b"));
-  if (idx !== -1) return idx;
-  // flat -> sharp mapping
-  const flatMap: Record<string, string> = { "Bb": "A#", "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#" };
-  const normalized = flatMap[name] ?? name;
-  const idx2 = NOTE_NAMES.findIndex(n => n.toLowerCase() === normalized.toLowerCase());
-  return idx2 !== -1 ? idx2 : null;
-}
-
 export type TuningEditorCallbacks = {
   onSave: (name: string, notes: number[]) => void;
   onDelete: (name: string) => void;

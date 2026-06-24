@@ -76,11 +76,12 @@ describe('getMoveableShapes ukulele', () => {
     expect(shape.rootStringIndex).toBe(1)
   })
 
-  it('A Minor Shape at A (baseFret=0) produces correct frets', () => {
+  it('A-Shape Minor at A (baseFret=0) produces correct frets', () => {
     const shapes = getMoveableShapes(InstrumentName.Ukulele, 'Am', UKULELE_GCEA_TUNING, ChordType.MINOR)
-    const shape = shapes.find(s => s.shapeName === 'A Minor Shape')!
+    const shape = shapes.find(s => s.shapeName === 'A-Shape')!
     expect(shape).toBeDefined()
     expect(shape.strings).toEqual([2, 0, 0, 0])
+    expect(shape.voicing).toBe('A')
   })
 
   it('A-Shape Major at A (baseFret=0) produces correct frets', () => {

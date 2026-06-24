@@ -82,11 +82,11 @@ function familyForInstrument(
 const MODAL_HTML = `
 <div class="modal" id="settings-modal">
   <div class="modal-background"></div>
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
     <header class="modal-card-head settings-modal-head">
       <div class="settings-modal-title">
         <span class="settings-app-label">FretFalcon</span>
-        <h2 class="settings-title">Settings</h2>
+        <h2 class="settings-title" id="settings-modal-title">Settings</h2>
       </div>
       <button class="delete" aria-label="close" id="settings-modal-close"></button>
     </header>
@@ -109,6 +109,7 @@ export class SettingsManager {
   private onSave: SaveCallback;
   private themePicker: ThemeSwatchPicker | null = null;
   private category: InstrumentCategory;
+  private previouslyFocused: HTMLElement | null = null;
 
   constructor(settings: AppSettings, onSave: SaveCallback) {
     this.settings = settings;
@@ -135,16 +136,62 @@ export class SettingsManager {
     this.modalEl
       .querySelector("#settings-reset-button")
       ?.addEventListener("click", () => this._resetToDefaults());
+
+    // Keyboard support: Esc closes, Tab is trapped within the dialog.
+    this.modalEl.addEventListener("keydown", (e) => this._onKeyDown(e));
+  }
+
+  private _onKeyDown(e: KeyboardEvent): void {
+    if (!this.isOpen()) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      this.close();
+      return;
+    }
+    if (e.key === "Tab") this._trapTab(e);
+  }
+
+  private _focusableEls(): HTMLElement[] {
+    const card = this.modalEl?.querySelector(".modal-card");
+    if (!card) return [];
+    const sel =
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    return [...card.querySelectorAll<HTMLElement>(sel)].filter(
+      (el) => el.offsetParent !== null,
+    );
+  }
+
+  private _trapTab(e: KeyboardEvent): void {
+    const focusable = this._focusableEls();
+    if (focusable.length === 0) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey && active === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && active === last) {
+      e.preventDefault();
+      first.focus();
+    }
   }
 
   public open(): void {
     if (!this.modalEl) return;
+    this.previouslyFocused = document.activeElement as HTMLElement | null;
     this._populate();
     this.modalEl.classList.add("is-active");
+    // Move focus into the dialog for keyboard users.
+    (
+      this.modalEl.querySelector("#settings-modal-close") as HTMLElement | null
+    )?.focus();
   }
 
   public close(): void {
     this.modalEl?.classList.remove("is-active");
+    // Restore focus to whatever opened the modal (e.g. the settings button).
+    this.previouslyFocused?.focus?.();
+    this.previouslyFocused = null;
   }
 
   public isOpen(): boolean {
@@ -345,6 +392,11 @@ export class SettingsManager {
       opt.selected = t.name === currentTuning;
       tuningSelect.appendChild(opt);
     });
+    // Only one tuning to choose from — keep the dropdown but grey it out.
+    if (tuningOptions.length <= 1) {
+      tuningSelect.disabled = true;
+      tuningSelect.title = "Only one tuning available for this instrument";
+    }
     tuningSelectWrap.appendChild(tuningSelect);
     tuningSelect.addEventListener("change", () => {
       this._applyInstrumentChange("tuning", tuningSelect.value);
@@ -387,10 +439,16 @@ export class SettingsManager {
           },
           onDelete: (name) => {
             if (!this.settings.customTunings?.[instrument]) return;
-            this.settings.customTunings[instrument] =
-              this.settings.customTunings[instrument]!.filter(
-                (t) => t.name !== name,
-              );
+            const remaining = this.settings.customTunings[instrument]!.filter(
+              (t) => t.name !== name,
+            );
+            // Prune the key entirely once its last custom tuning is gone, rather
+            // than leaving an empty array behind in storage.
+            if (remaining.length > 0) {
+              this.settings.customTunings[instrument] = remaining;
+            } else {
+              delete this.settings.customTunings[instrument];
+            }
             this.category.updateCustomTunings(this.settings.customTunings);
             this.settings = {
               ...this.settings,

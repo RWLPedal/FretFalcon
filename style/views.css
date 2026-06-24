@@ -103,75 +103,147 @@
 .timer-view {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 6px 8px;
-}
-.timer-title {
-  font-size: 1.25em;
-  font-weight: 600;
-  color: var(--clr-text);
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.timer-ring-container {
-  position: relative;
-  width: 220px;
-  height: 220px;
-  align-self: center;
-}
-.timer-ring {
-  width: 100%;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
   height: 100%;
-  transform: rotate(-90deg) scale(-1, 1);
+  box-sizing: border-box;
 }
-.timer-ring-bg {
-  fill: none;
-  stroke: var(--clr-border);
-  stroke-width: 12;
+/* When the config is open the face stacks from the top (so the panel-grow
+   measurement isn't split by vertical centering). */
+.timer-view--config-open {
+  justify-content: flex-start;
 }
-.timer-ring-progress {
-  fill: none;
-  stroke: var(--clr-primary);
-  stroke-width: 12;
-  stroke-linecap: round;
-  stroke-dasharray: 628.3;
-  stroke-dashoffset: 0;
-  transition: stroke-dashoffset 0.9s linear;
+
+/* The status (phase, "Done", idle summary) is shown in the panel title bar, not
+   in the body — see TimerView.updateTitle(). */
+
+/* Progress bar — single fill (simple), empty (stopwatch) */
+.timer-bar {
+  width: 100%;
+  height: 7px;
+  background: var(--clr-border);
+  border-radius: 4px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.timer-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--clr-primary);
+  border-radius: 4px;
+  transition: width 0.9s linear;
+}
+
+/* Segmented bar (intervals) — one track per phase */
+.timer-bar--segmented {
+  display: flex;
+  gap: 3px;
+  background: transparent;
+  overflow: visible;
+}
+.timer-seg {
+  flex: 1 1 0;
+  height: 7px;
+  background: var(--clr-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.timer-seg-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--clr-primary);
+  border-radius: 4px;
+  transition: width 0.4s linear;
+}
+.timer-seg--rest .timer-seg-fill {
+  background: var(--clr-primary);
+  opacity: 0.45;
+}
+
+/* Controls row: buttons left, time display right */
+.timer-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .timer-controls {
   display: flex;
   flex-direction: row;
-  justify-content: center;
+  align-items: center;
   gap: 8px;
 }
 .timer-start-pause,
-.timer-reset {
-  padding: 4px 14px;
-  font-size: 1em;
-  min-width: 2.5em;
+.timer-reset,
+.timer-settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--clr-border);
+  background: transparent;
+  color: var(--clr-text);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.timer-reset:hover,
+.timer-settings-btn:hover {
+  border-color: var(--clr-primary);
+  color: var(--clr-primary);
+}
+.timer-start-pause {
+  background: var(--clr-primary);
+  border-color: var(--clr-primary);
+  color: var(--clr-bg, #fff);
+}
+.timer-start-pause:hover {
+  filter: brightness(1.05);
+}
+.timer-start-pause .material-icons {
+  font-size: 22px;
+}
+.timer-reset .material-icons,
+.timer-settings-btn .material-icons {
+  font-size: 18px;
+}
+
+/* Time display + edit affordance */
+.timer-display-wrap {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.timer-edit {
+  font-size: 16px;
+  color: var(--clr-primary);
+  cursor: pointer;
+  flex: 0 0 auto;
 }
 .timer-display {
   font-family: "DM Mono", "SF Mono", "Fira Code", "Consolas", monospace;
-  font-size: 2.2em;
+  font-size: 2.1em;
   font-weight: 400;
   line-height: 1.1;
-  cursor: pointer;
   border-radius: 6px;
-  padding: 4px 8px;
+  padding: 2px 6px;
   background: transparent;
   color: var(--clr-text);
   user-select: none;
-  min-width: 7.5ch;
-  text-align: center;
+  text-align: right;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   white-space: nowrap;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+}
+.timer-display.is-editable {
+  cursor: pointer;
 }
 .timer-display[contenteditable="true"],
 .timer-display.is-editing {
@@ -181,47 +253,84 @@
   user-select: text;
 }
 
-/* ─── TimerView compact layout (container too narrow for ring) ───────────── */
-.timer-compact-row {
-  display: none;
-}
-.timer-view--compact .timer-ring-container,
-.timer-view--compact .timer-controls {
-  display: none;
-}
-.timer-view--compact .timer-compact-row {
+/* ─── TimerView inline config (below the main face) ─────────────────────── */
+.timer-config {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 2px 0;
+  gap: 7px;
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--clr-border);
 }
-.timer-compact-controls {
+.timer-settings-row {
   display: flex;
   flex-direction: row;
   align-items: center;
+  gap: 8px;
+}
+/* Small, muted, uppercase row labels — same register as .config-label elsewhere. */
+.timer-config .config-label {
+  flex: 0 0 auto;
+  min-width: 3.6rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--clr-text));
+  line-height: 1.1;
+}
+/* Neutralize the shared .config-compact chrome (border/margin) — we only want
+   its .config-toggle-btn styling for the segmented groups + steppers. */
+.timer-config-controls.config-compact {
+  flex: 1 1 auto;
+  border-bottom: 0;
+  margin-bottom: 0;
+  padding: 0;
+  max-height: none;
+  overflow: visible;
   gap: 4px;
 }
-.timer-display--compact {
-  position: static;
-  transform: none;
-  font-size: 1.3em;
-  padding: 2px 4px;
-  min-width: 0;
-  flex-shrink: 0;
+/* Compact toggle buttons (override editor.css's .config-compact sizing). */
+.timer-config .timer-config-controls .config-toggle-btn {
+  font-size: 0.62rem;
+  height: 20px;
+  padding: 0 6px;
 }
-.timer-bar {
-  width: 100%;
-  height: 6px;
-  background: var(--clr-border);
-  border-radius: 3px;
-  overflow: hidden;
+.timer-seg-group {
+  flex-wrap: wrap;
 }
-.timer-bar-fill {
-  height: 100%;
-  background: var(--clr-primary);
-  border-radius: 3px;
-  width: 100%;
-  transition: width 0.9s linear;
+/* Cycle steppers all share one row. */
+.timer-steppers {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.timer-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  white-space: nowrap;
+}
+.timer-config .timer-config-controls .timer-step-btn.config-toggle-btn {
+  min-width: 18px;
+  padding: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+.timer-step-val {
+  font-family: "DM Mono", "SF Mono", "Consolas", monospace;
+  font-size: 0.66rem;
+  font-weight: 400;
+  min-width: 2.8ch;
+  text-align: center;
+  color: var(--clr-text);
+}
+.timer-step-unit {
+  font-size: 0.52rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted, var(--clr-text));
 }
 
 /* ─── SchedulePlaybackView ───────────────────────────────────────────────── */
@@ -390,6 +499,266 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ─── Chord Card + Mini Fretboard ────────────────────────────────────────── */
+.chord-card {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  position: relative;
+  vertical-align: top;
+  margin: 5px;
+  padding: 8px 10px 9px;
+  background: color-mix(in oklch, var(--panel-bg) 93%, var(--border));
+  border: 1px solid color-mix(in oklch, var(--border) 85%, transparent);
+  border-radius: 10px;
+  box-shadow: var(--shadow, 0 1px 3px rgba(0, 0, 0, 0.08));
+}
+.chord-card.is-clickable {
+  cursor: pointer;
+  appearance: none;
+  font-family: inherit;
+  color: inherit;
+  text-align: center;
+  transition: transform 0.08s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+.chord-card.is-clickable:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  box-shadow: var(--shadow-panel, 0 6px 16px rgba(0, 0, 0, 0.14));
+}
+.chord-card.is-anchor {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent) 38%, transparent);
+}
+.chord-card.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.chord-card-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--text-primary);
+}
+.chord-card-shape {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.chord-card-degree {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 600;
+  font-size: 0.96em;
+  color: var(--accent);
+}
+.chord-card-warn { color: var(--note-pivot, #e6a817); font-size: 0.85em; }
+.chord-card-diagram { line-height: 0; }
+.chord-card-hint {
+  max-width: 130px;
+  font-size: 0.66rem;
+  font-style: italic;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--text-muted);
+}
+.mini-fb { display: block; overflow: visible; }
+.mini-fb.is-active { outline: 2px solid var(--accent); border-radius: 4px; }
+.mini-fb-line {
+  stroke: color-mix(in oklch, var(--text-muted) 42%, var(--border));
+  stroke-width: 1;
+}
+.mini-fb-nut {
+  stroke: color-mix(in oklch, var(--text-primary) 70%, var(--border));
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.mini-fb-pos {
+  fill: var(--text-muted);
+  font-family: "Spline Sans Mono", monospace;
+  font-weight: 400;
+}
+.mini-fb-mute {
+  stroke: var(--text-muted);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  fill: none;
+}
+.mini-fb-note { stroke: none; }
+.mini-fb-note-label {
+  font-family: "Hanken Grotesk", sans-serif;
+  font-weight: 600;
+}
+.mini-fb-root-ring { fill: none; stroke-width: 1.5; }
+.mini-fb-barre { fill: none; stroke: var(--chord-barre, var(--note-second)); }
+.mini-fb-barre-label {
+  fill: #fff;
+  font: 600 9px "Hanken Grotesk", sans-serif;
+}
+
+/* ─── Chord Tool (control bar + tabs + content) ──────────────────────────── */
+.chord-tool-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+/* The bar reuses .config-compact for styled selects/toggles + a single
+   wrapping row; only the spacing differs from the drawer default. Never let it
+   shrink — .config-compact has overflow:hidden, so a squeezed bar would clip its
+   (possibly wrapped) controls instead of giving the scroll to the content. */
+.chord-tool-bar {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  margin-bottom: 0;
+}
+.chord-tool-tabs {
+  display: inline-flex;
+  gap: 0;
+}
+.chord-tool-tabs .config-toggle-btn:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.chord-tool-tabs .config-toggle-btn:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: -1px;
+}
+/* Voicing select: only shown in Family mode (guitar). */
+.chord-tool-voicing.is-hidden { display: none; }
+.chord-tool-content {
+  flex: 1 1 auto;
+  overflow: auto;
+  padding: 8px;
+}
+.chord-card-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+}
+.chord-family-grid { gap: 2px; }
+.chord-tool-empty {
+  width: 100%;
+  padding: 18px 8px;
+  text-align: center;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+/* ─── Chord Interactive (lever-rail) View ────────────────────────────────── */
+.chord-interactive {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  padding: 8px 12px 14px;
+}
+
+/* Header: back · chord name */
+.chord-interactive-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.chord-interactive-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  color: var(--text-primary);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.chord-interactive-back:hover { border-color: var(--accent); }
+.chord-interactive-back .material-icons { font-size: 20px; }
+/* Board */
+.chord-interactive-board {
+  line-height: 0;
+  align-self: center;
+}
+
+/* Chord name (in the header) */
+.chord-interactive-name {
+  font-size: 1.3rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text-primary);
+}
+
+/* Modifier section: quality buttons on the left, live spelling on the right.
+   (The voicing is chosen from the shared control bar.) */
+.chord-interactive-section {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+/* Live spelling: note name over its interval number, interval-coloured. */
+.chord-interactive-tones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-left: auto;
+}
+.chord-tone {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+  font-family: "Spline Sans Mono", monospace;
+}
+.chord-tone-note {
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.chord-tone-num {
+  font-size: 0.66rem;
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+/* Modifiers. These buttons live outside .config-compact, so they don't inherit
+   the shared .config-toggle-btn base style — they're styled standalone here. */
+.chord-interactive-mods {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chord-mod-btn {
+  font-family: inherit;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.chord-mod-btn:hover { border-color: var(--accent); }
+.chord-mod-btn.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
 }
 
 /* ─── Metronome View ─────────────────────────────────────────────────────── */
@@ -610,10 +979,6 @@ body.dark-theme .legend-view .legend-title {
   min-width: unset;
 }
 
-.drone-view .config-compact .drone-octave-select select {
-  padding-right: 18px;
-}
-
 .drone-view .config-compact .drone-chord-select select {
   width: 62px;
   min-width: unset;
@@ -622,7 +987,6 @@ body.dark-theme .legend-view .legend-title {
 .drone-view .config-compact .drone-envelope-select select {
   width: auto;
   min-width: unset;
-  padding-right: 22px;
 }
 
 .drone-play-btn {

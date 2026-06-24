@@ -111,18 +111,19 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
       // Capo is display-only here: re-voice to a shape playable above the capo while keeping the
       // sounding chord, and keep `signalKey` untransposed so backing-track highlight matching works.
       let displayChord: Chord;
-      let title: string;
+      let subtitle: string | undefined;
       if (capoCtx) {
         displayChord = capoVoicing(String(baseChord.rootKey), baseChord.chordType, chordDetails.chordName, capoFret, capoCtx).chord;
-        title = `${chordDetails.chordName} (${numeral})`;
       } else {
         displayChord = baseChord;
         const isMoveable = baseChord !== chordData;
-        title = isMoveable
-          ? `${chordDetails.chordName} [${baseChord.shapeName}] (${numeral})`
-          : `${chordDetails.chordName} (${numeral})`;
+        subtitle = isMoveable ? baseChord.shapeName : undefined;
       }
-      this.chordSlots.push({ signalKey, view: new ChordDiagramView(displayChord, title, this.fretboardConfig), unresolvable: null });
+      this.chordSlots.push({
+        signalKey,
+        view: new ChordDiagramView(displayChord, chordDetails.chordName, this.fretboardConfig, undefined, false, undefined, { degree: numeral, subtitle }),
+        unresolvable: null,
+      });
     }
   }
 
@@ -237,7 +238,13 @@ class UnresolvableChordView extends BaseView {
 
     const titleEl = document.createElement('div');
     titleEl.classList.add('chord-diagram-title');
-    titleEl.textContent = `${this.chordName} (${this.numeral})`;
+    const nameEl = document.createElement('span');
+    nameEl.textContent = `${this.chordName} `;
+    titleEl.appendChild(nameEl);
+    const deg = document.createElement('span');
+    deg.classList.add('chord-card-degree');
+    deg.textContent = this.numeral;
+    titleEl.appendChild(deg);
     const warn = document.createElement('span');
     warn.textContent = ' ⚠';
     warn.title = 'No chord shape found for this chord';

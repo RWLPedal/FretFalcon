@@ -303,6 +303,11 @@ export class PanelHost {
     return this.instances.get(instanceId)?.viewId ?? null;
   }
 
+  /** Ids of all currently-open panel instances (snapshot — safe to mutate during iteration). */
+  public getOpenInstanceIds(): string[] {
+    return [...this.instances.keys()];
+  }
+
   public getFeatureTypeName(instanceId: string): string | null {
     const record = this.instances.get(instanceId);
     if (!record) return null;

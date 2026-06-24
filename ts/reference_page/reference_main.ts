@@ -1,6 +1,6 @@
 import { SidebarView } from "./sidebar_view";
 import { FloatingViewManager } from '../panels/panel_host';
-import { AppSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
+import { AppSettings, InstrumentSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
 import { ThemeManager, Theme } from "../theme_manager";
 import { instrumentCategory } from "../fretboard/fretboard_category";
 import { SettingsManager } from "../settings_manager";
@@ -10,7 +10,7 @@ import { registerFloatingView } from '../panels/panel_registry';
 import { registerDriveSource, registerDriveTarget, registerBroadcastSource } from '../panels/drive_registry';
 import { VIEW_MODULES } from '../modules/manifest';
 import { ViewModule } from '../modules/module_types';
-import { registerNavEntry } from './nav_registry';
+import { registerNavEntry, getNavEntries } from './nav_registry';
 import { FloatingViewDescriptor, FretboardFloatingViewDescriptor } from '../panels/panel_types';
 import { setFloatingViewGridSize, setFloatingViewContentOriginX, GRID_UNIT } from '../panels/panel_wrapper';
 import { initOnboarding } from '../onboarding/onboarding_tour';
@@ -182,11 +182,15 @@ class ReferencePage {
 
     private saveSettings(newSettings: AppSettings): void {
         try {
+            const prevInstrumentSettings = this.settings.instrumentSettings;
             localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
             this.settings = newSettings;
             this.themeManager.apply(newSettings.theme);
             this.settingsManager?.updateSettings(newSettings);
             if (this.floatingViewManager) {
+                // Close panels the new instrument/tuning no longer supports before
+                // re-rendering the rest, so doomed panels aren't repainted first.
+                this._closeIncompatiblePanels(prevInstrumentSettings, newSettings.instrumentSettings);
                 this.floatingViewManager.applySettingsChange(newSettings);
             }
             // Refresh sidebar so instrument-dependent buttons update.
@@ -197,6 +201,46 @@ class ReferencePage {
         } catch (e) {
             console.error("Failed to save settings to localStorage:", e);
             alert("Error saving settings.");
+        }
+    }
+
+    /**
+     * When the instrument or tuning changes, close any open panels that are no
+     * longer compatible — reusing the same `requiredInstruments` / tuning gates
+     * that hide tools from the sidebar. Prevents e.g. a CAGED or chord panel from
+     * lingering and rendering nonsensical shapes after switching to bass.
+     */
+    private _closeIncompatiblePanels(prev: InstrumentSettings, next: InstrumentSettings): void {
+        const instrumentChanged = prev.instrument !== next.instrument;
+        const tuningChanged = prev.tuning !== next.tuning;
+        if (!instrumentChanged && !tuningChanged) return;
+
+        const nextInstrument = next.instrument as string;
+        const nextTuning = next.tuning;
+        const navRequired = new Map<string, readonly string[] | undefined>(
+            getNavEntries().map((e) => [e.viewId, e.requiredInstruments]),
+        );
+        const featureTypes = instrumentCategory.getFeatureTypes();
+
+        for (const id of this.floatingViewManager.getOpenInstanceIds()) {
+            const viewId = this.floatingViewManager.getViewId(id);
+            if (!viewId) continue;
+
+            let incompatible = false;
+            const required = navRequired.get(viewId);
+            if (required && !required.includes(nextInstrument)) incompatible = true;
+
+            if (!incompatible) {
+                const ftName = this.floatingViewManager.getFeatureTypeName(id);
+                const ft = ftName ? featureTypes.get(ftName) : undefined;
+                if (ft?.requiredInstruments && !ft.requiredInstruments.includes(nextInstrument)) {
+                    incompatible = true;
+                } else if (ft?.isCompatibleWithTuning && !ft.isCompatibleWithTuning(nextInstrument, nextTuning)) {
+                    incompatible = true;
+                }
+            }
+
+            if (incompatible) this.floatingViewManager.destroyView(id);
         }
     }
 

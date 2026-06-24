@@ -58,6 +58,10 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  /* Match the select's font-size so the ::after arrow (sized in em against the
+     wrapper) and the select's em-based right padding share one basis — otherwise
+     the arrow resolves against the inherited 1rem and overlaps the option text. */
+  font-size: 0.78rem;
 }
 .config-compact .config-select-wrap select {
   font-family: inherit;

@@ -26,6 +26,12 @@ export function setFloatingViewContentOriginX(px: number): void {
   moduleContentOriginX = Math.max(0, px);
 }
 
+/** Current square grid cell size in px, or null when snapping is disabled. Lets a
+ *  view round a programmatic resize to whole cells so the panel stays grid-aligned. */
+export function getFloatingViewGridCell(): GridCell | null {
+  return moduleGridCell;
+}
+
 // The grid cell is square (w === h; see _applyGrid), so the two axes share one snap
 // unit. Two cases only: an origin-free snap for sizes and for the y position (the grid's
 // y origin is 0), and an origin-aware snap for the x position (below).
