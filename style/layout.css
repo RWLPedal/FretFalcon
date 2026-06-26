@@ -423,8 +423,8 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 2px;
-  padding: 5px 8px 8px;
+  gap: 1px;
+  padding: 5px 5px 8px;
 }
 .sidebar-collapse-btn--far-right {
   margin-left: auto;
@@ -432,7 +432,7 @@ body.dark-theme #schedule-accordion:not(.collapsed) #schedule-editor-container {
 .sidebar-tools-bar .topbar-icon-button,
 .sidebar-tools-bar #settings-button {
   font-size: 1rem;
-  padding: 2px 3px;
+  padding: 2px 2px;
 }
 
 /* Sidebar collapsed state */

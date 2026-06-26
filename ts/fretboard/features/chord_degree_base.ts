@@ -57,6 +57,22 @@ export function chordEntryArg(diatonicOnly = false): ConfigurationSchemaArg {
 }
 
 /**
+ * Builds the "{prefix} in {root} {mode}" header shared by chord-degree features.
+ * When the prefix (Roman numerals / chord names) is empty — e.g. a freshly opened,
+ * not-yet-configured panel — falls back to "{fallbackLabel} — {root} {mode}" so the
+ * title isn't a leading-space fragment and stays distinct per tool.
+ */
+export function composeDegreeHeader(
+  prefix: string,
+  rootNote: string,
+  modeLabel: string,
+  fallbackLabel: string,
+): string {
+  const where = `${rootNote} ${modeLabel}`;
+  return prefix.trim() ? `${prefix} in ${where}` : `${fallbackLabel} — ${where}`;
+}
+
+/**
  * Abstract base for chord-degree features that respond to drive signals.
  * Manages the active-chord signal listener and `activeChordKey` state.
  */

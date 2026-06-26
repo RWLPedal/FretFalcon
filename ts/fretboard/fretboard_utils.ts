@@ -89,6 +89,14 @@ export function getKeyIndex(noteName: string): number {
     return idx !== undefined ? idx : -1;
 }
 
+/** Normalizes any enharmonic note name (e.g. "Bb", "Db") to its sharp spelling
+ *  ("A#", "C#") — the canonical spelling used by the app's root-note dropdowns.
+ *  Unrecognized names pass through unchanged. */
+export function toSharpNoteName(noteName: string): string {
+    const i = getKeyIndex(noteName);
+    return i === -1 ? noteName : (NOTE_NAMES_FROM_A[i] ?? noteName);
+}
+
 /** Gets chord tones for highlighting (simple implementation) */
 export function getChordTones(chordTonesStr: string | undefined): Array<Array<string>> {
     if (!chordTonesStr) return [];

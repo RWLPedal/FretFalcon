@@ -586,8 +586,18 @@ export class FloatingLayout implements LayoutStrategy {
       const el = chrome.wrapperEl;
       if (animate) {
         el.classList.add('is-reflowing');
-        const onDone = () => { el.removeEventListener('transitionend', onDone); el.classList.remove('is-reflowing'); };
-        el.addEventListener('transitionend', onDone);
+        // Remove on transitionend, but also on a timeout fallback: panels whose rect
+        // is unchanged never fire transitionend, which would otherwise leave the class
+        // (and its left/top/width/height transition) stuck and make later drags laggy.
+        let cleared = false;
+        const clear = () => {
+          if (cleared) return;
+          cleared = true;
+          el.removeEventListener('transitionend', clear);
+          el.classList.remove('is-reflowing');
+        };
+        el.addEventListener('transitionend', clear);
+        setTimeout(clear, DURATION_MS + 50);
       }
       this._applyRectPx(el, rect, g);
     }

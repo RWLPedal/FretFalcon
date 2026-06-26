@@ -835,20 +835,22 @@ export function getChordLibraryForInstrument(
   return CHORD_LIBRARIES[instrument] ?? chord_library;
 }
 
-/** All root notes in UI display order. */
+/** All root notes in UI display order. Sharps only, to match every other panel's
+ *  note-name dropdowns. Enharmonic inputs (Bb/Eb/Ab from links or older saved
+ *  panels) are normalized to these via toSharpNoteName at the ingestion points. */
 export const ALL_CHORD_ROOTS = [
   "A",
-  "Bb",
+  "A#",
   "B",
   "C",
   "C#",
   "D",
-  "Eb",
+  "D#",
   "E",
   "F",
   "F#",
   "G",
-  "Ab",
+  "G#",
 ] as const;
 
 /**

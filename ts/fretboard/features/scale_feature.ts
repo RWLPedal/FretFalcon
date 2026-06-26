@@ -58,7 +58,13 @@ const scaleConfigSpec: ConfigSpec<ScaleConfig> = {
   scaleName: {
     label: 'Scale Name',
     codec: enumCodec(SCALE_NAME_OPTIONS),
-    ui: { kind: 'select', options: SCALE_NAME_OPTIONS.map(v => ({ value: v })) },
+    ui: { kind: 'select', options: SCALE_NAME_OPTIONS.map(v => ({
+      value: v,
+      // Label the two diatonic scales with their modal name so the vocabulary
+      // matches the mode dropdowns ("Ionian (Major)" …). Value/name stays plain
+      // so titles ("C Major") and drive signals are unchanged.
+      label: v === 'Major' ? 'Major (Ionian)' : v === 'Minor' ? 'Minor (Aeolian)' : v,
+    })) },
     defaultValue: 'Major',
     drivable: {
       kinds: [SignalKind.Key, SignalKind.Chord],

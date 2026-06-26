@@ -11,7 +11,7 @@ import { enumCodec, stringArrayCodec } from '../../core/config/codecs';
 import { SignalKind, KeySignal, ChordSignal } from '../../panels/link_types';
 import { buildChordEntryWidget } from './chord_entry_widget';
 import { InstrumentFeature } from '../fretboard_base';
-import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
+import { ChordDegreeProgressionFeature, composeDegreeHeader, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { BaseView } from '../../core/base_view';
 import { Chord, getChordLibraryForInstrument, getAvailableRoots } from '../../music/chords';
 import { AppSettings } from '../../settings';
@@ -73,7 +73,7 @@ export class ChordProgressionFeature extends ChordDegreeProgressionFeature {
     const modeLabel      = DIATONIC_MODE_LABELS[mode] ?? mode;
 
     const romanLabels = progDegrees.map(d => romans[d - 1]?.roman ?? String(d));
-    this.headerText = `${romanLabels.join(' – ')} in ${rootNote} ${modeLabel}`;
+    this.headerText = composeDegreeHeader(romanLabels.join(' – '), rootNote, modeLabel, 'Chord Progression');
     if (capoFret > 0) this.headerText += ` (capo ${capoFret})`;
 
     if (progDegrees.length > 0) {

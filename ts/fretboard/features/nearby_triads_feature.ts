@@ -13,7 +13,7 @@ import { enumCodec, stringArrayCodec } from '../../core/config/codecs';
 import { buildChordEntryWidget } from './chord_entry_widget';
 import { InstrumentFeature } from '../fretboard_base';
 import { emitEvent } from '../../core/events';
-import { ChordDegreeProgressionFeature, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
+import { ChordDegreeProgressionFeature, composeDegreeHeader, rootNoteArg, modeArg, chordEntryArg } from './chord_degree_base';
 import { AppSettings } from '../../settings';
 import { DiatonicMode, DIATONIC_MODE_LABELS } from '../../music/music_types';
 import { InstrumentName } from '../instruments';
@@ -514,13 +514,13 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
         const roman = getChordRomanInKey(ck, this.rootNote, this.diatonicMode);
         return roman ?? (chord_tones_library[ck]?.name ?? ck);
       });
-      return `${names.join(' – ')} in ${this.rootNote} ${modeLabel}`;
+      return composeDegreeHeader(names.join(' – '), this.rootNote, modeLabel, 'Nearby Triads');
     }
     const romans = getRomansForMode(this.diatonicMode);
     const progression = this.progDegrees
       .map(d => romans[d - 1]?.roman ?? String(d))
       .join(' – ');
-    return `${progression} in ${this.rootNote} ${modeLabel}`;
+    return composeDegreeHeader(progression, this.rootNote, modeLabel, 'Nearby Triads');
   }
 
   // ─── render() ────────────────────────────────────────────────────────────────

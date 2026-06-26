@@ -33,6 +33,7 @@ import {
   MOVEABLE_CHORD_LIBRARIES,
 } from "../../music/moveable_shapes";
 import { capoVoicing, capoChordTitle } from "../../fretboard/capo";
+import { toSharpNoteName } from "../../fretboard/fretboard_utils";
 import { ChordDiagramView } from "../../fretboard/views/chord_diagram_view";
 import { renderChordFamily } from "../../fretboard/views/chord_family_view";
 import { renderChordInteractive, ChordInteractiveHandle } from "../../fretboard/views/chord_interactive_view";
@@ -106,7 +107,7 @@ export class ChordToolView extends BaseView {
     this.settings = settings;
     const s = (state ?? {}) as Record<string, unknown>;
 
-    let root = typeof s.root === "string" ? s.root : "G";
+    let root = typeof s.root === "string" ? s.root : "C";
     let type = normalizeType(s.type);
     const voicing = typeof s.voicing === "string" ? s.voicing : "";
     let display: ChordLabelDisplay = VALID_DISPLAY.has(s.display as ChordLabelDisplay)
@@ -118,6 +119,8 @@ export class ChordToolView extends BaseView {
       if (t) type = normalizeType(t);
       if (d && VALID_DISPLAY.has(d as ChordLabelDisplay)) display = d as ChordLabelDisplay;
     }
+    // Roots are spelled with sharps; normalize older saved panels (Bb/Eb/Ab) to match.
+    root = toSharpNoteName(root);
     this.state = { tab: s.tab === "family" ? "family" : "positions", root, type, display, voicing };
 
     const gs = (settings.instrumentSettings as InstrumentSettings | undefined) ?? DEFAULT_INSTRUMENT_SETTINGS;
@@ -439,7 +442,7 @@ export class ChordToolView extends BaseView {
       if ((s.state ?? SignalState.Current) === SignalState.Next) continue;
       if (s.kind === SignalKind.Chord) {
         const sig = s as { rootNote?: string };
-        if (sig.rootNote) { this.state.root = sig.rootNote; changed = true; }
+        if (sig.rootNote) { this.state.root = toSharpNoteName(sig.rootNote); changed = true; }
         const t = chordTypeFromSignal(s);
         if (t) { this.state.type = t; changed = true; }
       } else if (s.kind === SignalKind.Capo) {

@@ -27,7 +27,7 @@ import { MoveableToggleView } from "../views/moveable_toggle_view";
 import { MOVEABLE_CHORD_LIBRARIES, getEasiestMoveableShape, getMoveableShapes } from "../../music/moveable_shapes";
 import { resolveTuning, InstrumentName } from "../instruments";
 import { planChordDiagramGrid } from "../layout";
-import { addHeader, clearAllChildren } from "../fretboard_utils";
+import { addHeader, clearAllChildren, toSharpNoteName } from "../fretboard_utils";
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS, ChordLabelDisplay } from "../fretboard_settings";
 import { featureTypeId } from "../../core/ids";
 import { enumCodec } from "../../core/config/codecs";
@@ -57,10 +57,10 @@ const chordConfigSpec: ConfigSpec<ChordConfig> = {
     label: 'Root',
     codec: enumCodec([...ALL_CHORD_ROOTS] as string[]),
     ui: { kind: 'select', options: [...ALL_CHORD_ROOTS].map(v => ({ value: v as string })) },
-    defaultValue: 'G',
+    defaultValue: 'C',
     drivable: {
       kinds: [SignalKind.Chord],
-      fromSignal: (s: any) => s.kind === SignalKind.Chord ? (s.rootNote ?? undefined) : undefined,
+      fromSignal: (s: any) => s.kind === SignalKind.Chord && s.rootNote ? toSharpNoteName(s.rootNote) : undefined,
     },
   },
   type: {
@@ -127,7 +127,7 @@ export const ChordFeatureSpec: FeatureSpec<ChordConfig> = {
   legacyArgOrder: ['root', 'type', 'display'],
   configSpec: chordConfigSpec,
   title: (config) => {
-    const root = config.root ?? 'G';
+    const root = config.root ?? 'C';
     const type = config.type ?? 'Major';
     if (type === CHORD_ALL_TYPES_VALUE) return `${root} Chords`;
     return `${root} ${type}`;
