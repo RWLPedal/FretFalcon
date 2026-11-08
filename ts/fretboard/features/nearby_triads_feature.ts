@@ -20,6 +20,10 @@ import { InstrumentName } from '../instruments';
 import { FretboardConfig } from '../fretboard_config';
 import { NoteRenderData, LineData } from '../renderer';
 import { planSingleFretboard } from '../layout';
+import {
+  SLOT_GAP, SLOT_PAD_X, SLOT_PAD_Y, SLOT_INNER_GAP, SLOT_LABEL_H, SLOT_CONTROLS_H,
+  SLOT_MIN_W, SLOT_OVERHEAD_H, SLOTS_MARGIN_TOP, MIN_BOARD_ROOM, planSlotGrid, slotColumnsForWidth,
+} from './nearby_triads_layout';
 import { InstrumentSettings, DEFAULT_INSTRUMENT_SETTINGS } from '../fretboard_settings';
 import {
   NOTE_NAMES_FROM_A,
@@ -160,6 +164,9 @@ function buildVoicingLines(
   return lines;
 }
 
+/** Where the Display setting sits in a saved config — see legacyArgOrder below. */
+const DISPLAY_ARG_INDEX = 2;
+
 // ─── Feature ──────────────────────────────────────────────────────────────────
 
 export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
@@ -175,6 +182,12 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
   readonly typeName = NearbyTriadsFeature.typeName;
 
+  /** True when a panel's saved config asks for the Reference display — one board per
+   *  chord — rather than Compact's single board. */
+  static drawsSeveralBoards(config: ReadonlyArray<string> | undefined): boolean {
+    return config?.[DISPLAY_ARG_INDEX] === 'reference';
+  }
+
   private readonly ntMode: NearbyTriadsMode;
   private readonly progDegrees: number[];
   private readonly progChordKeys: string[];
@@ -184,10 +197,24 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
   private readonly targetFret: number | null;
   private readonly targetString: number | null;
 
-  // Sized for one slot in reference mode (full-width ÷ N); equals fretboardConfig in other modes.
+  // Sized for one slot in reference mode (see planSlotGrid); equals fretboardConfig in other modes.
   private slotFretboardConfig: FretboardConfig;
+  /** Columns the reference display's slots are laid out in. */
+  private slotCols: number = 1;
   private _zoomMultiplier: number = 1.2;
   private _slotsNeedLayout: boolean = false;
+
+  // The room the boards are planned against, and the board they are all scaled from.
+  private readonly baseFretboardConfig: FretboardConfig;
+  private readonly availW: number | undefined;
+  private readonly availH: number | undefined;
+  /** The height the boards really have — the one board, or the whole grid of slots —
+   *  once a first drawing has shown what this display's own controls take of the
+   *  room. Undefined until then. See fitToRoom(). */
+  private boardRoom: number | undefined;
+  private _fitting: boolean = false;
+  private _contentArea: HTMLElement | null = null;
+  private _renderContent: (() => void) | null = null;
 
   // Reference / Compact state
   private slots: ChordSlot[] = [];
@@ -245,35 +272,125 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const zoom = guitarSettings.zoomMultiplier ?? 1.2;
     this._zoomMultiplier = zoom;
 
-    // Single-fretboard config (compact + driven modes).
-    this.fretboardConfig = planSingleFretboard(this.fretboardConfig, maxWidth, maxCanvasHeight, zoom, 15);
-
-    if (ntMode === 'reference') {
-      const N = Math.max(this.progDegrees.length, this.progChordKeys.length);
-      const gap = 8;      // matches slotsRow CSS gap
-      const slotPad = 8;  // col's padding:4px left + 4px right
-      const overhead = 42;       // label + 2×gap(2px) + nav controls + 2×vpad(2px) per slot row
-      const rowMargin = 8;       // slotsRow margin-top (fixed, not per-row)
-      if (maxWidth && maxCanvasHeight) {
-        this.slotFretboardConfig = NearbyTriadsFeature.bestSlotConfig(
-          this.fretboardConfig, N, maxWidth, maxCanvasHeight - rowMargin, zoom, gap, slotPad, overhead
-        );
-      } else {
-        const perSlotW = maxWidth ? (maxWidth - (N - 1) * gap - N * slotPad) / N : undefined;
-        this.slotFretboardConfig = planSingleFretboard(
-          this.fretboardConfig, perSlotW, undefined, zoom, 15
-        );
-      }
-      // If maxWidth was unknown at construction, defer slot sizing to renderReference().
-      this._slotsNeedLayout = !maxWidth;
-    } else {
-      this.slotFretboardConfig = this.fretboardConfig;
-    }
+    this.baseFretboardConfig = this.fretboardConfig;
+    this.availW = maxWidth;
+    this.availH = maxCanvasHeight;
+    this.slotFretboardConfig = this.fretboardConfig;
+    this.planBoards();
+    // If maxWidth was unknown at construction, defer slot sizing to renderReference().
+    this._slotsNeedLayout = ntMode === 'reference' && !maxWidth;
 
     this.initSlots();
     if (ntMode === 'compact') {
       this.compactFretboardView = new FretboardView(this.fretboardConfig, 15);
     }
+  }
+
+  // ─── Board sizing ────────────────────────────────────────────────────────────
+
+  /** Plans every board this display draws: against boardRoom once that is known,
+   *  against the whole room until then. */
+  private planBoards(): void {
+    const height = this.boardRoom ?? this.availH;
+    // Single-fretboard config (compact + driven modes, and the wizard).
+    this.fretboardConfig = planSingleFretboard(
+      this.baseFretboardConfig, this.availW, height, this._zoomMultiplier, 15
+    );
+    if (this.ntMode === 'reference') this.planSlots(this.availW, this.availH);
+    else this.slotFretboardConfig = this.fretboardConfig;
+  }
+
+  /** Plans the reference display's slots: how many columns, and the board in each. */
+  private planSlots(width: number | undefined, height: number | undefined): void {
+    const count = Math.max(1, this.progDegrees.length, this.progChordKeys.length);
+    const aspectRatio = this.baseFretboardConfig.getAspectRatio(15);
+    if (width && height) {
+      const grid = planSlotGrid(
+        count, width, this.boardRoom ?? height - SLOTS_MARGIN_TOP, aspectRatio
+      );
+      this.slotCols = grid.cols;
+      this.slotFretboardConfig = planSingleFretboard(
+        this.baseFretboardConfig, grid.boardW, grid.boardH, this._zoomMultiplier, 15
+      );
+      return;
+    }
+    this.slotCols = width ? slotColumnsForWidth(count, width) : count;
+    const slotW = width
+      ? (width - (this.slotCols - 1) * SLOT_GAP) / this.slotCols - 2 * SLOT_PAD_X
+      : undefined;
+    this.slotFretboardConfig = planSingleFretboard(
+      this.baseFretboardConfig, slotW, undefined, this._zoomMultiplier, 15
+    );
+  }
+
+  /** Swaps every board view for one at the size just planned. Voicings and the user's
+   *  choices are untouched: they depend on the tuning, not on how big a board is drawn. */
+  private rebuildBoardViews(): void {
+    for (const slot of this.slots) {
+      slot.fretboardView.destroy();
+      slot.fretboardView = new FretboardView(this.slotFretboardConfig, 15);
+    }
+    if (this.compactFretboardView) {
+      this.compactFretboardView.destroy();
+      this.compactFretboardView = new FretboardView(this.fretboardConfig, 15);
+    }
+    if (this.drivenFretboardView) {
+      this.drivenFretboardView.destroy();
+      this.drivenFretboardView = new FretboardView(this.fretboardConfig, 15);
+    }
+    this.wizard?.setFretboardConfig(this.fretboardConfig);
+  }
+
+  /**
+   * The boards are planned before anything is drawn, from the room the panel has. What
+   * a display puts around them — the compact legend, the wizard's tabs and buttons, the
+   * Driven Mode button — is only known once it is on screen, and differs between
+   * displays. So: draw, and if the result is taller than the room, the excess is
+   * exactly what the boards have to give up — plan them again for the height they
+   * were drawn in less that, and draw again. Nothing is painted in between.
+   */
+  private fitToRoom(): void {
+    const container = this._renderContainer;
+    const content = this._contentArea;
+    if (this._fitting || !container || !content || this.availH === undefined) return;
+    if (!container.isConnected || container.clientWidth === 0) return; // not laid out yet
+    this._fitting = true;
+    try {
+      for (let pass = 0; pass < 4; pass++) {
+        const boards = Array.from(content.querySelectorAll('canvas'));
+        if (boards.length === 0) break; // nothing here can shrink
+        const over = this.overflowPx(container, content);
+        if (over <= 0) break;
+        // What the boards occupy now — measured, so a board held back by its width
+        // rather than its height is counted as it was drawn. Every board is the same
+        // size; several are a grid of slots, each with its label and controls.
+        const boardH = boards[0].offsetHeight;
+        const rows = new Set(boards.map(b => Math.round(b.getBoundingClientRect().top))).size;
+        const drawn = boards.length > 1
+          ? rows * (boardH + SLOT_OVERHEAD_H) + (rows - 1) * SLOT_GAP
+          : boardH;
+        const room = Math.max(MIN_BOARD_ROOM, drawn - over);
+        if (room === this.boardRoom) break; // already as small as it gets
+        this.boardRoom = room;
+        this.planBoards();
+        this.rebuildBoardViews();
+        this._renderContent?.();
+      }
+    } finally {
+      this._fitting = false;
+    }
+  }
+
+  /** How much taller than its room the display came out. Asked of the box that scrolls
+   *  or clips the panel where there is one — that is exactly what the user would have
+   *  to scroll to, or lose — and it is not fooled by a margin collapsing out of the
+   *  container. */
+  private overflowPx(container: HTMLElement, content: HTMLElement): number {
+    for (let el = container.parentElement; el; el = el.parentElement) {
+      if (getComputedStyle(el).overflowY !== 'visible') return el.scrollHeight - el.clientHeight;
+    }
+    const used = content.getBoundingClientRect().bottom - container.getBoundingClientRect().top;
+    return Math.ceil(used - (this.availH ?? used));
   }
 
   // ─── Slot management ─────────────────────────────────────────────────────────
@@ -554,8 +671,16 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     const contentArea = document.createElement('div');
     container.appendChild(contentArea);
+    this._contentArea = contentArea;
 
     const renderContent = () => {
+      // A different display has different controls around its boards: start again
+      // from the whole room rather than from what the last one needed.
+      if (!this._fitting && this.boardRoom !== undefined) {
+        this.boardRoom = undefined;
+        this.planBoards();
+        this.rebuildBoardViews();
+      }
       clearAllChildren(contentArea);
       if (this.drivenSignalContainer && this.drivenSignalHandler) {
         this.drivenSignalContainer.removeEventListener('drive-signal', this.drivenSignalHandler);
@@ -585,7 +710,9 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
           this.renderCompact(contentArea, renderContent);
         }
       }
+      this.fitToRoom();
     };
+    this._renderContent = renderContent;
 
     this.attachChordSignalListener(container, () => {
       (container as any).__ntActiveChord = this.activeChordKey;
@@ -600,10 +727,14 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     this.linkStatusHandler = (e: Event) => {
       const detail   = (e as CustomEvent).detail;
       const hasLinks = detail?.hasIncomingLinks ?? false;
+      const wasShown = drivenBtn.style.display !== 'none';
       drivenBtn.style.display = hasLinks ? '' : 'none';
-      if (!hasLinks && this.runtimeDrivenActive) {
+      if (!hasLinks && (this.runtimeDrivenActive || wasShown)) {
+        // The button's row is free again (and so is driven mode's board).
         this.runtimeDrivenActive = false;
         renderContent();
+      } else if (hasLinks && !wasShown) {
+        this.fitToRoom(); // the button took a row off the boards
       }
     };
     this.linkStatusContainer = container;
@@ -627,24 +758,11 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       if (w <= 0) w = 420;
       const h = (container.clientHeight || container.offsetHeight)
         - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      const N = this.slots.length;
-      const gap = 8;
-      const slotPad = 8;
-      const overhead = 42;
-      const rowMargin = 8;
-      this.slotFretboardConfig = h > 0
-        ? NearbyTriadsFeature.bestSlotConfig(
-            this.fretboardConfig, N, w, h - rowMargin, this._zoomMultiplier, gap, slotPad, overhead
-          )
-        : planSingleFretboard(
-            this.fretboardConfig, (w - (N - 1) * gap - N * slotPad) / N, undefined, this._zoomMultiplier, 15
-          );
+      this.planSlots(w, h > 0 ? h : undefined);
       this.slots.forEach(s => {
         s.fretboardView.destroy();
         s.fretboardView = new FretboardView(this.slotFretboardConfig, 15);
       });
-      this.buildAllRawVoicings();
-      this.rankAllSlots();
       this._slotsNeedLayout = false;
     }
 
@@ -656,23 +774,38 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       return;
     }
 
+    // An explicit grid, in the columns the boards were planned for: a slot is as wide
+    // as its board or its controls, whichever is wider, and never wraps on its own.
+    const boardW = Math.ceil(this.slotFretboardConfig.getRequiredWidth(15));
+    const slotW = Math.max(SLOT_MIN_W, boardW) + 2 * SLOT_PAD_X;
+    const cols = Math.min(this.slotCols, this.slots.length);
     const slotsRow = document.createElement('div');
-    slotsRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px;';
+    slotsRow.style.cssText =
+      `display:grid;grid-template-columns:repeat(${cols},${slotW}px);gap:${SLOT_GAP}px;` +
+      `justify-content:center;margin-top:${SLOTS_MARGIN_TOP}px;`;
     container.appendChild(slotsRow);
 
     this.slots.forEach((slot, i) => {
       const col = document.createElement('div');
-      col.style.cssText = 'display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:6px;padding:2px 4px;transition:box-shadow 0.15s;';
+      col.style.cssText =
+        'box-sizing:border-box;min-width:0;display:flex;flex-direction:column;align-items:center;' +
+        `gap:${SLOT_INNER_GAP}px;border-radius:6px;padding:${SLOT_PAD_Y}px ${SLOT_PAD_X}px;` +
+        'transition:box-shadow 0.15s;';
       slot.columnEl = col;
 
-      // Chord label
+      // Chord label — one line, so a slot's height never depends on its chord's name.
       const label = document.createElement('div');
-      label.style.cssText = 'font-weight:bold;font-size:0.85rem;text-align:center;';
+      label.style.cssText =
+        `height:${SLOT_LABEL_H}px;line-height:${SLOT_LABEL_H}px;max-width:100%;overflow:hidden;` +
+        'text-overflow:ellipsis;white-space:nowrap;font-weight:bold;font-size:0.85rem;text-align:center;';
       label.textContent = `${slot.roman} — ${slot.chordName}`;
+      label.title = label.textContent;
       col.appendChild(label);
 
-      // Canvas container
+      // Canvas container. A flex box, so the canvas does not sit on a text baseline
+      // with a few pixels of descender under it that the sizing knows nothing about.
       const canvasWrap = document.createElement('div');
+      canvasWrap.style.display = 'flex';
       col.appendChild(canvasWrap);
       slot.fretboardView.render(canvasWrap);
       this.updateSlotFretboard(slot, i);
@@ -690,16 +823,25 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const nextSlot = this.slots[(slotIndex + 1) % N];
 
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'display:flex;align-items:center;gap:2px;font-size:0.78rem;justify-content:center;';
+    wrap.style.cssText =
+      `display:flex;align-items:center;gap:${SLOT_INNER_GAP}px;width:${SLOT_MIN_W}px;max-width:100%;` +
+      `height:${SLOT_CONTROLS_H}px;font-size:0.78rem;`;
 
-    const mkNavBtn = (ch: string): HTMLButtonElement => {
+    // Square, and as tall as the row: big enough for a fingertip.
+    const BTN_CSS =
+      `flex:none;box-sizing:border-box;width:${SLOT_CONTROLS_H}px;height:${SLOT_CONTROLS_H}px;` +
+      `min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;` +
+      'background:none;border:none;border-radius:4px;padding:0;cursor:pointer;line-height:1;';
+    const mkNavBtn = (ch: string, label: string): HTMLButtonElement => {
       const btn = document.createElement('button');
       btn.textContent = ch;
-      btn.style.cssText = 'background:none;border:none;padding:0 3px;font-size:0.85rem;cursor:pointer;opacity:0.6;color:inherit;line-height:1;';
+      btn.title = label;
+      btn.setAttribute('aria-label', label);
+      btn.style.cssText = BTN_CSS + 'font-size:1.05rem;opacity:0.6;color:inherit;';
       return btn;
     };
 
-    const prevBtn = mkNavBtn('‹');
+    const prevBtn = mkNavBtn('‹', `Previous voicing for ${nextSlot.roman}`);
     prevBtn.addEventListener('click', () => {
       if (!nextSlot.rankedVoicings.length) return;
       nextSlot.previewIndex = (nextSlot.previewIndex - 1 + nextSlot.rankedVoicings.length) % nextSlot.rankedVoicings.length;
@@ -707,10 +849,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     });
 
     const counter = document.createElement('span');
-    counter.style.cssText = 'min-width:58px;text-align:center;';
+    counter.style.cssText = 'flex:1 1 0;min-width:0;overflow:hidden;white-space:nowrap;text-align:center;';
     nextSlot.counterEl = counter;
 
-    const nextBtn = mkNavBtn('›');
+    const nextBtn = mkNavBtn('›', `Next voicing for ${nextSlot.roman}`);
     nextBtn.addEventListener('click', () => {
       if (!nextSlot.rankedVoicings.length) return;
       nextSlot.previewIndex = (nextSlot.previewIndex + 1) % nextSlot.rankedVoicings.length;
@@ -720,7 +862,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     const lockBtn = document.createElement('button');
     lockBtn.textContent = '✓';
     lockBtn.title = 'Lock in this voicing for ' + nextSlot.roman;
-    lockBtn.style.cssText = 'background:none;border:none;padding:0 4px;font-size:0.8rem;cursor:pointer;color:var(--clr-accent,#5a9);opacity:0.85;line-height:1;';
+    lockBtn.setAttribute('aria-label', lockBtn.title);
+    lockBtn.style.cssText = BTN_CSS + 'font-size:0.85rem;color:var(--clr-accent,#5a9);opacity:0.85;';
     lockBtn.addEventListener('click', () => {
       if (!nextSlot.rankedVoicings.length) return;
       nextSlot.selectedIndex = nextSlot.previewIndex;
@@ -757,6 +900,8 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
       // Lazy-create wizard; initialize from previously applied chords only (no slot defaults)
       if (!this.wizard) {
         this.wizard = new TriadsWizard(this.fretboardConfig, this.maxFretSpan, this.targetFret, this.targetString);
+        // The wizard moves between its own steps without coming back through here.
+        this.wizard.onRendered = () => this.fitToRoom();
         if (this._wizardInProgressState) {
           this.wizard.restoreState(this._wizardInProgressState);
           this._wizardInProgressState = null;
@@ -807,6 +952,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     if (this.wizardApplied) {
       const canvasWrap = document.createElement('div');
+      canvasWrap.style.display = 'flex';
       wrap.appendChild(canvasWrap);
       this.compactFretboardView.render(canvasWrap);
       this.updateCompactFretboard();
@@ -867,6 +1013,7 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
 
     if (this.drivenFretboardView) {
       const canvasWrap = document.createElement('div');
+      canvasWrap.style.display = 'flex';
       wrap.appendChild(canvasWrap);
       this.drivenFretboardView.render(canvasWrap);
     }
@@ -1101,49 +1248,10 @@ export class NearbyTriadsFeature extends ChordDegreeProgressionFeature {
     }
     this.wizard?.destroy();
     this.wizard = null;
+    this._contentArea = null;
+    this._renderContent = null;
 
     super.destroy?.();
-  }
-
-  // ─── Layout helpers ──────────────────────────────────────────────────────────
-
-  /**
-   * Finds the column count (1..N) that maximises canvas area for the N-slot
-   * reference grid, then returns a FretboardConfig sized to that canvas.
-   * The flex-wrap layout naturally produces the chosen column count because
-   * the canvas width determines the slot column width.
-   */
-  private static bestSlotConfig(
-    base: FretboardConfig,
-    N: number,
-    maxWidth: number,
-    availH: number,
-    zoom: number,
-    gap: number,
-    slotPad: number,
-    overhead: number
-  ): FretboardConfig {
-    const aspectRatio = base.getAspectRatio(15);
-    let bestArea = -1;
-    let bestW = 0;
-    let bestH = 0;
-    for (let cols = 1; cols <= N; cols++) {
-      const rows = Math.ceil(N / cols);
-      const bW = (maxWidth - (cols - 1) * gap) / cols - slotPad;
-      const bH = (availH - (rows - 1) * gap) / rows - overhead;
-      if (bW <= 0 || bH <= 0) continue;
-      let eW: number, eH: number;
-      if (bW / bH > aspectRatio) {
-        eH = bH; eW = eH * aspectRatio;
-      } else {
-        eW = bW; eH = eW / aspectRatio;
-      }
-      const area = eW * eH;
-      if (area > bestArea) {
-        bestArea = area; bestW = eW; bestH = eH;
-      }
-    }
-    return planSingleFretboard(base, bestW || undefined, bestH || undefined, zoom, 15);
   }
 
   // ─── Config schema ────────────────────────────────────────────────────────────

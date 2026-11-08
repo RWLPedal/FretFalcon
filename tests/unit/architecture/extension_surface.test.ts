@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as glob from 'glob';
+import { listModuleFiles } from '../helpers/module_files';
 
 // Paths that module files must NOT import from — these are internal implementation details.
 const FORBIDDEN_PATTERNS = [
@@ -29,10 +29,7 @@ const EXTERNAL_VIEW_ALLOWED = new Set([
   'feature_panel',
 ]);
 
-function getModuleFiles(): string[] {
-  const root = path.resolve(__dirname, '../../../ts/modules');
-  return glob.sync('*/module.ts', { cwd: root }).map(f => path.join(root, f));
-}
+const getModuleFiles = listModuleFiles;
 
 function extractImports(source: string): string[] {
   const importRe = /^import\s+.*?\s+from\s+['"]([^'"]+)['"]/gm;

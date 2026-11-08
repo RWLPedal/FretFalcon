@@ -333,6 +333,10 @@ export class ScheduleEditor {
         this.setEditorMode(EditorMode.Config);
       }
     };
+    this.uiManager.inspectorBackBtnEl.onclick = () => {
+      this.inspectorPanel.flush();
+      this.selectionManager.clearSelection();
+    };
     this.uiManager.addGroupBtnEl.onclick = () => this.rowManager.addGroupRow();
     this.uiManager.addIntervalBtnEl.onclick = () => {
       if (this.defaultCategoryName) {
@@ -374,6 +378,10 @@ export class ScheduleEditor {
 
   private _onSelectionChange(): void {
     const selected = this.selectionManager.getSelectedElements();
+
+    // One selected row has an inspector to show. Side by side with the list this
+    // changes nothing; the tabbed (mobile) layout swaps the list out for it.
+    this.uiManager.editorBodyEl.classList.toggle('is-detail-open', selected.size === 1);
 
     if (selected.size === 0) {
       this.inspectorPanel.showEmpty();

@@ -299,7 +299,7 @@ export class BackingTrackView extends BaseView {
     row.appendChild(presetLbl);
 
     const presetWrap = document.createElement("div");
-    presetWrap.classList.add("select", "is-small");
+    presetWrap.classList.add("select", "is-small", "dm-preset-select-wrap");
     const sel = document.createElement("select");
     this.presetSelectEl = sel;
     sel.appendChild(new Option("Preset…", ""));
@@ -357,7 +357,7 @@ export class BackingTrackView extends BaseView {
     row.appendChild(rootWrap);
 
     const modeWrap = document.createElement("div");
-    modeWrap.classList.add("select", "is-small");
+    modeWrap.classList.add("select", "is-small", "dm-mode-select-wrap");
     this.progModeSelectEl = document.createElement("select");
     for (const mode of ALL_DIATONIC_MODES) {
       const opt = new Option(DIATONIC_MODE_LABELS[mode], mode);
@@ -383,7 +383,7 @@ export class BackingTrackView extends BaseView {
     row.classList.add("dm-controls-row");
 
     const voiceWrap = document.createElement("div");
-    voiceWrap.classList.add("select", "is-small");
+    voiceWrap.classList.add("select", "is-small", "dm-voice-select-wrap");
     this.toneVoiceSelectEl = document.createElement("select");
     for (const voice of ALL_TONE_VOICES) {
       const opt = new Option(TONE_VOICE_LABELS[voice], voice);
@@ -464,6 +464,8 @@ export class BackingTrackView extends BaseView {
     this.stepNumEls = [];
     this.chordMeasureCellEls = [];
     this.trackDropdowns = [];
+    // The two layouts are styled by class (views.css; mobile.css scales both up).
+    this.gridEl.classList.toggle("dm-grid--vertical", this.activeLayout === "vertical");
 
     if (this.activeLayout === "vertical") {
       this.rebuildGridVertical();
@@ -510,50 +512,45 @@ export class BackingTrackView extends BaseView {
     this.buildProgRow();
   }
 
+  /** Steps run down the screen: a chord column, the step numbers, a column per drum
+   *  track and the bass column. Used when the panel is too narrow for 16 across. */
   private rebuildGridVertical(): void {
     if (!this.gridEl) return;
-    const spm = this.steps / this.numMeasures;
-
-    const drumCols = Array(NUM_TRACKS).fill("28px").join(" ");
-    this.gridEl.style.display = "grid";
-    this.gridEl.style.gridTemplateColumns = `48px 20px ${drumCols} 28px`;
-    this.gridEl.style.gap = "2px";
-    this.gridEl.style.alignItems = "stretch";
+    this.gridEl.style.setProperty("--dm-tracks", String(NUM_TRACKS));
 
     this.gridEl.appendChild(this.makeVHeaderCell("Chord"));
     this.gridEl.appendChild(this.makeVHeaderCell(""));
-    for (let t = 0; t < NUM_TRACKS; t++) {
-      const cell = this.makeVHeaderCell(
-        DRUM_SOUND_LABELS[this.trackSounds[t]].slice(0, 1).toUpperCase(),
-      );
-      cell.title = DRUM_SOUND_LABELS[this.trackSounds[t]];
-      this.gridEl.appendChild(cell);
-    }
+    for (let t = 0; t < NUM_TRACKS; t++) this.gridEl.appendChild(this.makeVTrackHeader(t));
     this.gridEl.appendChild(this.makeVBassHeader());
 
+    // The chord cells share the height of the step rows evenly, as the chord row
+    // shares the width of the step columns in the horizontal layout. (4, 8 or 12
+    // bars do not all divide 16 steps, so they cannot be placed on the step rows.)
+    const chordCol = document.createElement("div");
+    chordCol.classList.add("dm-v-chord-col");
+    chordCol.style.gridRow = `2 / span ${this.steps}`;
     for (let m = 0; m < this.numMeasures; m++) {
       const cell = document.createElement("div");
       cell.classList.add("dm-v-measure-cell");
-      cell.style.gridRow = `${2 + m * spm} / span ${spm}`;
-      cell.style.gridColumn = "1";
       this.updateMeasureCellAppearance(cell, this.measureChords[m]);
       cell.addEventListener("click", () => this.handleMeasureCellClick(m));
       this.chordMeasureCellEls.push(cell);
-      this.gridEl.appendChild(cell);
+      chordCol.appendChild(cell);
     }
+    this.gridEl.appendChild(chordCol);
 
     for (let t = 0; t < NUM_TRACKS; t++) this.cellEls.push([]);
 
     for (let s = 0; s < this.steps; s++) {
       const gridRow = s + 2;
-      const isMeasureStart = s > 0 && s % spm === 0;
+      const isBeatStart = s > 0 && s % 4 === 0;
 
       const beatNum = document.createElement("div");
       beatNum.classList.add("dm-v-beat-num");
-      beatNum.textContent = String((s % spm) + 1);
+      if (s % 4 === 0) beatNum.textContent = String(s / 4 + 1);
       beatNum.style.gridRow = String(gridRow);
       beatNum.style.gridColumn = "2";
-      if (isMeasureStart) beatNum.classList.add("dm-v-measure-start");
+      if (isBeatStart) beatNum.classList.add("dm-v-measure-start");
       this.stepNumEls.push(beatNum);
       this.gridEl.appendChild(beatNum);
 
@@ -562,7 +559,7 @@ export class BackingTrackView extends BaseView {
         cell.classList.add("dm-v-cell");
         cell.style.gridRow = String(gridRow);
         cell.style.gridColumn = String(t + 3);
-        if (isMeasureStart) cell.classList.add("dm-v-measure-start");
+        if (isBeatStart) cell.classList.add("dm-v-measure-start");
         this.updateCellAppearance(cell, this.tracks[t][s]);
         cell.addEventListener("click", () => this.handleCellClick(t, s));
         this.cellEls[t].push(cell);
@@ -573,7 +570,7 @@ export class BackingTrackView extends BaseView {
       bassCell.classList.add("dm-v-cell", "dm-v-bass-cell");
       bassCell.style.gridRow = String(gridRow);
       bassCell.style.gridColumn = String(NUM_TRACKS + 3);
-      if (isMeasureStart) bassCell.classList.add("dm-v-measure-start");
+      if (isBeatStart) bassCell.classList.add("dm-v-measure-start");
       this.updateBassCellAppearance(bassCell, this.bassTrack[s]);
       bassCell.addEventListener("click", () => this.handleBassCellClick(s));
       this.bassCellEls.push(bassCell);
@@ -586,6 +583,47 @@ export class BackingTrackView extends BaseView {
     el.classList.add("dm-v-hdr");
     el.textContent = text;
     return el;
+  }
+
+  /** A track's column header in the vertical grid: a short code for its sound, which
+   *  is also the picker for it. The column is too narrow for a visible dropdown, so a
+   *  transparent native select lies over the code and opens the system's own list. */
+  private makeVTrackHeader(t: number): HTMLElement {
+    const wrap = document.createElement("div");
+    wrap.classList.add("dm-v-hdr", "dm-v-track-hdr");
+
+    const code = document.createElement("span");
+    code.classList.add("dm-v-track-code");
+    wrap.appendChild(code);
+
+    const sel = document.createElement("select");
+    sel.classList.add("dm-v-track-select");
+    sel.setAttribute("aria-label", `Track ${t + 1} sound`);
+    for (const id of ALL_DRUM_SOUND_IDS) {
+      const opt = new Option(DRUM_SOUND_LABELS[id], id);
+      if (id === this.trackSounds[t]) opt.selected = true;
+      sel.appendChild(opt);
+    }
+    const showSound = () => {
+      const label = DRUM_SOUND_LABELS[this.trackSounds[t]];
+      // Two letters: one would not tell Snare from Shkr.
+      code.textContent = label.slice(0, 2);
+      wrap.title = label;
+    };
+    sel.addEventListener("change", () => {
+      this.setTrackSound(t, sel.value as DrumSoundId);
+      showSound();
+    });
+    this.trackDropdowns[t] = sel;
+    wrap.appendChild(sel);
+    showSound();
+    return wrap;
+  }
+
+  /** Choose the sound a track's cells are painted with from now on. */
+  private setTrackSound(t: number, sound: DrumSoundId): void {
+    this.trackSounds[t] = sound;
+    this.dispatchStateChange();
   }
 
   private makeVBassHeader(): HTMLElement {
@@ -656,8 +694,7 @@ export class BackingTrackView extends BaseView {
     for (let m = 0; m < this.numMeasures; m++) {
       const cell = document.createElement("div");
       cell.classList.add("dm-measure-cell");
-      cell.style.width = `${cellW}px`;
-      cell.style.minWidth = `${cellW}px`;
+      cell.style.setProperty("--dm-measure-w", `${cellW}px`);
       cell.style.fontSize = fontSize;
       if (this.measureBeatStart(m)) cell.classList.add("dm-beat-start");
       this.updateMeasureCellAppearance(cell, this.measureChords[m]);
@@ -685,9 +722,7 @@ export class BackingTrackView extends BaseView {
       if (id === this.trackSounds[t]) opt.selected = true;
       sel.appendChild(opt);
     }
-    sel.addEventListener("change", () => {
-      this.trackSounds[t] = sel.value as DrumSoundId;
-    });
+    sel.addEventListener("change", () => this.setTrackSound(t, sel.value as DrumSoundId));
     this.trackDropdowns[t] = sel;
     wrap.appendChild(sel);
     return wrap;

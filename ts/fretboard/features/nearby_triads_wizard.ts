@@ -231,12 +231,23 @@ export class TriadsWizard {
   private hoveredVoicing: TriadVoicing | null = null;
   private _voicingCanvasCleanup: (() => void) | null = null;
 
+  /** Called after every render, including the wizard's own moves between steps. */
+  onRendered: (() => void) | null = null;
+
   constructor(
-    private readonly fretboardConfig: FretboardConfig,
+    private fretboardConfig: FretboardConfig,
     private readonly maxFretSpan: number,
     private readonly targetFret: number | null,
     private readonly targetString: number | null,
   ) {}
+
+  /** Draw the voicing board at a new size from the next render on. The chords and the
+   *  voicings chosen so far are kept. */
+  setFretboardConfig(config: FretboardConfig): void {
+    this.fretboardConfig = config;
+    this.voicingFb?.destroy();
+    this.voicingFb = null;
+  }
 
   exportState(): WizardInProgressState {
     return {
@@ -355,6 +366,7 @@ export class TriadsWizard {
         }
       );
     }
+    this.onRendered?.();
   }
 
   // ─── Step 1: chord entry ────────────────────────────────────────────────────
@@ -447,6 +459,10 @@ export class TriadsWizard {
     // ── helpers ───────────────────────────────────────────────────────────────
     const INVERSION_LABEL: Record<string, string> = { Root: 'Root pos.', '1st': '1st inv.', '2nd': '2nd inv.' };
 
+    // A finger has no hover: a tap on a voicing locks it straight away.
+    const touch = typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;
+    const press = touch ? 'tap' : 'click';
+
     const updateStatus = () => {
       const c = this.chords[this.selectedIdx];
       if (!c?.rankedVoicings.length) { statusEl.textContent = 'No voicings'; return; }
@@ -454,15 +470,17 @@ export class TriadsWizard {
         const rv = c.rankedVoicings[c.selectedIndex];
         const inv = rv?.voicing ? (INVERSION_LABEL[rv.voicing.inversion] ?? rv.voicing.inversion) : '';
         const cost = rv && rv.cost > 0 ? ` · cost ${rv.cost}` : '';
-        statusEl.textContent = `✓ ${inv}${cost} · click to unlock`;
+        statusEl.textContent = `✓ ${inv}${cost} · ${press} to unlock`;
       } else if (this.hoveredVoicing) {
         const rv = c.rankedVoicings.find(r => r.voicing === this.hoveredVoicing);
         const inv = INVERSION_LABEL[this.hoveredVoicing.inversion] ?? this.hoveredVoicing.inversion;
         const cost = rv && rv.cost > 0 ? ` · cost ${rv.cost}` : '';
         const rank = rv ? c.rankedVoicings.indexOf(rv) + 1 : '?';
-        statusEl.textContent = `${inv} · rank ${rank}/${c.rankedVoicings.length}${cost} · click to lock`;
+        statusEl.textContent = `${inv} · rank ${rank}/${c.rankedVoicings.length}${cost} · ${press} to lock`;
       } else {
-        statusEl.textContent = `${c.rankedVoicings.length} voicings · hover to preview, click to lock`;
+        statusEl.textContent = touch
+          ? `${c.rankedVoicings.length} voicings · tap one to lock it`
+          : `${c.rankedVoicings.length} voicings · hover to preview, click to lock`;
       }
     };
 

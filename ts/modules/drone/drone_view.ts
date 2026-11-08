@@ -3,6 +3,7 @@ import { NoteName, NOTE_NAMES, SustainedNote, SustainedNoteOptions, getGuitarWav
 import { DriveSignal, SignalKind, StrumSignal } from '../../panels/link_types';
 import { volumeManager } from '../../sounds/volume_manager';
 import { emitEvent } from '../../core/events';
+import { holdScreenAwake, releaseScreenAwake } from '../../core/screen_wake';
 
 type ChordMode = 'note' | 'fifth' | 'major' | 'minor';
 type EnvelopeMode = 'sustain' | 'slow' | 'fast';
@@ -216,6 +217,7 @@ export class DroneView extends BaseView {
     this.droneVoice2.destroy();
     this.droneVoice3.destroy();
     this.isPlaying = false;
+    releaseScreenAwake(this);
     this.playBtn = null;
     this.noteSelect = null;
     this.octaveSelect = null;
@@ -229,8 +231,10 @@ export class DroneView extends BaseView {
     if (this.isPlaying) {
       this.stopDrone();
       this.isPlaying = false;
+      releaseScreenAwake(this);
     } else {
       this.isPlaying = true;
+      holdScreenAwake(this);
       if (!this.hasStrumLink) this.startDrone();
     }
     this.updatePlayBtn();

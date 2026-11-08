@@ -103,6 +103,8 @@ export class FloatingLayout implements LayoutStrategy {
       clearTimeout(this._resizeDebounceTimer);
       this._resizeDebounceTimer = null;
     }
+    // Scroll mode is a floating-layout concern; don't leak it to TabbedLayout.
+    this.area?.classList.remove('is-scrollable');
     this.area = null;
   }
 
@@ -138,7 +140,19 @@ export class FloatingLayout implements LayoutStrategy {
    *  call simply makes that guarantee explicit and avoids redundant reflows.) */
   private _recomputeGeometry(): GridGeometry {
     this._geom = this._geometry();
+    this._applyScrollMode();
     return this._geom;
+  }
+
+  /** When the cell has hit MIN_CELL_PX and the DESIGN_ROWS design space no longer
+   *  fits the viewport height, the workspace scrolls vertically instead of shrinking
+   *  panels below legibility. `is-scrollable` flips the area to overflow-y:auto +
+   *  pointer-events:auto (see layout.css); the sidebar sits above it (z-index 91)
+   *  so it stays interactive either way. */
+  private _applyScrollMode(): void {
+    if (!this.area) return;
+    const designHeight = DESIGN_ROWS * this._geom.cell;
+    this.area.classList.toggle('is-scrollable', designHeight > this.area.clientHeight + 0.5);
   }
 
   /** Debounced trigger for the canonical resize relayout. Used by the sidebar
@@ -177,12 +191,14 @@ export class FloatingLayout implements LayoutStrategy {
     }
   }
 
-  /** True when any two panels overlap or any panel spills past the area edge — using
-   *  actual rendered boxes (which include CSS min/max clamps), not just grid math. */
+  /** True when any two panels overlap or any panel spills past the RIGHT area edge —
+   *  using actual rendered boxes (which include CSS min/max clamps), not just grid
+   *  math. Bottom overflow is deliberately NOT a violation: when the cell is floored
+   *  at MIN_CELL_PX the design space is taller than the viewport and the workspace
+   *  scrolls vertically instead (see _applyScrollMode). */
   private _hasOverlapOrOverflow(): boolean {
     if (!this.area) return false;
     const vpW = this.area.clientWidth;
-    const vpH = this.area.clientHeight;
     const boxes: { x: number; y: number; w: number; h: number }[] = [];
     for (const [, chrome] of this.chromes) {
       const el = chrome.wrapperEl;
@@ -190,7 +206,7 @@ export class FloatingLayout implements LayoutStrategy {
       const y = parseFloat(el.style.top || '0');
       const w = el.offsetWidth;
       const h = el.offsetHeight;
-      if (x + w > vpW + 1 || y + h > vpH + 1) return true;
+      if (x + w > vpW + 1) return true;
       boxes.push({ x, y, w, h });
     }
     for (let i = 0; i < boxes.length; i++) {
@@ -368,13 +384,29 @@ export class FloatingLayout implements LayoutStrategy {
     const vpW = this.area?.clientWidth ?? window.innerWidth;
     const vpH = this.area?.clientHeight ?? window.innerHeight;
     const minX = this._geom.originX;
+    // In scroll mode the DESIGN_ROWS design space is taller than the viewport, so a
+    // panel below the fold is legitimate — clamping its Y up to (vpH - height) would
+    // pull it back over the panels above it (the min-cell "scroll instead of shrink"
+    // path). Only bound Y from below when scrolling; the width term is unaffected since
+    // there is never horizontal scroll.
+    const scrollable = this.area?.classList.contains('is-scrollable') ?? false;
+    // The X bound is the design space, not the viewport: when the cell is floored at
+    // MIN_CELL_PX the GRID_COLS grid can be WIDER than the viewport (e.g. a 1024px
+    // tablet: originX + 96·12 = 1344px), and clamping to the viewport would drag
+    // right-column panels over the left ones AND re-record their corrupted rects —
+    // exactly what the handleResize comment warns about. A panel at an authored
+    // right-edge column legitimately overflows the (overflow:hidden) area then,
+    // matching what the resize path produces.
+    const maxX = Math.max(vpW, minX + this._geom.cols * this._geom.cell);
     for (const [id, chrome] of this.chromes) {
       const el = chrome.wrapperEl;
       const x = parseFloat(el.style.left || '0');
       const y = parseFloat(el.style.top || '0');
       const size = { width: el.offsetWidth, height: el.offsetHeight };
-      const clampedX = Math.max(minX, Math.min(x, vpW - size.width));
-      const clampedY = Math.max(0, Math.min(y, vpH - size.height));
+      const clampedX = Math.max(minX, Math.min(x, maxX - size.width));
+      const clampedY = scrollable
+        ? Math.max(0, y)
+        : Math.max(0, Math.min(y, vpH - size.height));
       if (clampedX !== x || clampedY !== y) {
         el.style.left = `${clampedX}px`;
         el.style.top = `${clampedY}px`;

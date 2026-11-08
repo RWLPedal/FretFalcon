@@ -168,14 +168,14 @@
 /* Apply button — high-specificity override so it wins over the general .button rule */
 #editor-controls #set-schedule-control {
   background-color: var(--accent) !important;
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
   border-color: var(--accent) !important;
 }
 #editor-controls #set-schedule-control:hover {
   opacity: 0.88;
 }
 #editor-controls #set-schedule-control .material-icons {
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
 }
 
 /* Config Editor — Flex-based row layout (overrides old grid) */
@@ -439,7 +439,7 @@
 
 .layer-palette-popover {
   position: fixed;
-  z-index: 9999;
+  z-index: var(--z-popover);
   display: flex;
   gap: 5px;
   padding: 6px;
@@ -1067,6 +1067,7 @@
 .inspector-add-btn { font-size: 0.85rem; padding: 7px 18px; }
 .inspector-group-name-input {
   width: 100%;
+  box-sizing: border-box;
   font-family: inherit;
   font-size: 0.9rem;
   padding: 5px 8px;
@@ -1077,6 +1078,9 @@
 }
 .inspector-group-name-input:focus { outline: none; border-color: var(--accent); }
 .inspector-swatch-row { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Back to the list — only the tabbed layout shows it (mobile.css): there the list
+   and the inspector take turns instead of sitting side by side. */
+.inspector-back-btn { display: none; }
 
 /* ─── Editor footer ──────────────────────────────────────────────────────── */
 .editor-footer {
@@ -1170,7 +1174,7 @@
 .editor-btn.btn-ghost:hover { color: var(--text-primary); background: var(--input-bg); }
 .editor-btn.btn-primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: var(--accent);
 }
 .editor-btn.btn-primary:hover { opacity: 0.88; }
@@ -1288,6 +1292,8 @@
   align-self: center;
 }
 .drag-handle:active { cursor: grabbing; }
+/* A finger on the handle drags the row (DragDropManager), it does not scroll the list. */
+.drag-handle { touch-action: none; }
 .interval-duration-badge {
   font-size: 0.72rem;
   font-variant-numeric: tabular-nums;

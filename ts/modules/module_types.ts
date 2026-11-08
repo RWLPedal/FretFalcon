@@ -51,6 +51,10 @@ export interface ViewModule<S = unknown> {
       zoom?: boolean;
       configToggle?: boolean;
     };
+    /** True when the panel draws several fretboards at once (not one). The tabbed
+     *  (mobile) layout lays those across the screen rather than along it. A function
+     *  when that depends on the panel's settings; it is given the saved view state. */
+    multiBoard?: boolean | ((viewState: unknown) => boolean);
     defaultConfigCollapsed?: boolean;
     /** For feature-panel views, the drive-registry featureTypeName. */
     featureTypeName?: string;
@@ -92,6 +96,8 @@ export interface FeaturePanelModuleOpts {
   size?: PanelSizing;
   sizeHorizontal?: PanelSizing;
   showInMenu?: boolean;
+  /** See {@link ViewModule} `panel.multiBoard`. */
+  multiBoard?: boolean | ((viewState: unknown) => boolean);
   nav?: ViewModule['nav'];
   drive?: ViewModule['drive'];
 }
@@ -108,6 +114,7 @@ export function featurePanelModule(opts: FeaturePanelModuleOpts): ViewModule {
       showInMenu: opts.showInMenu ?? false,
       refreshOnInstrumentChange: true,
       capabilities: { rotate: true, zoom: true, configToggle: true },
+      multiBoard: opts.multiBoard,
       featureTypeName: opts.featureTypeName,
     },
     nav: opts.nav,

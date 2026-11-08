@@ -51,6 +51,30 @@ const SECTION_ORDER: NavSectionId[] = [
   NavSection.Extensions,
 ];
 
+export type FormFactor = 'desktop' | 'mobile';
+
+/** The nav groups a given user should actually be offered: entries for the other
+ *  form factor and for other instruments are dropped, and so are groups left empty.
+ *  The one filter behind both the desktop sidebar and the mobile add-a-tool sheet. */
+export function getVisibleNavGroups(opts: {
+  formFactor: FormFactor;
+  /** Current instrument; entries with requiredInstruments must list it. */
+  instrument?: string;
+}): NavSectionGroup[] {
+  const hidden = opts.formFactor === 'mobile' ? Visibility.Desktop : Visibility.Mobile;
+  return getNavSectionGroups()
+    .map((group) => ({
+      ...group,
+      entries: group.entries.filter(
+        (e) =>
+          e.visibility !== hidden &&
+          (!e.requiredInstruments ||
+            (opts.instrument !== undefined && e.requiredInstruments.includes(opts.instrument))),
+      ),
+    }))
+    .filter((group) => group.entries.length > 0);
+}
+
 /** Returns nav entries grouped and ordered by section for sidebar/menu rendering. */
 export function getNavSectionGroups(): NavSectionGroup[] {
   const grouped = new Map<NavSectionId, NavEntry[]>();

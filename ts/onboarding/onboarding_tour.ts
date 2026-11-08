@@ -15,6 +15,7 @@ import {
   SIDEBAR_TOOLS_BAR_CLASS,
 } from "../reference_page/sidebar_view";
 import { brandLockupHtml } from "../branding";
+import { MOBILE_STARTER_KEY } from "../screen_config/default_configs";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,17 +46,26 @@ interface OverlayRefs {
 
 const Onb: {
   overlay: OverlayRefs | null;
+  /** The steps of the tour in progress: DESKTOP_STEPS or MOBILE_STEPS. */
+  steps: TourStep[];
   stepIdx: number;
   repositioner: (() => void) | null;
   keyHandler: ((e: KeyboardEvent) => void) | null;
   manager: FloatingViewManager | null;
 } = {
   overlay: null,
+  steps: [],
   stepIdx: 0,
   repositioner: null,
   keyHandler: null,
   manager: null,
 };
+
+/** The tabbed (mobile) layout has a different shell — tabs, not a sidebar and a
+ *  board of panels — so it gets its own welcome copy and its own tour. */
+function isTabbed(): boolean {
+  return Onb.manager?.getStrategyKind() === "tabbed";
+}
 
 // ─── DOM helpers ─────────────────────────────────────────────────────────────
 
@@ -88,7 +98,7 @@ function panelByTitle(prefix: string): HTMLElement | null {
 
 // ─── Tour Steps ───────────────────────────────────────────────────────────────
 
-const STEPS: TourStep[] = [
+const DESKTOP_STEPS: TourStep[] = [
   {
     key: "nav",
     target: () => $(`.${SIDEBAR_CONTAINER_CLASS}`),
@@ -156,6 +166,79 @@ const STEPS: TourStep[] = [
   },
 ];
 
+// The tabbed layout's tour points at its shell (selectors: style/mobile.css). It
+// leaves the open tabs alone — every target is there whatever is open, bar the link
+// between two tabs, whose step is dropped when no two neighbours can be linked.
+// These targets sit against the screen's edges, where a ring drawn AROUND them would
+// hang off it: a negative pad draws the spotlight's ring just inside the target.
+const EDGE_PAD = -3;
+
+const MOBILE_STEPS: TourStep[] = [
+  {
+    key: "tabs",
+    target: () => $(".tabbed-tab-strip"),
+    pad: EDGE_PAD,
+    placement: "top",
+    step: "Tabs",
+    title: "One tool per tab",
+    body: "Each tool opens as a tab. <b>Tap</b> a tab to switch — or <b>swipe</b> the screen sideways. <b>Press and hold</b> a tab to move it.",
+  },
+  {
+    key: "add",
+    target: () => $(".tabbed-add-btn"),
+    pad: EDGE_PAD,
+    placement: "top",
+    step: "Add",
+    title: "Everything is under +",
+    body: "<b>Chords, scales, triads</b> and the circle of fifths; a <b>metronome</b>, a timer, strumming patterns and backing tracks. Open as many as you like.",
+  },
+  {
+    key: "link",
+    target: () => $(".tabbed-link-connector"),
+    pad: 2,
+    placement: "top",
+    step: "Link",
+    title: "Tabs follow each other",
+    body: "The link between two tabs makes one <b>follow the other's key</b> — change the scale and the chords next to it change too. Tap it to link or unlink.",
+  },
+  {
+    key: "actions",
+    target: () => $(".tabbed-top-bar-actions"),
+    pad: EDGE_PAD,
+    placement: "bottom",
+    step: "This tab",
+    title: "Controls for the tab you're on",
+    body: "<b>Options</b> hides a tab's settings to give the fretboard the room, <b>rotate</b> turns a fretboard, and <b>×</b> closes the tab.",
+  },
+  {
+    key: "menu",
+    target: () => $(".tabbed-menu-btn"),
+    pad: EDGE_PAD,
+    placement: "bottom",
+    last: true,
+    step: "Menu",
+    title: "Layouts &amp; settings",
+    body: "Ready-made <b>starter layouts</b>, and <b>settings</b> for your instrument, tuning and theme. This tour is in here too, whenever you want it again.",
+  },
+];
+
+/** A step can only be shown if what it points at is on screen. */
+function hasTarget(step: TourStep): boolean {
+  const target = step.target();
+  if (!target) return false;
+  const r = target.getBoundingClientRect();
+  return r.width > 0 && r.height > 0;
+}
+
+/** The tour for the live layout. The desktop tour builds the views its steps point
+ *  at (openTourViews); the mobile one works with what is open, so it drops any step
+ *  with nothing to point at and re-marks the last one. */
+function stepsForLayout(): TourStep[] {
+  if (!isTabbed()) return DESKTOP_STEPS;
+  const steps = MOBILE_STEPS.filter(hasTarget);
+  return steps.map((s, i) => ({ ...s, last: i === steps.length - 1 }));
+}
+
 // ─── Welcome Modal ────────────────────────────────────────────────────────────
 
 function buildWelcome(): void {
@@ -173,34 +256,31 @@ function buildWelcome(): void {
         <p class="onb-lede">Not a course and not a song library — a living board of chord shapes, scales and practice tools you arrange to fit whatever you're playing.</p>
     `;
 
+  const tabbed = isTabbed();
+  const feat = (icon: string, title: string, desc: string) => `
+        <div class="onb-feat">
+            <span class="material-icons onb-feat-icon">${icon}</span>
+            <div>
+                <div class="onb-feat-title">${title}</div>
+                <div class="onb-feat-desc">${desc}</div>
+            </div>
+        </div>`;
   const feats = el("div", "onb-feats");
-  feats.innerHTML = `
-        <div class="onb-feat">
-            <span class="material-icons onb-feat-icon">open_with</span>
-            <div>
-                <div class="onb-feat-title">Move &amp; resize freely</div>
-                <div class="onb-feat-desc">Every reference is a panel. Drag it, scale it, build the layout that matches how you practice.</div>
-            </div>
-        </div>
-        <div class="onb-feat">
-            <span class="material-icons onb-feat-icon">sync_alt</span>
-            <div>
-                <div class="onb-feat-title">Link panels by key</div>
-                <div class="onb-feat-desc">Connect panels so they share a root note — change the key once and everything follows.</div>
-            </div>
-        </div>
-        <div class="onb-feat">
-            <span class="material-icons onb-feat-icon">timer</span>
-            <div>
-                <div class="onb-feat-title">Practice in place</div>
-                <div class="onb-feat-desc">Metronome, timer and backing tracks sit right alongside your reference, not in another tab.</div>
-            </div>
-        </div>
-    `;
+  feats.innerHTML = tabbed
+    ? feat("tab", "One tool per tab", "Every reference fills the screen. Switch with a tap or a swipe, and open as many as you like.") +
+      feat("sync_alt", "Link tabs by key", "Link neighbouring tabs so they share a root note — change the key once and everything follows.") +
+      feat("timer", "Practice in place", "Metronome, timer and backing tracks are one tab away from your reference.")
+    : feat("open_with", "Move &amp; resize freely", "Every reference is a panel. Drag it, scale it, build the layout that matches how you practice.") +
+      feat("sync_alt", "Link panels by key", "Connect panels so they share a root note — change the key once and everything follows.") +
+      feat("timer", "Practice in place", "Metronome, timer and backing tracks sit right alongside your reference, not in another tab.");
 
   const actions = el("div", "onb-actions");
 
-  const startBtn = el("button", "onb-btn-primary", "Take the 60-second tour");
+  const startBtn = el(
+    "button",
+    "onb-btn-primary",
+    tabbed ? "Take the 30-second tour" : "Take the 60-second tour",
+  );
   startBtn.addEventListener("click", () => {
     closeWelcome();
     openTourViews(() => startTour());
@@ -211,7 +291,11 @@ function buildWelcome(): void {
     "onb-btn-secondary",
     `Read intro<span class="material-icons">open_in_new</span>`,
   ) as HTMLAnchorElement;
-  introLink.href = "https://fretfalcon.com/welcome.html";
+  // dist/index.html is self-contained and also runs straight off disk, where a
+  // root-relative link is dead — so fall back to the canonical origin there and
+  // stay relative when hosted, which keeps local deploy previews honest.
+  introLink.href =
+    location.protocol === "file:" ? "https://fretfalcon.com/info/" : "/info/";
   introLink.target = "_blank";
   introLink.rel = "noopener noreferrer";
 
@@ -244,6 +328,16 @@ function openTourViews(onReady: () => void): void {
   const manager = Onb.manager;
   if (!manager) {
     onReady();
+    return;
+  }
+
+  // The mobile tour points at the shell, so it leaves the open tabs as they are.
+  // Only an empty screen gets something to point at: the starter set of tabs.
+  if (isTabbed()) {
+    if (manager.getOpenInstanceIds().length === 0) {
+      manager.loadNamedLayout(`default:${MOBILE_STARTER_KEY}`);
+    }
+    requestAnimationFrame(onReady);
     return;
   }
 
@@ -293,8 +387,9 @@ function startTour(): void {
 
   Onb.overlay = { wrap, block, spot, tip, arrow, ghost: null };
 
+  Onb.steps = stepsForLayout();
   Onb.repositioner = () => {
-    if (Onb.overlay) layoutStep(STEPS[Onb.stepIdx]);
+    if (Onb.overlay) layoutStep(Onb.steps[Onb.stepIdx]);
   };
   window.addEventListener("resize", Onb.repositioner);
 
@@ -306,9 +401,14 @@ function startTour(): void {
 
 function gotoStep(i: number): void {
   if (!Onb.overlay) return;
-  const clamped = Math.max(0, Math.min(i, STEPS.length - 1));
+  const steps = Onb.steps;
+  if (!steps.length) {
+    teardownTour();
+    return;
+  }
+  const clamped = Math.max(0, Math.min(i, steps.length - 1));
   Onb.stepIdx = clamped;
-  const s = STEPS[clamped];
+  const s = steps[clamped];
 
   clearGesture();
   document.body.classList.remove("onb-links-emph");
@@ -316,8 +416,8 @@ function gotoStep(i: number): void {
   const { tip, spot } = Onb.overlay;
 
   // Build tip content
-  const stepCount = `${clamped + 1} / ${STEPS.length}`;
-  const dotsHtml = STEPS.map(
+  const stepCount = `${clamped + 1} / ${steps.length}`;
+  const dotsHtml = steps.map(
     (_, idx) =>
       `<span class="onb-dot${idx === clamped ? " active" : ""}"></span>`,
   ).join("");
@@ -396,8 +496,10 @@ function placeTip(
   tip: HTMLElement,
   arrow: HTMLElement,
 ): void {
-  const TIP_W = 326;
-  const TIP_H = 220;
+  // The tip's real size: CSS narrows it on a small screen, and its height follows
+  // its text. (The fallbacks are its desktop size, for a tip not yet laid out.)
+  const TIP_W = tip.offsetWidth || 326;
+  const TIP_H = tip.offsetHeight || 220;
   const MARGIN = 16;
   const ARROW_SIZE = 13;
   const GAP = 12;
@@ -407,57 +509,66 @@ function placeTip(
 
   const order = [preferredPlacement, "bottom", "top", "right", "left"];
   const unique = [...new Set(order)];
+  const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(lo, v), Math.max(lo, hi));
 
   let placed = false;
 
-  for (const side of unique) {
-    let tx = 0,
-      ty = 0;
+  // First pass: a side where the tip fits centred on the target. Second pass: a side
+  // where it fits once slid along that edge — on a phone the target is often in a
+  // corner (the + button), where a centred tip would hang off the screen.
+  for (const slide of [false, true]) {
+    for (const side of unique) {
+      let tx = 0,
+        ty = 0;
 
-    if (side === "right") {
-      tx = r.right + pad + GAP;
-      ty = r.top + r.height / 2 - TIP_H / 2;
-    } else if (side === "left") {
-      tx = r.left - pad - GAP - TIP_W;
-      ty = r.top + r.height / 2 - TIP_H / 2;
-    } else if (side === "bottom") {
-      tx = r.left + r.width / 2 - TIP_W / 2;
-      ty = r.bottom + pad + GAP;
-    } else {
-      tx = r.left + r.width / 2 - TIP_W / 2;
-      ty = r.top - pad - GAP - TIP_H;
-    }
+      if (side === "right") {
+        tx = r.right + pad + GAP;
+        ty = r.top + r.height / 2 - TIP_H / 2;
+      } else if (side === "left") {
+        tx = r.left - pad - GAP - TIP_W;
+        ty = r.top + r.height / 2 - TIP_H / 2;
+      } else if (side === "bottom") {
+        tx = r.left + r.width / 2 - TIP_W / 2;
+        ty = r.bottom + pad + GAP;
+      } else {
+        tx = r.left + r.width / 2 - TIP_W / 2;
+        ty = r.top - pad - GAP - TIP_H;
+      }
 
-    if (
-      tx >= MARGIN &&
-      ty >= MARGIN &&
-      tx + TIP_W <= vw - MARGIN &&
-      ty + TIP_H <= vh - MARGIN
-    ) {
-      applyTipPosition(
-        tip,
-        arrow,
-        tx,
-        ty,
-        side,
-        r,
-        pad,
-        TIP_W,
-        TIP_H,
-        ARROW_SIZE,
-      );
-      placed = true;
-      break;
+      if (slide) {
+        if (side === "top" || side === "bottom") tx = clamp(tx, MARGIN, vw - TIP_W - MARGIN);
+        else ty = clamp(ty, MARGIN, vh - TIP_H - MARGIN);
+      }
+
+      if (
+        tx >= MARGIN &&
+        ty >= MARGIN &&
+        tx + TIP_W <= vw - MARGIN &&
+        ty + TIP_H <= vh - MARGIN
+      ) {
+        applyTipPosition(
+          tip,
+          arrow,
+          tx,
+          ty,
+          side,
+          r,
+          pad,
+          TIP_W,
+          TIP_H,
+          ARROW_SIZE,
+        );
+        placed = true;
+        break;
+      }
     }
+    if (placed) break;
   }
 
   if (!placed) {
     // Clamp to viewport as last resort
-    const tx = Math.min(
-      Math.max(MARGIN, r.right + pad + GAP),
-      vw - TIP_W - MARGIN,
-    );
-    const ty = Math.min(Math.max(MARGIN, r.top), vh - TIP_H - MARGIN);
+    const tx = clamp(r.right + pad + GAP, MARGIN, vw - TIP_W - MARGIN);
+    const ty = clamp(r.top, MARGIN, vh - TIP_H - MARGIN);
     applyTipPosition(
       tip,
       arrow,
@@ -571,7 +682,7 @@ function onKey(e: KeyboardEvent): void {
     return;
   }
   if (e.key === "ArrowRight") {
-    const s = STEPS[Onb.stepIdx];
+    const s = Onb.steps[Onb.stepIdx];
     if (s?.last) teardownTour();
     else gotoStep(Onb.stepIdx + 1);
     return;

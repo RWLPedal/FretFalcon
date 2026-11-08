@@ -9,7 +9,13 @@ export default featurePanelModule({
   icon: "swap_horiz",
   featureTypeName: NearbyTriadsFeature.typeName,
   size: { min: { cols: 34, rows: 26 }, default: { cols: 46, rows: 32 } },
-  sizeHorizontal: { default: { cols: 52, rows: 24 } },
+  // Taller than it is strictly drawn: the Compact display opens on its chord wizard,
+  // whose voicing board sits between a row of chord tabs and the wizard's buttons. At
+  // 24 rows on a laptop that board came out 50px tall.
+  sizeHorizontal: { min: { cols: 40, rows: 20 }, default: { cols: 52, rows: 30 } },
+  // One board in the Compact display, one per chord in Reference.
+  multiBoard: (state) =>
+    NearbyTriadsFeature.drawsSeveralBoards((state as { config?: string[] } | undefined)?.config),
   nav: {
     section: NavSection.Fretboard,
     label: "Nearby Triads",

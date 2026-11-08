@@ -5,8 +5,26 @@
       "name": "fretfalcon",
       "runtimeExecutable": "node",
       "runtimeArgs": [".claude/preview-server.js"],
-      "port": 4000,
+      "port": 5291,
       "autoPort": true
+    },
+    {
+      "name": "fretfalcon-site",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["deploy/serve.mjs"],
+      "port": 5292
+    },
+    {
+      "name": "fretfalcon-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 5290
+    },
+    {
+      "name": "fretfalcon-dev-single",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:single"],
+      "port": 5293
     }
   ]
 }

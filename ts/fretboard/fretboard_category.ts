@@ -3,14 +3,9 @@ import { Category } from "../feature"; // Use Category from feature.ts
 import { FeatureTypeDescriptor, SettingsUISchemaItem } from "../feature";
 import { registerFeatureSpec } from "../core/config/feature_spec_registry";
 
-// Import Guitar Features
-import { NotesFeature, NotesFeatureSpec } from "./features/notes_feature";
-import { ScaleFeature, ScaleFeatureSpec } from "./features/scale_feature";
-import { ChordFeature, ChordFeatureSpec } from "./features/chord_feature";
-import { ChordProgressionFeature, ChordProgressionFeatureSpec } from "./features/chord_progression_feature";
-import { TriadFeature, TriadFeatureSpec } from "./features/triad_feature";
-import { CagedFeature, CagedFeatureSpec } from "./features/caged_feature";
-import { MetronomeFeature } from "./features/metronome_feature";
+// Features are auto-discovered from features/*_feature.ts — see feature_manifest.ts.
+// Adding a feature = create its feature file + module file; no edits here.
+import { FEATURE_DESCRIPTORS, FEATURE_SPECS } from "./features/feature_manifest";
 
 // Import Guitar Settings related items
 import {
@@ -22,9 +17,6 @@ import {
 import { INSTRUMENTS, InstrumentName, getAvailableTunings } from "./instruments";
 import type { CustomTuning } from "../settings";
 import { FretboardColorScheme } from "./colors";
-import { ArpeggioFeature, ArpeggioFeatureSpec } from "./features/arpeggio_feature";
-import { MultiLayerFretboardFeature, MultiLayerFeatureSpec } from "./features/multi_layer_fretboard_feature";
-import { NearbyTriadsFeature, NearbyTriadsFeatureSpec } from "./features/nearby_triads_feature";
 
 export const COLOR_SCHEME_OPTIONS: {
   value: FretboardColorScheme;
@@ -172,45 +164,13 @@ export class InstrumentCategory implements Category {
   private customTunings?: Partial<Record<string, CustomTuning[]>>;
 
   constructor() {
-    // Instantiate the map of features provided by this category
-    this.featureTypes = new Map<string, FeatureTypeDescriptor>([
-      [NotesFeature.typeName, NotesFeature as unknown as FeatureTypeDescriptor],
-      [ScaleFeature.typeName, ScaleFeature as unknown as FeatureTypeDescriptor],
-      [ChordFeature.typeName, ChordFeature as unknown as FeatureTypeDescriptor],
-      [
-        ChordProgressionFeature.typeName,
-        ChordProgressionFeature as unknown as FeatureTypeDescriptor,
-      ],
-      [TriadFeature.typeName, TriadFeature as unknown as FeatureTypeDescriptor],
-      [CagedFeature.typeName, CagedFeature as unknown as FeatureTypeDescriptor],
-      [
-        MetronomeFeature.typeName,
-        MetronomeFeature as unknown as FeatureTypeDescriptor,
-      ],
-      [
-        MultiLayerFretboardFeature.typeName,
-        MultiLayerFretboardFeature as unknown as FeatureTypeDescriptor,
-      ],
-      [
-        NearbyTriadsFeature.typeName,
-        NearbyTriadsFeature as unknown as FeatureTypeDescriptor,
-      ],
-      [
-        ArpeggioFeature.typeName,
-        ArpeggioFeature as unknown as FeatureTypeDescriptor,
-      ],
-    ]);
-
-    // Register FeatureSpecs for migrated features (Phase B).
-    registerFeatureSpec(NotesFeatureSpec as any);
-    registerFeatureSpec(ScaleFeatureSpec as any);
-    registerFeatureSpec(ChordFeatureSpec as any);
-    registerFeatureSpec(TriadFeatureSpec as any);
-    registerFeatureSpec(CagedFeatureSpec as any);
-    registerFeatureSpec(ArpeggioFeatureSpec as any);
-    registerFeatureSpec(ChordProgressionFeatureSpec as any);
-    registerFeatureSpec(NearbyTriadsFeatureSpec as any);
-    registerFeatureSpec(MultiLayerFeatureSpec as any);
+    // Both registries derive from the auto-discovered feature manifest — one entry per
+    // features/*_feature.ts. Legacy descriptors key the category map; migrated features
+    // additionally register their typed FeatureSpec.
+    this.featureTypes = new Map<string, FeatureTypeDescriptor>(
+      FEATURE_DESCRIPTORS.map((d) => [d.typeName, d]),
+    );
+    FEATURE_SPECS.forEach(registerFeatureSpec);
   }
 
   getName(): string {

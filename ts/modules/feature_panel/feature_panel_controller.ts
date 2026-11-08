@@ -33,6 +33,8 @@ export class FeaturePanelController extends BaseView implements SignalSink {
   private drivenConfig: DrivenConfig<unknown> | null = null;
   private drivenState: DrivenState = emptyDrivenState();
   private lastResolvedConfig: unknown | null = null;
+  /** The link status last reported, replayed to each feature this controller builds. */
+  private linkStatus: { hasIncomingLinks: boolean; hasNextSignals?: boolean } | null = null;
   // Capo fret from a linked Capo source (0 = no capo). Not a config field — it's transient
   // and re-applied on every feature rebuild via buildFeatureContext().
   private currentCapo = 0;
@@ -157,9 +159,15 @@ export class FeaturePanelController extends BaseView implements SignalSink {
     this.rebuildFeatureNew();
   }
 
+  /**
+   * Re-creates the feature from the current config and the room the panel has. A
+   * driven field still waiting for its source keeps the value it last had (see
+   * resolveConfig), so a panel linked to a source that has not signalled yet still
+   * follows a resize and its other settings.
+   */
   private rebuildFeatureNew(): void {
     if (!this.spec || !this.drivenConfig) return;
-    const resolved = resolveConfig(this.drivenConfig, this.drivenState);
+    const resolved = resolveConfig(this.drivenConfig, this.drivenState, this.lastResolvedConfig);
     if (resolved === null) {
       return;
     }
@@ -195,6 +203,11 @@ export class FeaturePanelController extends BaseView implements SignalSink {
         featureTypeName: this.featureTypeName,
         config: encodedConfig,
       });
+
+      // The feature is new and has heard nothing; the links have not changed.
+      if (this.linkStatus) {
+        emitEvent(this.featureContainer, 'link-status-changed', this.linkStatus, { bubbles: false });
+      }
     } catch (err) {
       this.featureContainer.innerHTML = `<p>Error creating feature: ${err instanceof Error ? err.message : String(err)}</p>`;
       console.error(err);
@@ -277,8 +290,9 @@ export class FeaturePanelController extends BaseView implements SignalSink {
       this.rebuildFeatureNew();
     }
 
+    this.linkStatus = { hasIncomingLinks, hasNextSignals };
     if (this.featureContainer) {
-      emitEvent(this.featureContainer, 'link-status-changed', { hasIncomingLinks, hasNextSignals }, { bubbles: false });
+      emitEvent(this.featureContainer, 'link-status-changed', this.linkStatus, { bubbles: false });
     }
   }
 

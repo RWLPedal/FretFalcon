@@ -19,6 +19,7 @@ export default featurePanelModule({
   featureTypeName: TriadFeature.typeName,
   size: { default: { cols: 26, rows: 43 } },
   sizeHorizontal: { default: { cols: 46, rows: 20 } },
+  multiBoard: true, // one fretboard per string set
   nav: {
     section: NavSection.Fretboard,
     label: 'Triads',

@@ -3,6 +3,7 @@ import { formatDuration, parseDurationString } from '../../time_utils';
 import { SignalKind, DriveSignal } from '../../panels/link_types';
 import { getFloatingViewGridCell } from '../../panels/panel_wrapper';
 import { emitEvent } from '../../core/events';
+import { holdScreenAwake, releaseScreenAwake } from '../../core/screen_wake';
 
 export type TimerMode = 'simple' | 'intervals' | 'stopwatch';
 
@@ -29,6 +30,7 @@ const DEFAULTS: TimerSettings = {
 const STEP_SECONDS = 30;       // focus/rest stepper granularity
 const MIN_PHASE = 30;          // minimum focus/rest length
 const DEFAULT_TITLE = 'Timer'; // chrome title when there's no status to show
+const LONG_DISPLAY_CHARS = 5;  // "59:59" — anything longer includes hours
 
 type ChimeKind = 'end' | 'transition' | 'go' | 'tick';
 type Phase = 'focus' | 'rest';
@@ -492,6 +494,7 @@ export class TimerView extends BaseView {
     this.hasStarted = true;
     this.isRunning = true;
     this.isDone = false;
+    holdScreenAwake(this);
     this.updateButtonState();
     this.updateDisplay();
     this.dispatchTransportChanged(true);
@@ -504,6 +507,7 @@ export class TimerView extends BaseView {
       window.clearInterval(this.timerId);
       this.timerId = null;
     }
+    releaseScreenAwake(this);
     if (!this.isRunning) return;
     this.isRunning = false;
     this.updateButtonState();
@@ -622,9 +626,13 @@ export class TimerView extends BaseView {
 
   private updateDisplay(): void {
     if (this.displayEl && !this.isEditing) {
-      this.displayEl.textContent = this.countInRemaining > 0
+      const text = this.countInRemaining > 0
         ? String(this.countInRemaining)
         : formatDuration(this.currentSeconds);
+      this.displayEl.textContent = text;
+      // The full-screen (tabbed) face sizes the digits to the screen width; an
+      // H:MM:SS reading needs a smaller size than M:SS to stay on one line.
+      this.displayEl.classList.toggle('timer-display--long', text.length > LONG_DISPLAY_CHARS);
     }
     this.updateTitle();
     this.updateBarProgress();

@@ -13,6 +13,11 @@
 :root {
   --chord-barre: var(--note-second);
   --chord-root: var(--danger);
+  /* Text/icon color on a saturated accent/primary/danger fill (buttons, active
+     chips, filled cells). White reads correctly on every current theme's accent;
+     a future theme with a pale accent overrides this in its [data-theme] block
+     instead of hunting down ~20 scattered `color: #fff` rules. */
+  --text-on-accent: #fff;
 }
 
 /* ───────────────────────────────────────

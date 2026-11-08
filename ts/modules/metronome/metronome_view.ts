@@ -3,6 +3,7 @@ import { AudioController } from '../../audio_controller';
 import { SignalKind, GrooveSignal } from '../../panels/link_types';
 import { ValueSlider } from '../../core/widgets/value_slider';
 import { emitEvent } from '../../core/events';
+import { holdScreenAwake, releaseScreenAwake } from '../../core/screen_wake';
 
 enum BeatState {
   Silent = 0,
@@ -224,6 +225,14 @@ export class MetronomeView extends BaseView {
     this.beatElements = [];
     const step = this.currentSubdivisionLevel / this.currentTimeSignature.subdivision;
 
+    // Layout hints for the full-screen (tabbed) face, which draws the beats as a
+    // grid of large pads: all of them in one row, or two rows that break on a beat.
+    // The floating panel's single flex row ignores both.
+    const count = this.numberOfVisualBeats;
+    const twoRowCols = count <= 4 ? count : step * Math.ceil(this.currentTimeSignature.beats / 2);
+    this.beatsContainer.style.setProperty("--beat-count", String(count));
+    this.beatsContainer.style.setProperty("--beat-cols", String(twoRowCols));
+
     for (let i = 0; i < this.numberOfVisualBeats; i++) {
       const beatEl = document.createElement("div");
       beatEl.classList.add("metronome-beat");
@@ -256,6 +265,7 @@ export class MetronomeView extends BaseView {
       this.startInterval();
       this.startProgressionTimer();
     }
+    holdScreenAwake(this);
     this.updateMuteButtonState();
     this.updatePlayPauseButtonState();
     this.dispatchTempoEvent();
@@ -268,6 +278,7 @@ export class MetronomeView extends BaseView {
       this.stopInterval();
       this.stopProgressionTimer();
     }
+    releaseScreenAwake(this);
     this.updateMuteButtonState();
     this.updatePlayPauseButtonState();
     this.dispatchTransportChanged(false);
@@ -276,6 +287,7 @@ export class MetronomeView extends BaseView {
   destroy(): void {
     this.stopInterval();
     this.stopProgressionTimer();
+    releaseScreenAwake(this);
     this.cleanupVisuals();
     super.destroy();
   }

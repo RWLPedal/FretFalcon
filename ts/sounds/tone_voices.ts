@@ -23,8 +23,8 @@ export const ALL_TONE_VOICES: ToneVoice[] = ['clean', 'overdrive', 'fuzz', 'orga
 
 const _organWaveCache    = new WeakMap<AudioContext, PeriodicWave>();
 const _rhodesWaveCache   = new WeakMap<AudioContext, PeriodicWave>();
-let   _overdriveCurve: Float32Array | null = null;
-let   _fuzzCurve:      Float32Array | null = null;
+let   _overdriveCurve: Float32Array<ArrayBuffer> | null = null;
+let   _fuzzCurve:      Float32Array<ArrayBuffer> | null = null;
 
 function getOrganWave(ctx: AudioContext): PeriodicWave {
   let wave = _organWaveCache.get(ctx);
@@ -51,7 +51,7 @@ function getRhodesWave(ctx: AudioContext): PeriodicWave {
 }
 
 // Soft saturation via tanh with normalisation so output stays in [-1, 1].
-function getOverdriveCurve(): Float32Array {
+function getOverdriveCurve(): Float32Array<ArrayBuffer> {
   if (_overdriveCurve) return _overdriveCurve;
   const n   = 512;
   const k   = 8; // higher = more saturation
@@ -65,7 +65,7 @@ function getOverdriveCurve(): Float32Array {
 }
 
 // Hard clip: pre-gain then clamp to [-1, 1].
-function getFuzzCurve(): Float32Array {
+function getFuzzCurve(): Float32Array<ArrayBuffer> {
   if (_fuzzCurve) return _fuzzCurve;
   const n       = 512;
   const preGain = 10;

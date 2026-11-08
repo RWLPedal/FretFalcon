@@ -32,7 +32,18 @@ export class ThemeManager {
     this._theme = theme;
     document.documentElement.dataset.theme = theme;
     document.body.classList.toggle("dark-theme", !LIGHT_THEMES.has(theme));
+    this.syncBrowserChrome();
     this._listeners.forEach((cb) => cb(theme));
+  }
+
+  /** Tint the browser's own chrome — the address bar, and the status bar of the app
+   *  installed to a home screen — with the live theme's page background. */
+  private syncBrowserChrome(): void {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+    const background = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+    // Only a plain hex colour: every theme's --bg is one, and it is the one form every
+    // browser accepts here.
+    if (meta && /^#[0-9a-f]{3,8}$/i.test(background)) meta.content = background;
   }
 
   get theme(): Theme {

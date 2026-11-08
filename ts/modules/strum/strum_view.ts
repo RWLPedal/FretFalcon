@@ -6,6 +6,8 @@ import { BUILT_IN_PRESETS } from './strum_presets';
 export { StrokeAction, StrumPreset } from './strum_types';
 import { StrokeAction, StrumPreset } from './strum_types';
 import { ValueSlider } from '../../core/widgets/value_slider';
+import { beatsPerRow } from './strum_layout';
+import { holdScreenAwake, releaseScreenAwake } from '../../core/screen_wake';
 export interface StrumViewState {
   _v: 1;
   subdivision: 'eighth' | 'sixteenth';
@@ -17,9 +19,6 @@ export interface StrumViewState {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const GRID_WIDTH = 416; // total pixel width for all slot cells, matching dm grid
-const BEAT_GAP   = 8;   // margin-left pixels added at each beat-start slot
 
 const CYCLE_ORDER: StrokeAction[] = [
   StrokeAction.Rest,
@@ -73,14 +72,6 @@ function slotBeatLabel(index: number, timeSig: { beats: number; division: number
   return pos === 0 ? String(beat) : (s16[pos] ?? '');
 }
 
-function computeCellWidth(timeSig: { beats: number; division: number }, subdivision: 'eighth' | 'sixteenth'): number {
-  const n   = totalSlots(timeSig, subdivision);
-  const spb = slotsPerBeat(timeSig, subdivision);
-  let gaps  = 0;
-  for (let i = 1; i < n; i++) { if (i % spb === 0) gaps++; }
-  return (GRID_WIDTH - gaps * BEAT_GAP) / n;
-}
-
 // ─── StrumView ────────────────────────────────────────────────────────────────
 
 export class StrumView extends BaseView {
@@ -100,7 +91,7 @@ export class StrumView extends BaseView {
 
   // UI refs
   private gridEl: HTMLElement | null = null;
-  private beatLabelsEl: HTMLElement | null = null;
+  private gridResizeObserver: ResizeObserver | null = null;
   private cellEls: HTMLElement[] = [];
   private beatLabelEls: HTMLElement[] = [];
   private playBtn: HTMLButtonElement | null = null;
@@ -286,53 +277,58 @@ export class StrumView extends BaseView {
     const wrapper = document.createElement('div');
     wrapper.className = 'sv-grid-wrapper';
 
-    this.beatLabelsEl = document.createElement('div');
-    this.beatLabelsEl.className = 'sv-beat-labels';
-    wrapper.appendChild(this.beatLabelsEl);
-
     this.gridEl = document.createElement('div');
     this.gridEl.className = 'sv-grid';
     wrapper.appendChild(this.gridEl);
 
     this.buildCells();
+
+    // Where the grid is as wide as its panel (the tabbed layout), it wraps whole
+    // beats onto further rows rather than squeezing or clipping the slots.
+    if (typeof ResizeObserver !== 'undefined') {
+      this.gridResizeObserver?.disconnect();
+      this.gridResizeObserver = new ResizeObserver(() => this.layoutBeats());
+      this.gridResizeObserver.observe(wrapper);
+    }
     return wrapper;
   }
 
+  /** One `.sv-beat` group per beat, each holding a label + slot column per slot. */
   private buildCells(): void {
-    if (!this.gridEl || !this.beatLabelsEl) return;
+    if (!this.gridEl) return;
     this.gridEl.innerHTML = '';
-    this.beatLabelsEl.innerHTML = '';
     this.cellEls = [];
     this.beatLabelEls = [];
 
     const n    = totalSlots(this.timeSig, this.subdivision);
     const spb  = slotsPerBeat(this.timeSig, this.subdivision);
-    const cellW = computeCellWidth(this.timeSig, this.subdivision);
 
     if (this.slots.length !== n) {
       this.slots = new Array(n).fill(StrokeAction.Rest);
     }
 
+    let beatEl: HTMLElement | null = null;
     for (let i = 0; i < n; i++) {
-      const isBeatStart = i > 0 && i % spb === 0;
+      if (i % spb === 0 || !beatEl) {
+        beatEl = document.createElement('div');
+        beatEl.className = 'sv-beat';
+        this.gridEl.appendChild(beatEl);
+      }
+
+      const col = document.createElement('div');
+      col.className = 'sv-col';
 
       // Beat label
       const lbl = document.createElement('div');
       lbl.className = 'sv-beat-label';
-      lbl.style.width    = `${cellW}px`;
-      lbl.style.minWidth = `${cellW}px`;
       if (i % spb === 0) lbl.classList.add('sv-beat-label--beat');
-      if (isBeatStart)   lbl.classList.add('sv-beat-start');
       lbl.textContent = slotBeatLabel(i, this.timeSig, this.subdivision);
       this.beatLabelEls.push(lbl);
-      this.beatLabelsEl.appendChild(lbl);
+      col.appendChild(lbl);
 
       // Slot cell
       const cell = document.createElement('div');
       cell.className = 'sv-slot';
-      cell.style.width    = `${cellW}px`;
-      cell.style.minWidth = `${cellW}px`;
-      if (isBeatStart) cell.classList.add('sv-beat-start');
 
       const indicator = document.createElement('span');
       indicator.className = 'sv-slot-indicator';
@@ -341,8 +337,20 @@ export class StrumView extends BaseView {
       this.updateCellStyle(cell, i);
       cell.addEventListener('click', () => this.cycleSlot(i));
       this.cellEls.push(cell);
-      this.gridEl.appendChild(cell);
+      col.appendChild(cell);
+
+      beatEl.appendChild(col);
     }
+    this.layoutBeats();
+  }
+
+  /** Publish the beats-per-row for the grid's current width (read by mobile.css). */
+  private layoutBeats(): void {
+    if (!this.gridEl) return;
+    const spb   = slotsPerBeat(this.timeSig, this.subdivision);
+    const beats = Math.ceil(totalSlots(this.timeSig, this.subdivision) / spb);
+    const width = this.gridEl.parentElement?.clientWidth ?? 0;
+    this.gridEl.style.setProperty('--sv-beats-per-row', String(beatsPerRow(width, beats, spb)));
   }
 
   private rebuildGrid(): void {
@@ -468,6 +476,7 @@ export class StrumView extends BaseView {
 
   start(): void {
     this.isPlaying = true;
+    holdScreenAwake(this);
     if (this.playBtn) {
       this.playBtn.innerHTML = `<span class="material-icons">stop</span>`;
       this.playBtn.classList.add('is-danger');
@@ -479,6 +488,7 @@ export class StrumView extends BaseView {
 
   stop(): void {
     this.isPlaying = false;
+    releaseScreenAwake(this);
     if (this.playBtn) {
       this.playBtn.innerHTML = `<span class="material-icons">play_arrow</span>`;
       this.playBtn.classList.remove('is-danger');
@@ -492,6 +502,9 @@ export class StrumView extends BaseView {
 
   destroy(): void {
     this.stopInterval();
+    releaseScreenAwake(this);
+    this.gridResizeObserver?.disconnect();
+    this.gridResizeObserver = null;
     super.destroy();
   }
 

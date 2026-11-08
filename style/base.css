@@ -58,6 +58,13 @@
   --clr-link: var(--clr-primary-light);
 }
 
+/* iOS Safari enlarges text when a phone is turned on its side. Every size here is
+   already worked out from the room there is, so the browser must leave it alone. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 /* ── Apply theme tokens → semantic vars ─────────────────────────────────── */
 body {
   /* theme-tokens.css sets --bg, --accent, etc. on [data-theme]; these
@@ -107,6 +114,22 @@ body {
   background: transparent;
 }
 
+/* ── Screen-reader-only ─────────────────────────────────────────────────────
+   Removes an element from the visual layout while leaving it in the
+   accessibility tree and the DOM. Used for the page <h1>, which the app's
+   visual chrome (the sidebar brand lockup) conveys graphically instead. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* ── Flash Overlay ──────────────────────────────────────────────────────── */
 .hidden  { display: none;  opacity: 0; }
 .visible { display: block; opacity: 0.8; }
@@ -118,6 +141,84 @@ body {
   right: 0;
   top: 0;
   width: 100%;
-  z-index: 100;
+  z-index: var(--z-flash-overlay);
   transition: opacity 0.15s ease-in-out;
+}
+
+/* ── Global stacking scale ──────────────────────────────────────────────────
+   Central z-index layers, highest sits on top. Values are the historical ones
+   (this is a documentation/centralization pass — no restacking). Component-internal
+   z-index (1/2/10 confined to a single stacking context) is deliberately NOT part
+   of this scale. */
+:root {
+  --z-link-overlay:      89;  /* link-signal SVG, just under the sidebar */
+  --z-sidebar:           91;
+  --z-flash-overlay:    100;  /* full-screen beat flash */
+  --z-modal:            200;  /* settings modal */
+  --z-mobile-backdrop:  300;  /* mobile add-panel scrim */
+  --z-mobile-sheet:     301;  /* mobile bottom sheet above its scrim */
+  --z-onboarding-scrim: 9000; /* tour scrim / wrap / block */
+  --z-onboarding-spot:  9001; /* tour spotlight cutout */
+  --z-onboarding-tip:   9002; /* tour coachmark */
+  --z-onboarding-ghost: 9003; /* tour drag ghost */
+  --z-popover:          9999; /* dropdowns, volume/palette popovers, drag ghosts */
+  --z-error-toast:     10000; /* uncaught-error toast — above everything */
+}
+#pt2-error-toasts {
+  position: fixed;
+  bottom: 12px;
+  right: 12px;
+  z-index: var(--z-error-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 24px));
+}
+.pt2-error-toast {
+  background: var(--panel-bg, #fff);
+  color: var(--text-primary, #222);
+  border: 1px solid var(--danger, #b33);
+  border-left: 4px solid var(--danger, #b33);
+  border-radius: 6px;
+  box-shadow: var(--shadow-panel, 0 4px 12px rgba(0, 0, 0, 0.25));
+  font-size: 12px;
+  overflow: hidden;
+}
+.pt2-error-toast-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border, #ccc);
+}
+.pt2-error-toast-title {
+  font-weight: 600;
+  color: var(--danger, #b33);
+  flex: 1;
+}
+.pt2-error-toast-count {
+  color: var(--text-muted, #888);
+  font-variant-numeric: tabular-nums;
+}
+.pt2-error-toast-btn {
+  background: transparent;
+  border: 1px solid var(--border, #ccc);
+  border-radius: 4px;
+  color: var(--text-primary, #222);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 8px;
+}
+.pt2-error-toast-btn:hover {
+  border-color: var(--danger, #b33);
+}
+.pt2-error-toast-body {
+  margin: 0;
+  padding: 8px;
+  max-height: 140px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 11px;
 }

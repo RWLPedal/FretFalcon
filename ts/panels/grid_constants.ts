@@ -24,8 +24,11 @@ export const GRID_COLS = 96;
 export const DESIGN_ROWS = 61;
 
 /** Square cell edge clamps (px). Prevents giant panels on ultrawide monitors and
- *  illegibly small ones on narrow windows. */
-export const MIN_CELL_PX = 8;
+ *  illegibly small ones on narrow windows. When the height-fit term would push the
+ *  cell below MIN_CELL_PX, the cell stops shrinking and the workspace scrolls
+ *  vertically instead (FloatingLayout toggles `is-scrollable` on the area) —
+ *  scrolling beats unreadable panels. */
+export const MIN_CELL_PX = 12;
 export const MAX_CELL_PX = 22;
 
 /** Vestigial 16px row unit. Retained ONLY as the value written to the persisted

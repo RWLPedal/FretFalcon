@@ -8,3 +8,17 @@ main.js.map
 .vscode/
 .clinerules
 docs/SMOKE.md
+
+# The hosted build target and webpack's intermediate output for the single-file
+# target (rebuild with `npm run build`). dist/index.html, the single file, IS committed.
+dist-hosted/
+.build/
+
+# Assembled deploy artifact (rebuild with `npm run site`) and the Netlify CLI's
+# site link, which is machine-local.
+deploy/site/
+.netlify/
+
+# Playwright visual harness artifacts (goldens in __screenshots__ ARE committed)
+tests/visual/.results/
+tests/visual/.report/

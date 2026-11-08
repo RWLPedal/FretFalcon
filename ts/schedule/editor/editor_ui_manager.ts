@@ -8,6 +8,7 @@ export class EditorUIManager {
   public sidebarListEl!: HTMLElement;
   public sidebarFooterEl!: HTMLElement;
   public inspectorEl!: HTMLElement;
+  public inspectorBackBtnEl!: HTMLButtonElement;
   public addGroupBtnEl!: HTMLButtonElement;
   public addIntervalBtnEl!: HTMLButtonElement;
   public setScheduleButtonEl!: HTMLButtonElement;
@@ -58,7 +59,8 @@ export class EditorUIManager {
     this.scheduleNameDisplayEl.classList.add('schedule-name-display');
     this.scheduleNameDisplayEl.title = 'Double-click to rename';
     this.scheduleNameDisplayEl.contentEditable = 'false';
-    this.scheduleNameDisplayEl.addEventListener('dblclick', () => {
+    const beginRename = () => {
+      if (this.scheduleNameDisplayEl.isContentEditable) return;
       this.scheduleNameDisplayEl.contentEditable = 'true';
       this.scheduleNameDisplayEl.classList.add('is-editing');
       this.scheduleNameDisplayEl.focus();
@@ -66,6 +68,15 @@ export class EditorUIManager {
       range.selectNodeContents(this.scheduleNameDisplayEl);
       const sel = window.getSelection();
       if (sel) { sel.removeAllRanges(); sel.addRange(range); }
+    };
+    this.scheduleNameDisplayEl.addEventListener('dblclick', beginRename);
+    // A double-tap is a zoom gesture on a touch screen, not a double-click: there a
+    // single tap renames. (Decided per tap, from the pointer that made it — a laptop
+    // with a touch screen gets both.)
+    let tappedWith = 'mouse';
+    this.scheduleNameDisplayEl.addEventListener('pointerdown', (e) => { tappedWith = e.pointerType; });
+    this.scheduleNameDisplayEl.addEventListener('click', () => {
+      if (tappedWith !== 'mouse') beginRename();
     });
     this.scheduleNameDisplayEl.addEventListener('blur', () => {
       this.scheduleNameDisplayEl.contentEditable = 'false';
@@ -150,6 +161,10 @@ export class EditorUIManager {
 
     this.inspectorEl = document.createElement('div');
     this.inspectorEl.classList.add('editor-inspector');
+    // Shown only by the tabbed (mobile) layout, where the list and the inspector
+    // take turns filling the panel instead of sitting side by side.
+    this.inspectorBackBtnEl = this._createBtn('‹ Schedule', 'Back to the interval list', ['btn-ghost', 'inspector-back-btn']);
+    this.inspectorEl.appendChild(this.inspectorBackBtnEl);
     this.editorBodyEl.appendChild(this.inspectorEl);
 
     this.containerEl.appendChild(this.editorBodyEl);

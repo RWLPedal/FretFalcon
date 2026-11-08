@@ -601,7 +601,7 @@
 .mini-fb-root-ring { fill: none; stroke-width: 1.5; }
 .mini-fb-barre { fill: none; stroke: var(--chord-barre, var(--note-second)); }
 .mini-fb-barre-label {
-  fill: #fff;
+  fill: var(--text-on-accent);
   font: 600 9px "Hanken Grotesk", sans-serif;
 }
 
@@ -758,7 +758,7 @@
 .chord-mod-btn.is-active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* ─── Metronome View ─────────────────────────────────────────────────────── */
@@ -1047,7 +1047,7 @@ body.dark-theme .legend-view .legend-title {
 .drone-icon-btn.is-active {
   background: var(--clr-primary);
   border-color: var(--clr-primary);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 body.dark-theme .drone-icon-btn {
   border-color: var(--clr-border-dark);
@@ -1060,7 +1060,7 @@ body.dark-theme .drone-icon-btn:hover {
 body.dark-theme .drone-icon-btn.is-active {
   background: var(--clr-primary-dark);
   border-color: var(--clr-primary-dark);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* ─── CAGED Feature ──────────────────────────────────────────────────────── */
@@ -1188,7 +1188,7 @@ body.dark-theme .drone-icon-btn.is-active {
 .dm-sound-btn.is-active {
   background: var(--accent) !important;
   border-color: var(--accent) !important;
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
 }
 
 /* Grid */
@@ -1354,7 +1354,7 @@ body.dark-theme .dm-cell.dm-cell-filled {
 }
 .dm-bars-btn.is-active {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
 }
 
 /* Chord progression row */
@@ -1364,10 +1364,13 @@ body.dark-theme .dm-cell.dm-cell-filled {
   margin: 4px 0 2px;
   opacity: 0.6;
 }
-/* Width and font-size are set dynamically; the formula w = 416/N − 2 ensures
-   N cells always fill the same row width as the 16-step drum grid. */
+/* Width (--dm-measure-w) and font-size are set dynamically; the formula
+   w = 416/N − 2 ensures N cells always fill the same row width as the 16-step
+   drum grid. */
 .dm-measure-cell {
   flex: none;
+  width: var(--dm-measure-w);
+  min-width: var(--dm-measure-w);
   height: 24px;
   border-radius: 4px;
   border: 1px solid var(--border);
@@ -1390,7 +1393,7 @@ body.dark-theme .dm-cell.dm-cell-filled {
 }
 .dm-measure-cell.dm-measure-filled {
   background: var(--dm-measure-color, #2c4a7c);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: rgba(0, 0, 0, 0.15);
 }
 .dm-measure-cell.dm-measure-current {
@@ -1402,6 +1405,26 @@ body.dark-theme .dm-measure-cell.dm-measure-filled {
 }
 
 /* ─── BackingTrackView — vertical ("Down") grid ──────────────────────────── */
+
+/* Columns: chord | step number | one per drum track | bass. */
+.dm-grid.dm-grid--vertical {
+  display: grid;
+  grid-template-columns: 48px 20px repeat(var(--dm-tracks, 5), 28px) 28px;
+  gap: 2px;
+  align-items: stretch;
+}
+/* The chord cells split the height of the step rows evenly between them. */
+.dm-v-chord-col {
+  grid-column: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+}
+.dm-v-chord-col .dm-v-measure-cell {
+  flex: 1 1 0;
+  min-height: 0;
+}
 
 .dm-v-hdr {
   display: flex;
@@ -1443,6 +1466,30 @@ body.dark-theme .dm-measure-cell.dm-measure-filled {
 }
 body.dark-theme .dm-v-cell.dm-cell-filled {
   border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* A drum track's header in the vertical grid: its sound's code, with a transparent
+   native select over it (makeVTrackHeader) — tap the code to change the sound. */
+.dm-v-track-hdr {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--input-bg);
+  text-transform: none;
+  color: var(--text-primary);
+}
+.dm-v-track-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.dm-v-track-hdr:focus-within {
+  border-color: var(--accent);
 }
 
 /* Compact bass degree selector in the vertical grid header */
@@ -1510,7 +1557,7 @@ body.dark-theme .dm-v-cell.dm-cell-filled {
 }
 .dm-v-measure-cell.dm-measure-filled {
   background: var(--dm-measure-color, #2c4a7c);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: rgba(0, 0, 0, 0.15);
 }
 .dm-v-measure-cell.dm-measure-current {
@@ -1846,7 +1893,7 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1877,7 +1924,7 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   padding: 1px 5px;
   border-radius: 3px;
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   flex-shrink: 0;
   line-height: 1.5;
 }
@@ -2023,7 +2070,7 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
 .sv-subdiv-btn--active {
   background: var(--clr-primary, #4a90d9) !important;
   border-color: var(--clr-primary, #4a90d9) !important;
-  color: #fff !important;
+  color: var(--text-on-accent) !important;
 }
 
 /* Small icon buttons — fixed height to match Bulma .is-small select/button */
@@ -2056,14 +2103,26 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   width: 100%;
 }
 
-/* Beat-start gap (matches dm-beat-start spacing) */
-.sv-beat-start {
-  margin-left: 8px;
-}
-
-/* Beat label row — one label per slot; width set in JS via computeCellWidth */
-.sv-beat-labels {
+/* Slot grid — one .sv-beat group per beat, each a row of .sv-col (label over
+   slot). A floating panel shows every beat in one fixed-width row; the tabbed
+   layout (mobile.css) lets it fill the screen and wrap whole beats. */
+.sv-grid {
   display: flex;
+  gap: 8px; /* between beats — matches dm-beat-start spacing and BEAT_GAP in strum_view.ts */
+  width: 416px; /* matches the dm grid */
+  max-width: 100%;
+}
+.sv-beat {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.sv-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 0;
+  min-width: 0;
 }
 .sv-beat-label {
   height: 14px;
@@ -2083,10 +2142,6 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
   color: var(--clr-primary);
 }
 
-/* Slot grid — horizontal single row; cell widths set in JS via computeCellWidth */
-.sv-grid {
-  display: flex;
-}
 .sv-slot {
   height: 38px;
   border-radius: 5px;
@@ -2120,17 +2175,17 @@ body.dark-theme .dm-v-measure-cell.dm-measure-filled {
 }
 .sv-slot--stroke {
   background: var(--dm-palette-2);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: rgba(0, 0, 0, 0.15);
 }
 .sv-slot--accent {
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: rgba(0, 0, 0, 0.15);
 }
 .sv-slot--chuck {
   background: var(--dm-palette-6);
-  color: #fff;
+  color: var(--text-on-accent);
   border-color: rgba(0, 0, 0, 0.15);
 }
 /* Air: ghost strum — hand moves but doesn't touch strings */

@@ -282,6 +282,12 @@ export class CircleOfFifthsView extends BaseView {
 
     this.cofResizeObserver = new ResizeObserver(() => requestAnimationFrame(() => this._applySvgSize()));
     this.cofResizeObserver.observe(container);
+    // The wheel takes the height the text around it leaves, so it is fitted again
+    // whenever that text changes height — not least when the web font arrives after
+    // the first measurement and the lines come out a few pixels shorter.
+    for (const child of Array.from(view.children)) {
+      if (child !== this.svgEl) this.cofResizeObserver.observe(child);
+    }
 
     this.listen(container, 'drive-signal', (e: Event) => {
       const { signal } = (e as CustomEvent<{ signal: DriveSignal }>).detail;
@@ -565,7 +571,16 @@ export class CircleOfFifthsView extends BaseView {
   private _applySvgSize(): void {
     if (!this.svgEl || !this.container || !this.viewEl) return;
     const W = this.container.clientWidth;
-    const H = this.container.clientHeight;
+    // A tabbed panel is exactly its pane and scrolls whatever does not fit, so there
+    // the wheel has to stay inside the panel's padding or the pane scrolls by that
+    // much. A floating panel takes its height from its content instead, so its
+    // padding is not room to be spent or saved here.
+    const containerStyle = getComputedStyle(this.container);
+    const scrolls = containerStyle.overflowY === 'auto' || containerStyle.overflowY === 'scroll';
+    const padding = scrolls
+      ? (parseFloat(containerStyle.paddingTop) || 0) + (parseFloat(containerStyle.paddingBottom) || 0)
+      : 0;
+    const H = this.container.clientHeight - padding;
 
     // Sum heights of all non-SVG children of the view div to find how much vertical
     // space the info bar and progression chips consume.

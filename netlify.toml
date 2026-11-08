@@ -1,0 +1,12 @@
+# fretfalcon.com is always deployed prebuilt: `npm run deploy` runs
+# deploy/build_site.mjs locally (which also builds the separate FretFalcon_info
+# project, a sibling checkout Netlify has no access to) and uploads the result.
+# So there is deliberately no [build] command here — only the publish directory.
+#
+# Redirects and headers are not configured here either; they ship as
+# deploy/_redirects and deploy/_headers, copied into the publish directory. That
+# keeps them inside the artifact, so the same rules apply to a draft deploy, a
+# local `npm run site:serve`, and a plain copy of the directory to any host.
+
+[build]
+  publish = "deploy/site"

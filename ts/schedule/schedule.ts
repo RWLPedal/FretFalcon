@@ -1,6 +1,7 @@
 import { Feature } from "../feature";
 import { AudioController } from "../audio_controller";
 import { IDisplayController, Status } from "./display_controller";
+import { holdScreenAwake, releaseScreenAwake } from '../core/screen_wake';
 
 export interface GroupInfo {
   name: string;
@@ -489,6 +490,7 @@ class IntervalTimer {
         } else {
           // Timer finished
           this.countdownTimerId = null; // Mark as stopped *before* callback
+          releaseScreenAwake(this);
           this.finishedCallback?.();
         }
       }
@@ -497,6 +499,9 @@ class IntervalTimer {
     // Start the first tick
     if (this.introTimeRemaining > 0 || this.timeRemaining > 0) {
       this.countdownTimerId = window.setTimeout(tick, 1000); // Initial start with timeout
+      // A schedule is read off a music stand: keep the screen on while it runs. The
+      // next interval's timer takes over from this one without the lock being dropped.
+      holdScreenAwake(this);
     } else {
       this.finishedCallback?.(); // Call immediately if zero duration
     }
@@ -507,5 +512,6 @@ class IntervalTimer {
       window.clearTimeout(this.countdownTimerId);
       this.countdownTimerId = null;
     }
+    releaseScreenAwake(this);
   }
 }

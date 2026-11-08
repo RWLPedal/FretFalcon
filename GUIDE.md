@@ -7,6 +7,7 @@
   - [Quickstart](#quickstart)
   - [Core Concepts](#core-concepts)
     - [The Panel System](#the-panel-system)
+    - [On a Phone or Tablet](#on-a-phone-or-tablet)
     - [Linking: Connecting Panels Together](#linking-connecting-panels-together)
     - [Signal Types](#signal-types)
     - [The Schedule](#the-schedule)
@@ -63,6 +64,14 @@ FretFalcon is built around **floating panels** — draggable, resizable windows 
 Each panel has a **config toggle** (gear icon in its header) that reveals its configuration controls inline. Changes take effect immediately.
 
 Most panels that display fretboard diagrams also have **rotate** and **zoom** controls in their headers.
+
+### On a Phone or Tablet
+
+On a small screen there is no room to float panels, so each one becomes a **tab** that fills the screen. The tab bar is along the bottom: tap a tab to switch to it, or swipe sideways across the panel; **+** adds a tool; long-press a tab and drag to reorder. The top bar holds the menu (starter layouts, settings, the tour) and the current panel's actions — link, show or hide its options, rotate, close. Hide the options once a panel is set up and the fretboard gets the whole screen. Two tabs next to each other can be linked with the connector between them. A tablet held upright shows two panels at once, with a divider you can drag.
+
+**Add it to your home screen.** From the hosted site, use your browser's *Add to Home Screen* (in Safari it is under Share). FretFalcon then opens from its own icon, full screen, and still opens when you have no signal — it keeps what it needs after the first visit. Your layouts are stored on the device either way.
+
+**The screen stays on while you play.** While a metronome, timer, backing track, drone, strum pattern or schedule is running, the phone will not dim or lock. When the last one stops, it goes back to its normal behaviour. (This needs a recent browser; on iPhone, iOS 16.4 or later.)
 
 ### Linking: Connecting Panels Together
 
@@ -174,13 +183,19 @@ Triads is a good companion to the Chord Progression view for visualizing the sha
 
 ### Nearby Triads
 
-*(Guitar only)* Shows the triads closest to the current position or chord shape — useful for finding voice-leading connections and chord substitutions.
+*(Guitar only)* Shows a triad voicing for each chord of a progression, chosen so that every change moves your hand as little as possible — voice leading, worked out for you.
 
 **Config options:**
-- **Root Note**, **Chord Type**, and **Position** — the starting chord shape to find neighbors for
-- **Distance** — how far up or down the neck to search
+- **Root Note** and **Mode** — the key the progression is in. Both can follow a linked source.
+- **Display** — two ways to see it:
+  - **Compact** — one fretboard with every chord's voicing on it, colour-coded, with a legend underneath. A short wizard sets it up: name the chords (`C Am F G`, or Roman numerals `I vi IV V`), then pick a voicing for each on the fretboard. **Edit chords & voicings** reopens it.
+  - **Reference** — one fretboard per chord. Each shows that chord's voicing and, dashed, where the next chord's lies. Under each board, **‹ ›** step through the next chord's voicings (ranked by how little movement they need; the number after the dot is the cost) and **✓** locks one in.
+- **Target Fret** and **Target String** — pull the voicings toward one region of the neck.
+- **Chords** — the progression itself.
 
-Use this alongside Chord Progression to find efficient triad movements between chords.
+Linked to a Backing Track, the chord being played is outlined as the track moves through the progression, and a **Driven Mode** button appears: one large fretboard that shows the current chord's voicing and the next one's, following the track.
+
+On a phone held upright, Reference lays its fretboards across the screen, one above the other; use rotate if you prefer them standing.
 
 ### Arpeggio
 

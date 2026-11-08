@@ -17,7 +17,7 @@ const EXPECTED_INTERVALS: Record<string, number[]> = {
  *  to its root note. Result order matches the shape's stringGroup order. */
 function computeShapeIntervals(
   shape: (typeof TRIAD_SHAPE_CATALOG)[0],
-  tuning: number[],
+  tuning: readonly number[],
 ): number[] {
   const rootRelFret = shape.relativeFrets[shape.rootStringIndexInGroup];
   const rootTuning = tuning[shape.stringGroup[shape.rootStringIndexInGroup]];

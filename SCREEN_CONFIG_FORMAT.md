@@ -134,6 +134,7 @@ V3 separates layout-independent instance data (what views are open and their vie
 |-------|------|-------------|
 | `order` | `string[]` | Instance IDs in tab bar order. |
 | `activeId` | `string` *(optional)* | The currently visible tab. |
+| `split` | `number` *(optional)* | Where a tablet shows two panes, the first pane's share of the screen (0.3–0.7; values outside are clamped on load). Absent means an even split. Added without a version bump. |
 
 ---
 

@@ -8,7 +8,7 @@ import { AppSettings } from '../settings';
 import { InstrumentSettings } from '../fretboard/fretboard_settings';
 import { Theme } from '../theme_manager';
 import { ThemeSwatchPicker } from '../core/widgets/theme_swatch_picker';
-import { getNavSectionGroups } from './nav_registry';
+import { getNavSectionGroups, getVisibleNavGroups } from './nav_registry';
 import { InstrumentName } from '../fretboard/instruments';
 import { DEFAULT_CONFIG_OPTIONS } from '../screen_config/default_configs';
 import { getViewIcon } from '../panels/panel_registry';
@@ -62,14 +62,9 @@ export class SidebarView {
             <nav class="sidebar-nav">
         `;
 
-        for (const group of getNavSectionGroups()) {
-            const visibleEntries = group.entries.filter(
-                (e) => !e.requiredInstruments || e.requiredInstruments.includes(instrument as string)
-            );
-            if (visibleEntries.length === 0) continue;
-
+        for (const group of getVisibleNavGroups({ formFactor: 'desktop', instrument: instrument as string })) {
             html += `<div class="sidebar-section-label">${group.label}</div>`;
-            for (const entry of visibleEntries) {
+            for (const entry of group.entries) {
                 const btnId = `nav-btn-${entry.viewId}`;
                 html += `
                     <button id="${btnId}" class="sidebar-nav-btn"

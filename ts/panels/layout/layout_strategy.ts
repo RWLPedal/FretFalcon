@@ -27,6 +27,8 @@ export interface LayoutData {
   tabbed?: {
     order: string[];
     activeId?: string;
+    /** The first pane's share of a two-pane (tablet) screen; absent = even. */
+    split?: number;
   };
 }
 

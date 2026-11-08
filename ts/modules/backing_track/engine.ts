@@ -20,6 +20,7 @@ import {
 import { chord_tones_library } from '../../music/chords';
 import { DiatonicMode } from '../../music/music_types';
 import { TrackData, BassStep, NUM_TRACKS } from './presets';
+import { holdScreenAwake, releaseScreenAwake } from '../../core/screen_wake';
 
 export interface EngineState {
   bpm: number;
@@ -80,6 +81,7 @@ export class BackingTrackEngine {
   start(): void {
     if (this.playing) return;
     this.playing = true;
+    holdScreenAwake(this);
     this.callbacks.onPlayStateChange(true);
     this.startInterval();
     this.dispatchTransportChanged(true);
@@ -92,6 +94,7 @@ export class BackingTrackEngine {
     this.currentStep = -1;
     this.currentMeasure = -1;
     this.playing = false;
+    releaseScreenAwake(this);
     this.callbacks.onPlayStateChange(false);
     if (prevStep >= 0) this.callbacks.onStepChange(prevStep, -1);
     if (prevMeasure >= 0) this.callbacks.onMeasureChange(prevMeasure, -1);

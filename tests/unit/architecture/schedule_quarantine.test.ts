@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as glob from 'glob';
+import { walkTsFiles } from '../helpers/module_files';
 
 // All TypeScript files outside ts/schedule/ must NOT import from ts/schedule/ internals.
 // The only permitted cross-boundary import is `ts/schedule/api.ts`.
@@ -17,9 +17,7 @@ const SHIM_FILES = new Set([
 
 const TS_ROOT = path.resolve(__dirname, '../../../ts');
 
-function getAllTsFiles(dir: string): string[] {
-  return glob.sync('**/*.ts', { cwd: dir }).map(f => path.join(dir, f));
-}
+const getAllTsFiles = walkTsFiles;
 
 function extractImports(source: string): string[] {
   const importRe = /^(?:import|export)\s+.*?\s+from\s+['"]([^'"]+)['"]/gm;

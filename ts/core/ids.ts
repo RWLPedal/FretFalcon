@@ -22,15 +22,14 @@ export function featureTypeId(raw: string): FeatureTypeId {
 }
 
 // ─── Well-known core IDs ──────────────────────────────────────────────────────
-// Only IDs that core machinery must reference live here.
-// All other view IDs are declared module-locally.
+// Only IDs that core machinery must reference by name live here — the
+// view_id_integrity architecture test enforces that every entry is actually used
+// (an unreferenced entry is dead coupling). All other view IDs are declared
+// module-locally, and the modules that own any_floating_view / schedule_floating_view
+// reference those ids directly.
 
 export const CORE_VIEW_IDS = {
   ConfigurableFeature: viewId('configurable_instrument_feature'),
-  AnyView:             viewId('any_floating_view'),
-  SchedulePanel:       viewId('schedule_floating_view'),
-  // GlobalKey stays here until the broadcast flag lands in Phase 2
-  GlobalKey:           viewId('global_key'),
 } as const;
 
 // ─── Nav sections ─────────────────────────────────────────────────────────────

@@ -67,6 +67,9 @@ export interface V3PersistedViewEntry {
   viewState?: unknown;
   collapsed?: boolean;
   orientationOverride?: "vertical" | "horizontal";
+  /** Per-instance orientation chosen in the tabbed (mobile) layout. Optional and
+   *  additive (no version bump): absent means "follow the viewport's long axis". */
+  tabbedOrientation?: "vertical" | "horizontal";
   zoomActive?: boolean;
 }
 
@@ -88,6 +91,9 @@ export interface V3FloatingLayout {
 export interface V3TabbedLayout {
   order: string[];
   activeId?: string;
+  /** The first pane's share (0.3–0.7) where a tablet shows two panes. Optional and
+   *  additive (no version bump): absent means an even split. */
+  split?: number;
 }
 
 export interface V3Payload {

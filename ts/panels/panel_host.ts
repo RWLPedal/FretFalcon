@@ -17,13 +17,18 @@ import {
   getBroadcastSourceViewId,
 } from "./drive_registry";
 import { isFretboardDescriptor, FloatingViewDescriptor } from "./panel_types";
-import { resolveSizing, PanelSizing, Orientation } from "./panel_sizing";
+import { resolveSizing, Orientation } from "./panel_sizing";
 import { onEvent, emitEvent } from "../core/events";
 import { ScreenConfigManager } from "../screen_config/screen_config_manager";
 import {
   CurrentPayload,
-  V4Payload,
+  LinkRecord,
 } from "../screen_config/screen_config_types";
+import {
+  DEFAULT_CONFIG_OPTIONS,
+  MOBILE_STARTER_KEY,
+  MOBILE_STARTER_LAYOUT,
+} from "../screen_config/default_configs";
 import {
   GRID_COLS,
   DESIGN_ROWS,
@@ -36,15 +41,37 @@ import {
   packShelves,
   reconcileLayout,
   tidyLayout,
+  layoutBottomRow,
   ReconcileItem,
   PlacedRect,
 } from "./layout/grid_packer";
 import { FloatingLayout } from "./layout/floating_layout";
 import { TabbedLayout } from "./layout/tabbed_layout";
-import type { LayoutStrategy, PanelChrome } from "./layout/layout_strategy";
+import type {
+  LayoutData,
+  LayoutStrategy,
+  PanelChrome,
+  PanelSpawnInfo,
+} from "./layout/layout_strategy";
+import {
+  TABBED_MEDIA_QUERY,
+  mergeLayoutData,
+  pairLinkState,
+  tabbedDefaultOrientation,
+  tabbedPaneSize,
+  PairLink,
+} from "./layout/layout_mode";
 
 const FLOATING_VIEW_AREA_ID = "floating-view-area";
-const MOBILE_BREAKPOINT = "(max-width: 768px)";
+
+/** Views that are never re-created for a settings or orientation change: they own
+ *  running audio/timing state that a re-render would reset. */
+const NEVER_RECREATE_VIEW_IDS = new Set<ViewId>([
+  "instrument_floating_metronome" as ViewId,
+  "floating_timer" as ViewId,
+]);
+
+type PersistedEntry = CurrentPayload["instances"][string];
 
 // Retain FloatingViewManager as an alias so existing imports keep working.
 export { PanelHost as FloatingViewManager };
@@ -54,7 +81,15 @@ interface PanelRecord {
   viewId: ViewId;
   viewState?: unknown;
   collapsed?: boolean;
-  orientationOverride?: "vertical" | "horizontal";
+  /** Per-instance orientation in the floating layout (the desktop rotate button). */
+  orientationOverride?: Orientation;
+  /** Per-instance orientation in the tabbed layout. Kept apart from
+   *  orientationOverride so a rotate on a phone never re-shapes a desktop panel. */
+  tabbedOrientation?: Orientation;
+  /** The orientation the current viewInstance was built with. */
+  renderedOrientation: Orientation;
+  /** Last title shown in the chrome, so a strategy switch can carry it over. */
+  title: string;
   zoomActive?: boolean;
   viewInstance: View;
   contentEl: HTMLElement;
@@ -78,6 +113,26 @@ export class PanelHost {
   /** Set by the page so the grid background + drag-snap can re-sync to the live
    *  (fit-aware) cell size after a load / resize / tidy. */
   private _onGeometryChanged: () => void = () => {};
+  /** Monotonic counter bumped each time a layout pass finishes applying geometry
+   *  (resize relayout, restore, tidy, strategy switch). Observability only — the
+   *  test bridge polls it to await layout stability instead of sleeping past the
+   *  resize debounces. Never read by app logic. */
+  private _layoutEpoch = 0;
+
+  /** True while restoreViewsFromState is rebuilding panels. Saves are held back
+   *  until it finishes: a save mid-restore would persist a half-built state (links
+   *  are only registered once every panel exists). */
+  private _restoring = false;
+  /** Last-known layout data for the strategy that is NOT live, kept so a save
+   *  while tabbed still carries the floating geometry (and vice versa). */
+  private _dormantLayout: LayoutData = {};
+  /** Saved instances that are not instantiated in the tabbed layout (the broadcast
+   *  source). They stay in the persisted payload and come back when floating. */
+  private _dormantInstances = new Map<string, PersistedEntry>();
+  /** Saved links that touch a dormant instance. */
+  private _dormantLinks: LinkRecord[] = [];
+  private _openSettings: () => void = () => {};
+  private _startTour: () => void = () => {};
 
   constructor(
     appSettings: AppSettings,
@@ -88,65 +143,92 @@ export class PanelHost {
 
     this.floatingLayout = new FloatingLayout(
       () => this.saveState(),
-      () => this._onGeometryChanged(),
-    );
-    this.tabbedLayout = new TabbedLayout(
-      (viewId) => this.spawnView(viewId),
-      (i) => this.toggleTabbedLink(i),
-      (i) => this.tabbedPairState(i),
-      (newOrder) => {
-        if (this.linkManager) {
-          for (const link of [...this.linkManager.getLinks()]) {
-            const si = newOrder.indexOf(link.sourceInstanceId);
-            const ti = newOrder.indexOf(link.targetInstanceId);
-            if (si === -1 || ti === -1 || ti !== si + 1) {
-              this.linkManager.removeLinkBetween(
-                link.sourceInstanceId,
-                link.targetInstanceId,
-              );
-            }
-          }
-        }
-        this.saveState();
+      () => {
+        this._layoutEpoch++;
+        this._onGeometryChanged();
       },
     );
+    this.tabbedLayout = new TabbedLayout({
+      spawn: (viewId) => this.spawnView(viewId),
+      openSettings: () => this._openSettings(),
+      startTour: () => this._startTour(),
+      closeAll: () => this.closeAllViews(),
+      starterLayouts: () => [
+        { key: MOBILE_STARTER_KEY, label: "Mobile starter" },
+        ...DEFAULT_CONFIG_OPTIONS.filter((o) => o.key !== "empty"),
+      ],
+      loadStarterLayout: (key) => this.loadNamedLayout(`default:${key}`),
+      instrument: () =>
+        (this.appSettings.instrumentSettings as any)?.instrument ?? "",
+      pairLink: (leftId, rightId) => this._pairLink(leftId, rightId),
+      togglePairLink: (leftId, rightId) => this._togglePairLink(leftId, rightId),
+      incomingLinks: (instanceId) =>
+        (this.linkManager?.getLinks() ?? [])
+          .filter((l) => l.targetInstanceId === instanceId)
+          .map((l) => l.sourceInstanceId),
+      unlink: (sourceId, targetId) => {
+        this.linkManager?.removeLinkBetween(sourceId, targetId);
+        this.saveState();
+      },
+      // A reorder only changes tab order. Links are never pruned to fit it: the tab
+      // bar shows links between non-adjacent tabs as a badge instead.
+      orderChanged: () => this.saveState(),
+    });
 
     const area = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!area) {
       console.error(`PanelHost: #${FLOATING_VIEW_AREA_ID} not found`);
     }
 
-    this._mql = window.matchMedia(MOBILE_BREAKPOINT);
+    this._mql = window.matchMedia(TABBED_MEDIA_QUERY);
     const isMobile = this._mql.matches;
     this.currentStrategy = isMobile ? this.tabbedLayout : this.floatingLayout;
+    this._stampLayoutKind();
     if (area) this.currentStrategy.mount(area);
 
-    this._mql.addEventListener("change", this._onBreakpointChange);
+    this._mql.addEventListener("change", this._syncStrategyToViewport);
 
     window.addEventListener("resize", () => {
       if (this._resizeDebounceTimer !== null)
         clearTimeout(this._resizeDebounceTimer);
       this._resizeDebounceTimer = setTimeout(() => {
         this._resizeDebounceTimer = null;
+        // Belt and braces: the media-query change event is the primary trigger, but
+        // the resize path re-checks so the strategy can never disagree with the viewport.
+        this._syncStrategyToViewport();
+        // A phone turned on its side stays tabbed but flips portrait ↔ landscape.
+        this._syncRenderedOrientations();
         this.currentStrategy.handleResize?.();
+        this._layoutEpoch++;
       }, 100);
     });
   }
 
-  private _onBreakpointChange = (e: MediaQueryListEvent): void => {
+  private _syncStrategyToViewport = (): void => {
     const area = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!area) return;
-    const newStrategy = e.matches ? this.tabbedLayout : this.floatingLayout;
+    const newStrategy = this._mql.matches ? this.tabbedLayout : this.floatingLayout;
     if (newStrategy === this.currentStrategy) return;
     this._switchStrategy(area, newStrategy);
   };
+
+  /** Publish the live strategy on <html data-layout> — the stylesheets key off this
+   *  instead of repeating the media query, so JS and CSS cannot disagree. */
+  private _stampLayoutKind(): void {
+    document.documentElement.dataset.layout = this.currentStrategy.kind;
+  }
 
   private _switchStrategy(
     area: HTMLElement,
     newStrategy: LayoutStrategy,
   ): void {
-    // Capture layout state before dismantling chromes
-    const savedLayout = this.currentStrategy.serializeLayout();
+    // Fold the outgoing strategy's layout into the dormant data before dismantling
+    // its chromes; from here on it describes both strategies.
+    this._dormantLayout = mergeLayoutData(
+      this._dormantLayout,
+      this.currentStrategy.serializeLayout(),
+      this._persistedInstanceIds(),
+    );
 
     // Release all chromes and collect freed contentEls
     for (const record of this.instances.values()) {
@@ -155,50 +237,34 @@ export class PanelHost {
 
     this.currentStrategy.unmount();
     this.currentStrategy = newStrategy;
+    this._stampLayoutKind();
     newStrategy.mount(area);
 
+    const toFloating = newStrategy === this.floatingLayout;
+
+    // Going floating: every panel returns to its saved grid rect (panels opened
+    // while tabbed have none and are placed below the rest).
+    const dormantEntries = toFloating ? [...this._dormantInstances.values()] : [];
+    const canonical = toFloating
+      ? this._resolveCanonicalRects(
+          [...this.instances.values(), ...dormantEntries],
+          this._dormantLayout.floating?.perInstance ?? {},
+        )
+      : {};
+    const g = this.floatingLayout.currentGeometry();
+
     // Sort by saved zIndex so floating z-order is preserved
-    const sorted = [...this.instances.values()].sort((a, b) => {
-      const aZ = savedLayout.floating?.perInstance[a.instanceId]?.zIndex ?? 100;
-      const bZ = savedLayout.floating?.perInstance[b.instanceId]?.zIndex ?? 100;
-      return aZ - bZ;
-    });
+    const sorted = [...this.instances.values()].sort(
+      (a, b) =>
+        (canonical[a.instanceId]?.zIndex ?? 100) -
+        (canonical[b.instanceId]?.zIndex ?? 100),
+    );
 
     for (const record of sorted) {
-      const desc = getFloatingViewDescriptor(record.viewId);
-      let switchIcon = desc?.icon ?? getViewIcon(record.viewId);
-      if (record.viewId === CORE_VIEW_IDS.ConfigurableFeature) {
-        const featureTypeName = (record.viewState as any)?.featureTypeName;
-        if (featureTypeName)
-          switchIcon = getViewIconByFeatureType(featureTypeName) ?? switchIcon;
-      }
-      const switchSizing = resolveSizing(
-        desc,
-        this._effectiveOrientation(record.orientationOverride),
+      const rect = canonical[record.instanceId];
+      record.chrome = newStrategy.createChrome(
+        this._chromeInfoFor(record, rect ? this._placementFor(rect, g) : undefined),
       );
-      record.chrome = newStrategy.createChrome({
-        instanceId: record.instanceId,
-        title: desc?.displayName ?? record.viewId,
-        icon: switchIcon,
-        contentEl: record.contentEl,
-        collapsed: record.collapsed,
-        zoomActive: record.zoomActive,
-        sizing: switchSizing,
-        supportsRotate:
-          !!desc && isFretboardDescriptor(desc) && desc.supportsRotate,
-        supportsZoom:
-          !!desc && isFretboardDescriptor(desc) && desc.supportsZoom,
-        supportsConfigToggle: desc?.supportsConfigToggle,
-        onRotate:
-          !!desc && isFretboardDescriptor(desc) && desc.supportsRotate
-            ? () => this._handleRotateRequest(record.instanceId)
-            : undefined,
-        onZoom:
-          !!desc && isFretboardDescriptor(desc) && desc.supportsZoom
-            ? () => this._handleZoomRequest(record.instanceId)
-            : undefined,
-        onClose: (id) => this.destroyView(id),
-      });
       this.linkManager?.registerInstanceEl(record.instanceId, record.contentEl);
       if (record.chrome.wrapperEl) {
         this.linkManager?.onWindowSpawned(
@@ -210,27 +276,179 @@ export class PanelHost {
       }
     }
 
-    newStrategy.applyLayoutData(savedLayout);
-
-    // Fire resize on each contentEl so canvases redraw at new dimensions
-    for (const record of this.instances.values()) {
-      requestAnimationFrame(() => {
-        emitEvent(
-          record.contentEl,
-          "wrapper-user-resized",
-          {
-            width: record.contentEl.clientWidth,
-            height: record.contentEl.clientHeight,
-          },
-          { bubbles: false },
+    // Panels held back while tabbed (the broadcast source) come back with their links.
+    if (toFloating && dormantEntries.length) {
+      const dormantLinks = this._dormantLinks;
+      this._dormantInstances.clear();
+      this._dormantLinks = [];
+      for (const entry of dormantEntries) {
+        const rect = canonical[entry.instanceId];
+        this._createPanel(entry.instanceId, entry.viewId as ViewId, entry.viewState, {
+          ...(rect ? this._placementFor(rect, g) : {}),
+          collapsed: entry.collapsed,
+          orientationOverride: entry.orientationOverride,
+          tabbedOrientation: entry.tabbedOrientation,
+          zoomActive: entry.zoomActive,
+        });
+      }
+      for (const l of dormantLinks) {
+        this.linkManager?.createLink(
+          l.sourceInstanceId,
+          l.sourceHandle,
+          l.targetInstanceId,
+          l.targetHandle,
         );
-      });
+      }
+    }
+
+    if (toFloating) {
+      const rectsOnly: Record<string, PlacedRect> = {};
+      for (const [id, r] of Object.entries(canonical)) {
+        if (this.instances.has(id)) {
+          rectsOnly[id] = { col: r.col, row: r.row, colSpan: r.colSpan, rowSpan: r.rowSpan };
+        }
+      }
+      this.floatingLayout.applyRects(rectsOnly);
+    }
+
+    newStrategy.applyLayoutData(this._dormantLayout);
+
+    // The two strategies orient fretboards differently (global setting vs. the
+    // viewport's long axis), so views built for the old one may need a rebuild.
+    this._syncRenderedOrientations();
+
+    // Fire resize on each contentEl so canvases redraw at new dimensions. The tabbed
+    // layout sizes its own panels (hidden tabs have no box to measure here).
+    if (toFloating) {
+      for (const record of this.instances.values()) {
+        requestAnimationFrame(() => {
+          emitEvent(
+            record.contentEl,
+            "wrapper-user-resized",
+            {
+              width: record.contentEl.clientWidth,
+              height: record.contentEl.clientHeight,
+            },
+            { bubbles: false },
+          );
+        });
+      }
     }
 
     this.saveState();
+    this._layoutEpoch++;
+  }
+
+  /** Everything the layout strategy needs to build a panel's chrome. Shared by the
+   *  spawn/restore path and the strategy switch so the two can't drift apart. */
+  private _chromeInfoFor(
+    p: Pick<
+      PanelRecord,
+      | "instanceId"
+      | "viewId"
+      | "viewState"
+      | "title"
+      | "contentEl"
+      | "collapsed"
+      | "zoomActive"
+      | "orientationOverride"
+      | "tabbedOrientation"
+    >,
+    placement?: {
+      position?: { x: number; y: number };
+      size?: { width: number; height: number };
+      zIndex?: number;
+    },
+  ): PanelSpawnInfo {
+    const desc = getFloatingViewDescriptor(p.viewId);
+    // For legacy configurable_instrument_feature entries, resolve the icon from the
+    // feature-specific viewId descriptor so the tab shows the right icon.
+    let icon = desc?.icon ?? getViewIcon(p.viewId);
+    if (p.viewId === CORE_VIEW_IDS.ConfigurableFeature) {
+      const featureTypeName = (p.viewState as any)?.featureTypeName;
+      if (featureTypeName) icon = getViewIconByFeatureType(featureTypeName) ?? icon;
+    }
+    const fretboard = !!desc && isFretboardDescriptor(desc) ? desc : undefined;
+    const supportsRotate = !!fretboard?.supportsRotate;
+    const supportsZoom = !!fretboard?.supportsZoom;
+    return {
+      instanceId: p.instanceId,
+      title: p.title,
+      icon,
+      contentEl: p.contentEl,
+      collapsed: p.collapsed,
+      zoomActive: p.zoomActive,
+      sizing: resolveSizing(desc, this._effectiveOrientation(p)),
+      supportsRotate,
+      supportsZoom,
+      supportsConfigToggle: desc?.supportsConfigToggle,
+      position: placement?.position,
+      size: placement?.size,
+      zIndex: placement?.zIndex,
+      onRotate: supportsRotate
+        ? () => this._handleRotateRequest(p.instanceId)
+        : undefined,
+      onZoom: supportsZoom
+        ? () => this._handleZoomRequest(p.instanceId)
+        : undefined,
+      onClose: (id) => this.destroyView(id),
+    };
+  }
+
+  /** px placement for a canonical grid rect. Position is only lower-bounded (no upper
+   *  clamp — the fit cell keeps it on-screen, and clamping a tall panel upward is what
+   *  used to cause overlaps). Size derives from the span; CSS min/max does the rest. */
+  private _placementFor(
+    rect: PlacedRect & { zIndex?: number },
+    g: GridGeometry,
+  ): {
+    position: { x: number; y: number };
+    size: { width: number; height: number };
+    zIndex?: number;
+  } {
+    return {
+      position: {
+        x: Math.max(g.originX, colToPx(rect.col, g)),
+        y: Math.max(0, rowToPx(rect.row, g)),
+      },
+      size: { width: rect.colSpan * g.cell, height: rect.rowSpan * g.cell },
+      zIndex: rect.zIndex,
+    };
   }
 
   // --- Public API ---
+
+  /** Which layout strategy is live. Mirrors the 768px matchMedia breakpoint. */
+  public getStrategyKind(): "floating" | "tabbed" {
+    return this.currentStrategy === this.tabbedLayout ? "tabbed" : "floating";
+  }
+
+  /** Tab order, active tab and the tabs on screen (two on a tablet) when the tabbed
+   *  (mobile) strategy is live; null on desktop. */
+  public getTabbedState(): {
+    order: string[];
+    activeId: string | null;
+    visible: string[];
+  } | null {
+    if (this.currentStrategy !== this.tabbedLayout) return null;
+    return {
+      order: this.tabbedLayout.getOrder(),
+      activeId: this.tabbedLayout.getActiveId(),
+      visible: this.tabbedLayout.getVisibleIds(),
+    };
+  }
+
+  /** Activate a tab by instanceId (tabbed strategy only; no-op on desktop). */
+  public activateTab(instanceId: string): void {
+    if (this.currentStrategy !== this.tabbedLayout) return;
+    if (!this.instances.has(instanceId)) return;
+    this.tabbedLayout.focus(instanceId);
+  }
+
+  /** See _layoutEpoch — test-bridge observability, not app state. */
+  public getLayoutEpoch(): number {
+    return this._layoutEpoch;
+  }
 
   public setLinkManager(lm: LinkManager): void {
     this.linkManager = lm;
@@ -251,35 +469,59 @@ export class PanelHost {
     this._onGeometryChanged = cb;
   }
 
-  /** Toggle a link between tab[i] and tab[i+1]. */
-  public toggleTabbedLink(i: number): void {
-    if (!this.linkManager) return;
-    const order = this.tabbedLayout.getOrder();
-    if (i < 0 || i >= order.length - 1) return;
-    const src = order[i];
-    const tgt = order[i + 1];
-    if (this.linkManager.hasLink(src, tgt)) {
-      this.linkManager.removeLinkBetween(src, tgt);
+  /** Link state between two adjacent tabs, in either direction. */
+  private _pairLink(leftId: string, rightId: string): PairLink {
+    const lm = this.linkManager;
+    if (!lm) return { state: "incompatible" };
+    return pairLinkState(
+      leftId,
+      rightId,
+      (s, t) => lm.hasLink(s, t),
+      (s, t) => lm.canLink(s, t),
+    );
+  }
+
+  /** Link or unlink two adjacent tabs; returns the resulting state. */
+  private _togglePairLink(leftId: string, rightId: string): PairLink {
+    const lm = this.linkManager;
+    const before = this._pairLink(leftId, rightId);
+    if (!lm || !before.sourceId || !before.targetId) return before;
+    if (before.state === "linked") {
+      lm.removeLinkBetween(before.sourceId, before.targetId);
     } else {
-      this.linkManager.createLink(src, "right", tgt, "left");
+      // Handle sides only matter to the floating layout's arrows: leave the source
+      // on the side facing the target.
+      const sourceIsLeft = before.sourceId === leftId;
+      lm.createLink(
+        before.sourceId,
+        sourceIsLeft ? "right" : "left",
+        before.targetId,
+        sourceIsLeft ? "left" : "right",
+      );
     }
+    this.saveState();
+    return {
+      state: before.state === "linked" ? "available" : "linked",
+      sourceId: before.sourceId,
+      targetId: before.targetId,
+    };
+  }
+
+  /** Reorder the tabs (tabbed strategy only). Exposed for the test bridge — the
+   *  long-press drag is too flaky to synthesize. */
+  public reorderTabs(order: string[]): void {
+    if (this.currentStrategy !== this.tabbedLayout) return;
+    this.tabbedLayout.setOrder(order);
     this.saveState();
   }
 
-  /** Returns the link state between tab[i] and tab[i+1]. */
-  public tabbedPairState(i: number): "linked" | "available" | "incompatible" {
-    if (!this.linkManager) return "incompatible";
-    const order = this.tabbedLayout.getOrder();
-    if (i < 0 || i >= order.length - 1) return "incompatible";
-    const src = order[i];
-    const tgt = order[i + 1];
-    if (this.linkManager.hasLink(src, tgt)) return "linked";
-    if (!this.linkManager.canLink(src, tgt)) return "incompatible";
-    return "available";
+  public setSettingsCallback(fn: () => void): void {
+    this._openSettings = fn;
   }
 
-  public setSettingsCallback(fn: () => void): void {
-    this.tabbedLayout.setSettingsCallback(fn);
+  /** How the tabbed layout's menu (and its first-visit hint) start the tour. */
+  public setTourCallback(fn: () => void): void {
+    this._startTour = fn;
   }
 
   public registerSink(instanceId: string, sink: SignalSink): void {
@@ -364,7 +606,8 @@ export class PanelHost {
       title?: string;
       zIndex?: number;
       collapsed?: boolean;
-      orientationOverride?: "vertical" | "horizontal";
+      orientationOverride?: Orientation;
+      tabbedOrientation?: Orientation;
       zoomActive?: boolean;
     },
   ): string | null {
@@ -372,63 +615,31 @@ export class PanelHost {
     if (!descriptor) return null;
 
     try {
-      const orientationOverride = options?.orientationOverride;
       const zoomActive = options?.zoomActive ?? false;
-      const globalOrientation =
-        (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
-      const effectiveOrientation: "vertical" | "horizontal" =
-        orientationOverride ?? globalOrientation;
-      const zoomMultiplier = this._zoomMultiplierFor(
-        effectiveOrientation,
-        zoomActive,
-      );
+      const orientation = this._effectiveOrientation({ ...options, viewId, viewState });
       const settings = this._buildOverriddenSettings(
-        orientationOverride,
-        zoomMultiplier,
+        orientation,
+        this._zoomMultiplierFor(orientation, zoomActive),
       );
 
       const viewInstance = descriptor.createView(viewState, settings);
       const contentEl = document.createElement("div");
       viewInstance.render(contentEl);
 
-      // For legacy configurable_instrument_feature entries, resolve the icon
-      // from the feature-specific viewId descriptor so the tab shows the right icon.
-      let resolvedIcon = descriptor.icon;
-      if (viewId === CORE_VIEW_IDS.ConfigurableFeature) {
-        const featureTypeName = (viewState as any)?.featureTypeName;
-        if (featureTypeName)
-          resolvedIcon =
-            getViewIconByFeatureType(featureTypeName) ?? resolvedIcon;
-      }
-
-      const sizing = resolveSizing(descriptor, effectiveOrientation);
-
-      const chrome = this.currentStrategy.createChrome({
+      const identity = {
         instanceId,
+        viewId,
+        viewState,
         title: options?.title ?? descriptor.displayName,
-        icon: resolvedIcon,
         contentEl,
         collapsed: options?.collapsed,
         zoomActive,
-        sizing,
-        supportsRotate:
-          isFretboardDescriptor(descriptor) && descriptor.supportsRotate,
-        supportsZoom:
-          isFretboardDescriptor(descriptor) && descriptor.supportsZoom,
-        supportsConfigToggle: descriptor.supportsConfigToggle,
-        position: options?.position,
-        size: options?.size,
-        zIndex: options?.zIndex,
-        onRotate:
-          isFretboardDescriptor(descriptor) && descriptor.supportsRotate
-            ? () => this._handleRotateRequest(instanceId)
-            : undefined,
-        onZoom:
-          isFretboardDescriptor(descriptor) && descriptor.supportsZoom
-            ? () => this._handleZoomRequest(instanceId)
-            : undefined,
-        onClose: (id) => this.destroyView(id),
-      });
+        orientationOverride: options?.orientationOverride,
+        tabbedOrientation: options?.tabbedOrientation,
+      };
+      const chrome = this.currentStrategy.createChrome(
+        this._chromeInfoFor(identity, options),
+      );
 
       const unlistens: Array<() => void> = [];
 
@@ -440,25 +651,30 @@ export class PanelHost {
             ...detail,
           };
           this.saveState();
+          // A setting can change how the panel should lie (Nearby Triads' display).
+          // Not from inside the view's own event: it is the view that gets replaced.
+          if (record.renderedOrientation !== this._effectiveOrientation(record)) {
+            queueMicrotask(() => {
+              if (this.instances.get(instanceId) === record) this._syncRenderedOrientations();
+            });
+          }
         }),
       );
 
-      // Keep chrome title in sync
+      // Keep chrome title in sync. Goes through record.chrome, not the chrome made
+      // above: a strategy switch replaces the chrome and this listener outlives it.
       unlistens.push(
         onEvent(contentEl, "feature-title-changed", (detail) => {
-          if (detail.title) chrome.setTitle(detail.title);
+          if (!detail.title) return;
+          record.title = detail.title;
+          record.chrome.setTitle(detail.title);
         }),
       );
 
       const record: PanelRecord = {
-        instanceId,
-        viewId,
-        viewState,
-        collapsed: options?.collapsed,
-        orientationOverride,
-        zoomActive,
+        ...identity,
+        renderedOrientation: orientation,
         viewInstance,
-        contentEl,
         chrome,
         _unlistens: unlistens,
       };
@@ -476,7 +692,7 @@ export class PanelHost {
       }
 
       if (this.currentStrategy === this.tabbedLayout) {
-        this.tabbedLayout.rebuildConnectors();
+        this.tabbedLayout.refreshLinks();
       }
 
       this.saveState();
@@ -494,9 +710,6 @@ export class PanelHost {
     this.linkManager?.onWindowDestroyed(instanceId);
     record._unlistens.forEach((u) => u());
     record.chrome.destroy();
-    if (this.currentStrategy === this.tabbedLayout) {
-      this.tabbedLayout.onPanelClosed(instanceId);
-    }
     // Also purge the floating layout's per-instance bookkeeping, so a destroyed panel can't linger as a "ghost" rect.
     this.floatingLayout.forgetInstance(instanceId);
 
@@ -522,12 +735,41 @@ export class PanelHost {
     const area = document.getElementById(FLOATING_VIEW_AREA_ID);
     if (!area) return;
 
-    const saved = this._loadState();
+    const tabbed = this.currentStrategy === this.tabbedLayout;
+    let saved = this._loadState();
+    // First visit on a phone: open a small starter set instead of a blank screen.
+    const firstRun = saved === null && tabbed;
+    if (firstRun) saved = MOBILE_STARTER_LAYOUT;
+
+    this._dormantLayout = saved?.layout ?? {};
+    this._dormantInstances.clear();
+    this._dormantLinks = [];
+
     if (!saved?.instances) {
       this.linkManager?.initialize([]);
       return;
     }
 
+    this._restoring = true;
+    try {
+      this._restorePanels(area, saved, opts);
+    } finally {
+      this._restoring = false;
+    }
+    // One save, now that every panel exists and the links are registered.
+    this.saveState();
+    if (firstRun) {
+      this.tabbedLayout.showHint("Tap + to add more tools · tap here for a tour", () =>
+        this._startTour(),
+      );
+    }
+  }
+
+  private _restorePanels(
+    area: HTMLElement,
+    saved: CurrentPayload,
+    opts?: { recomputeCell?: boolean },
+  ): void {
     const floatingData = saved.layout?.floating;
     if (floatingData?.nextZIndex) {
       this.floatingLayout.currentMaxZIndex = Math.max(
@@ -552,13 +794,9 @@ export class PanelHost {
     // lack saved geometry. The result is machine-independent (in grid cells).
     const savedPerInstance = floatingData?.perInstance ?? {};
     const instanceEntries = Object.values(saved.instances);
-    const allHaveGeom = instanceEntries.every(
-      (e) => savedPerInstance[e.instanceId],
-    );
     const canonical = this._resolveCanonicalRects(
       instanceEntries,
       savedPerInstance,
-      allHaveGeom,
     );
 
     // Sort by zIndex so floating z-stacking matches what was saved
@@ -568,7 +806,16 @@ export class PanelHost {
       return aZ - bZ;
     });
 
+    const tabbed = this.currentStrategy === this.tabbedLayout;
+    const broadcastViewId = getBroadcastSourceViewId();
+
     for (const entry of sortedEntries) {
+      // Reserve the id first: a skipped or dormant entry must still never collide
+      // with an instance spawned later.
+      const numericId = parseInt(entry.instanceId.replace("fv-", ""), 10);
+      if (!isNaN(numericId))
+        this.nextInstanceId = Math.max(this.nextInstanceId, numericId + 1);
+
       if (!getFloatingViewDescriptor(entry.viewId)) {
         console.warn(
           `PanelHost: Cannot restore view "${entry.viewId}" — descriptor not found`,
@@ -576,41 +823,24 @@ export class PanelHost {
         continue;
       }
 
-      // Global Key (broadcast source) is hidden from mobile — skip in tabbed mode.
-      if (this.currentStrategy === this.tabbedLayout) {
-        const broadcastViewId = getBroadcastSourceViewId();
-        if (broadcastViewId && entry.viewId === broadcastViewId) continue;
+      // Global Key (broadcast source) has no tab on mobile. It is held dormant, not
+      // dropped: it stays in the saved state and returns when the layout is floating.
+      if (tabbed && broadcastViewId && entry.viewId === broadcastViewId) {
+        this._dormantInstances.set(entry.instanceId, entry);
+        continue;
       }
 
       try {
-        const numericId = parseInt(entry.instanceId.replace("fv-", ""), 10);
-        if (!isNaN(numericId))
-          this.nextInstanceId = Math.max(this.nextInstanceId, numericId + 1);
-
         const rect = canonical[entry.instanceId];
-        // Position only lower-bounded (no upper clamp — the fit cell keeps it on-screen,
-        // and clamping a tall panel upward is what used to cause overlaps). Size derives
-        // from the canonical span; CSS min/max on the wrapper handles the rest.
-        const position = rect
-          ? {
-              x: Math.max(g.originX, colToPx(rect.col, g)),
-              y: Math.max(0, rowToPx(rect.row, g)),
-            }
-          : undefined;
-        const size = rect
-          ? { width: rect.colSpan * g.cell, height: rect.rowSpan * g.cell }
-          : undefined;
-
         this._createPanel(
           entry.instanceId,
           entry.viewId as ViewId,
           entry.viewState,
           {
-            position,
-            size,
-            zIndex: rect?.zIndex,
+            ...(rect ? this._placementFor(rect, g) : {}),
             collapsed: entry.collapsed,
             orientationOverride: entry.orientationOverride,
+            tabbedOrientation: entry.tabbedOrientation,
             zoomActive: entry.zoomActive,
           },
         );
@@ -618,6 +848,12 @@ export class PanelHost {
         console.error(`PanelHost: Error restoring ${entry.instanceId}:`, e);
       }
     }
+
+    const savedLinks = saved.links ?? [];
+    const touchesDormant = (l: LinkRecord) =>
+      this._dormantInstances.has(l.sourceInstanceId) ||
+      this._dormantInstances.has(l.targetInstanceId);
+    this._dormantLinks = savedLinks.filter(touchesDormant);
 
     // Finalize: set the canonical rects authoritatively and re-render at the fit cell
     // (floating only — tabbed ignores geometry).
@@ -643,21 +879,21 @@ export class PanelHost {
     }
 
     this.currentStrategy.applyLayoutData(saved.layout);
-    this.linkManager?.initialize(saved.links ?? []);
-    if (this.currentStrategy === this.tabbedLayout) {
-      this.tabbedLayout.rebuildConnectors();
-    }
+    this.linkManager?.initialize(savedLinks.filter((l) => !touchesDormant(l)));
+    if (tabbed) this.tabbedLayout.refreshLinks();
   }
 
-  /** Resolve saved per-instance geometry into canonical cell rects (with zIndex):
-   *  reconcile authored positions when every instance has geometry, else shelf-pack.
+  /** Resolve saved per-instance geometry into canonical cell rects (with zIndex).
+   *  Instances with saved geometry keep their authored position; instances without
+   *  (e.g. opened while the layout was tabbed) are shelf-packed below them. The
+   *  whole set is then reconciled (preserve-X push-down) so nothing overlaps.
    *  Spans come straight from the descriptor's grid footprint (already in cells) for
    *  instances that lack a saved span. */
   private _resolveCanonicalRects(
     entries: Array<{
       instanceId: string;
       viewId: string;
-      orientationOverride?: "vertical" | "horizontal";
+      orientationOverride?: Orientation;
     }>,
     saved: Record<
       string,
@@ -669,54 +905,54 @@ export class PanelHost {
         zIndex: number;
       }
     >,
-    allHaveGeom: boolean,
   ): Record<string, PlacedRect & { zIndex: number }> {
-    const spanFor = (entry: {
-      instanceId: string;
-      viewId: string;
-      orientationOverride?: "vertical" | "horizontal";
-    }) => {
+    const spanFor = (entry: (typeof entries)[number]) => {
       const geom = saved[entry.instanceId];
-      const sz = this._sizingFor(
-        entry.viewId as ViewId,
-        entry.orientationOverride,
+      // Floating footprint, whichever strategy is live: these rects are floating geometry.
+      const sz = resolveSizing(
+        getFloatingViewDescriptor(entry.viewId),
+        entry.orientationOverride ?? this._globalOrientation(),
       );
       return {
         colSpan: geom?.colSpan ?? sz?.default.cols ?? 20,
         rowSpan: geom?.rowSpan ?? sz?.default.rows ?? 12,
       };
     };
-    const zFor = (id: string) => saved[id]?.zIndex ?? 100;
-    const out: Record<string, PlacedRect & { zIndex: number }> = {};
 
-    if (allHaveGeom) {
-      const items: ReconcileItem[] = entries.map((e) => {
-        const { colSpan, rowSpan } = spanFor(e);
-        const geom = saved[e.instanceId]!;
-        return {
-          id: e.instanceId,
-          col: geom.col,
-          row: geom.row,
-          colSpan,
-          rowSpan,
-        };
-      });
-      const reconciled = reconcileLayout(items);
-      for (const e of entries) {
-        const r = reconciled[e.instanceId];
-        if (r) out[e.instanceId] = { ...r, zIndex: zFor(e.instanceId) };
-      }
-    } else {
-      const items = entries.map((e) => ({ id: e.instanceId, ...spanFor(e) }));
-      const packed = packShelves(items, GRID_COLS);
-      for (const it of items) {
+    const placed: ReconcileItem[] = [];
+    const unplaced: Array<{ id: string; colSpan: number; rowSpan: number }> = [];
+    for (const e of entries) {
+      const geom = saved[e.instanceId];
+      if (geom) placed.push({ id: e.instanceId, col: geom.col, row: geom.row, ...spanFor(e) });
+      else unplaced.push({ id: e.instanceId, ...spanFor(e) });
+    }
+
+    if (unplaced.length) {
+      const packed = packShelves(unplaced, GRID_COLS);
+      const below = placed.length ? layoutBottomRow(placed) + 1 : 0;
+      for (const it of unplaced) {
         const pos = packed[it.id] ?? { col: 0, row: 0 };
-        out[it.id] = {
-          col: pos.col,
-          row: pos.row,
-          colSpan: it.colSpan,
-          rowSpan: it.rowSpan,
-          zIndex: zFor(it.id),
+        placed.push({ ...it, col: pos.col, row: pos.row + below });
+      }
+    }
+
+    // A fully shelf-packed set is already overlap-free; reconciling it would only
+    // re-apply the border offset the authored layouts already carry.
+    const resolved: Record<string, PlacedRect> =
+      unplaced.length === entries.length
+        ? Object.fromEntries(placed.map((p) => [p.id, p]))
+        : reconcileLayout(placed);
+
+    const out: Record<string, PlacedRect & { zIndex: number }> = {};
+    for (const e of entries) {
+      const r = resolved[e.instanceId];
+      if (r) {
+        out[e.instanceId] = {
+          col: r.col,
+          row: r.row,
+          colSpan: r.colSpan,
+          rowSpan: r.rowSpan,
+          zIndex: saved[e.instanceId]?.zIndex ?? 100,
         };
       }
     }
@@ -730,29 +966,51 @@ export class PanelHost {
     const descriptor = getFloatingViewDescriptor(record?.viewId ?? "");
     if (!record || !descriptor) return;
 
-    const globalOrientation =
-      (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
-    const current: "vertical" | "horizontal" =
-      record.orientationOverride ?? globalOrientation;
-    record.orientationOverride =
-      current === "vertical" ? "horizontal" : "vertical";
+    const rotated: Orientation =
+      this._effectiveOrientation(record) === "vertical" ? "horizontal" : "vertical";
+    // Each strategy keeps its own per-instance orientation.
+    if (this.currentStrategy === this.tabbedLayout) record.tabbedOrientation = rotated;
+    else record.orientationOverride = rotated;
 
     // Re-apply size constraints for the new orientation (CSS min/max) before the view
     // re-renders and auto-sizes into them.
-    const sizing = resolveSizing(descriptor, record.orientationOverride);
-    record.chrome.setSizeConstraints?.(sizing);
+    record.chrome.setSizeConstraints?.(resolveSizing(descriptor, rotated));
 
-    const zm = this._zoomMultiplierFor(
-      record.orientationOverride,
-      record.zoomActive ?? false,
-    );
+    this._rebuildView(record, descriptor, true);
+    this.saveState();
+  }
+
+  /** Re-create a panel's view at its current effective orientation and zoom. */
+  private _rebuildView(
+    record: PanelRecord,
+    descriptor: FloatingViewDescriptor,
+    forceAutoSize: boolean,
+  ): void {
+    const orientation = this._effectiveOrientation(record);
+    const zm = this._zoomMultiplierFor(orientation, record.zoomActive ?? false);
+    record.renderedOrientation = orientation;
     this._recreateViewInPlace(
       record,
       descriptor,
-      this._buildOverriddenSettings(record.orientationOverride, zm),
-      true,
+      this._buildOverriddenSettings(orientation, zm),
+      forceAutoSize,
     );
-    this.saveState();
+  }
+
+  /** Rebuild any orientation-sensitive view whose effective orientation no longer
+   *  matches what it was built with — after a strategy switch, or when a phone is
+   *  turned (the tabbed layout follows the viewport's long axis). */
+  private _syncRenderedOrientations(): void {
+    for (const record of this.instances.values()) {
+      if (NEVER_RECREATE_VIEW_IDS.has(record.viewId)) continue;
+      const descriptor = getFloatingViewDescriptor(record.viewId);
+      if (!descriptor?.refreshOnInstrumentChange) continue;
+      if (record.renderedOrientation === this._effectiveOrientation(record)) continue;
+      // Re-render only. The panel's floating footprint is NOT re-fitted: within the
+      // floating layout its orientation never changed (only the tabbed layout follows
+      // the viewport), so its authored size and position must survive the round trip.
+      this._rebuildView(record, descriptor, false);
+    }
   }
 
   private _handleZoomRequest(instanceId: string): void {
@@ -761,18 +1019,7 @@ export class PanelHost {
     if (!record || !descriptor) return;
 
     record.zoomActive = !record.zoomActive;
-    const globalOrientation =
-      (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
-    const effectiveOrientation: "vertical" | "horizontal" =
-      record.orientationOverride ?? globalOrientation;
-    const zm = this._zoomMultiplierFor(effectiveOrientation, record.zoomActive);
-
-    this._recreateViewInPlace(
-      record,
-      descriptor,
-      this._buildOverriddenSettings(record.orientationOverride, zm),
-      true,
-    );
+    this._rebuildView(record, descriptor, true);
     record.chrome.setZoomActive(record.zoomActive);
     this.saveState();
   }
@@ -830,46 +1077,29 @@ export class PanelHost {
     const instrumentChanged =
       oldInstrument !== (newSettings.instrumentSettings as any)?.instrument;
 
-    const SKIP_VIEW_IDS = new Set<ViewId>([
-      "instrument_floating_metronome" as ViewId,
-      "floating_timer" as ViewId,
-    ]);
-
     for (const record of this.instances.values()) {
-      if (SKIP_VIEW_IDS.has(record.viewId)) continue;
+      if (NEVER_RECREATE_VIEW_IDS.has(record.viewId)) continue;
       const descriptor = getFloatingViewDescriptor(record.viewId);
       if (!descriptor?.refreshOnInstrumentChange) continue;
 
-      const effectiveOrientation: "vertical" | "horizontal" =
-        record.orientationOverride ??
-        (newSettings.instrumentSettings as any)?.orientation ??
-        "vertical";
+      const effectiveOrientation = this._effectiveOrientation(record);
       // A global orientation flip changes the effective footprint of fretboard panels
       // that follow the global setting (no per-instance override) — adopt the new
       // orientation's size so the panel isn't left at the previous orientation's
       // dimensions. (The rotate button drives this directly via setSizeConstraints.)
+      // The tabbed layout ignores the global setting, so nothing flips there.
       const orientationFlipped =
-        orientationChanged && record.orientationOverride === undefined;
+        orientationChanged && effectiveOrientation !== record.renderedOrientation;
       if (orientationFlipped && isFretboardDescriptor(descriptor)) {
         record.chrome.setSizeConstraints?.(
           resolveSizing(descriptor, effectiveOrientation),
         );
       }
 
-      const zm = this._zoomMultiplierFor(
-        effectiveOrientation,
-        record.zoomActive ?? false,
-      );
       // Re-fit to content only when the panel's intrinsic footprint actually changed
       // (instrument swap or an effective-orientation flip). Otherwise keep the panel at
       // its current authored size — a pure repaint, e.g. a handedness mirror.
-      const footprintChanged = instrumentChanged || orientationFlipped;
-      this._recreateViewInPlace(
-        record,
-        descriptor,
-        this._buildOverriddenSettings(record.orientationOverride, zm),
-        footprintChanged,
-      );
+      this._rebuildView(record, descriptor, instrumentChanged || orientationFlipped);
     }
 
     this.saveState();
@@ -957,7 +1187,6 @@ export class PanelHost {
   // --- Persistence helpers ---
 
   private _buildPayload(): CurrentPayload {
-    const layoutData = this.currentStrategy.serializeLayout();
     const instances: CurrentPayload["instances"] = {};
     for (const [id, record] of this.instances) {
       instances[id] = {
@@ -966,17 +1195,30 @@ export class PanelHost {
         viewState: record.viewState,
         collapsed: record.collapsed,
         orientationOverride: record.orientationOverride,
+        tabbedOrientation: record.tabbedOrientation,
         zoomActive: record.zoomActive,
       };
     }
+    for (const [id, entry] of this._dormantInstances) instances[id] = entry;
     return {
       instances,
-      links: this.linkManager?.getLinks() ?? [],
-      layout: layoutData,
+      links: [...(this.linkManager?.getLinks() ?? []), ...this._dormantLinks],
+      // Both strategies' layout data, so neither is lost while the other is live.
+      layout: mergeLayoutData(
+        this._dormantLayout,
+        this.currentStrategy.serializeLayout(),
+        new Set(Object.keys(instances)),
+      ),
     };
   }
 
+  /** Ids of every instance in the persisted state: open panels plus dormant ones. */
+  private _persistedInstanceIds(): Set<string> {
+    return new Set([...this.instances.keys(), ...this._dormantInstances.keys()]);
+  }
+
   private saveState(): void {
+    if (this._restoring) return;
     this.screenConfigManager.saveAutoSave(this._buildPayload());
   }
 
@@ -986,23 +1228,30 @@ export class PanelHost {
 
   // --- Shared math ---
 
-  /** The orientation a panel renders at: its per-instance override, else the global. */
-  private _effectiveOrientation(
-    orientationOverride?: "vertical" | "horizontal",
-  ): Orientation {
-    const global =
-      (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
-    return orientationOverride ?? global;
+  private _globalOrientation(): Orientation {
+    return (this.appSettings.instrumentSettings as any)?.orientation ?? "vertical";
   }
 
-  /** Resolve a view's effective grid footprint (default/min/max in cells) for the given
-   *  orientation. */
-  private _sizingFor(
-    viewId: ViewId,
-    orientationOverride?: "vertical" | "horizontal",
-  ): PanelSizing | undefined {
-    const desc = getFloatingViewDescriptor(viewId);
-    return resolveSizing(desc, this._effectiveOrientation(orientationOverride));
+  /** The orientation a panel renders at. Floating: its per-instance override, else
+   *  the global setting. Tabbed: its per-instance choice, else what suits the screen
+   *  it fills (tabbedDefaultOrientation) — a portrait phone gets a vertical fretboard
+   *  whatever the (desktop-oriented) global setting says. */
+  private _effectiveOrientation(panel: {
+    viewId: string;
+    viewState?: unknown;
+    orientationOverride?: Orientation;
+    tabbedOrientation?: Orientation;
+  }): Orientation {
+    if (this.currentStrategy === this.tabbedLayout) {
+      if (panel.tabbedOrientation) return panel.tabbedOrientation;
+      const desc = getFloatingViewDescriptor(panel.viewId);
+      const flag = !!desc && isFretboardDescriptor(desc) ? desc.multiBoard : false;
+      const multiBoard = typeof flag === 'function' ? flag(panel.viewState) : !!flag;
+      // Against the pane it fills — half the screen where a tablet shows two.
+      const pane = tabbedPaneSize(window.innerWidth, window.innerHeight);
+      return tabbedDefaultOrientation(pane.width, pane.height, multiBoard);
+    }
+    return panel.orientationOverride ?? this._globalOrientation();
   }
 
   private _zoomMultiplierFor(
@@ -1013,17 +1262,16 @@ export class PanelHost {
     return orientation === "horizontal" ? 2.0 : 1.25;
   }
 
+  /** App settings as one panel sees them: its effective orientation and zoom. */
   private _buildOverriddenSettings(
-    orientationOverride: "vertical" | "horizontal" | undefined,
+    orientation: Orientation,
     zoomMultiplier: number,
   ): AppSettings {
     return {
       ...this.appSettings,
       instrumentSettings: {
         ...this.appSettings.instrumentSettings,
-        ...(orientationOverride !== undefined
-          ? { orientation: orientationOverride }
-          : {}),
+        orientation,
         zoomMultiplier,
       },
     };

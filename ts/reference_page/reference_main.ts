@@ -1,3 +1,9 @@
+import { installGlobalErrorHandler } from "../core/error_reporter";
+
+// Install before anything else so exceptions thrown during bootstrap itself
+// (module registration, restore-from-state, …) surface as an on-screen toast.
+installGlobalErrorHandler();
+
 import { SidebarView } from "./sidebar_view";
 import { FloatingViewManager } from '../panels/panel_host';
 import { AppSettings, InstrumentSettings, loadSettings, SETTINGS_STORAGE_KEY } from "../settings";
@@ -16,6 +22,8 @@ import { setFloatingViewGridSize, setFloatingViewContentOriginX, GRID_UNIT } fro
 import { initOnboarding } from '../onboarding/onboarding_tour';
 import { ScreenConfigManager } from '../screen_config/screen_config_manager';
 import { consumeLayoutParam, consumeLeftyParam } from './url_params';
+import { initTestBridge } from '../test_bridge';
+import { registerOfflineSupport } from '../core/offline';
 
 
 function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
@@ -40,6 +48,7 @@ function moduleToDescriptor(mod: ViewModule): FloatingViewDescriptor {
     isFretboardView: true as const,
     supportsRotate: !!mod.panel.capabilities?.rotate,
     supportsZoom: !!mod.panel.capabilities?.zoom,
+    multiBoard: mod.panel.multiBoard,
   } as FretboardFloatingViewDescriptor;
 }
 
@@ -138,6 +147,8 @@ class ReferencePage {
 
         // Give TabbedLayout (mobile) access to the settings modal.
         this.floatingViewManager.setSettingsCallback(() => this.settingsManager.open());
+        // …and to the tour (its menu has the entry the sidebar's "?" is on desktop).
+        this.floatingViewManager.setTourCallback(() => (window as any).Onb?.replay());
 
         // A ?layout=<preset> URL param (e.g. /?layout=reference) opens the page on a
         // built-in starter layout. It overwrites the auto-save for this load only — the
@@ -160,6 +171,10 @@ class ReferencePage {
         });
 
         initOnboarding(this.floatingViewManager);
+
+        // No-op unless ?fftest is present (Playwright harness, tests/visual/).
+        initTestBridge(this.floatingViewManager);
+        registerOfflineSupport();
     }
 
     private _wireSettingsButton(): void {

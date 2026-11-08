@@ -3,14 +3,38 @@
     "start": "npm start --prefix ts",
     "test": "vitest run --config tests/vitest.config.ts",
     "test:watch": "vitest --config tests/vitest.config.ts",
+    "dev": "npm start --prefix ts",
+    "dev:single": "npm run start:single --prefix ts",
     "build": "node build_html.js",
-    "typecheck": "tsc --noEmit -p ts"
+    "build:single": "node build_html.js --target single",
+    "build:hosted": "node build_html.js --target hosted",
+    "typecheck": "tsc --noEmit -p ts",
+    "typecheck:tests": "tsc --noEmit -p tests",
+    "check": "npm run typecheck && npm run typecheck:tests && npm run test",
+    "pw:smoke": "playwright test -c tests/visual/playwright.config.ts structural.spec.ts breakpoint.spec.ts resize.spec.ts mobile.spec.ts practice.spec.ts onboarding.spec.ts install.spec.ts",
+    "pw:smoke:hosted": "playwright test -c tests/visual/playwright.hosted.config.ts structural.spec.ts breakpoint.spec.ts resize.spec.ts mobile.spec.ts practice.spec.ts onboarding.spec.ts install.spec.ts",
+    "smoke": "npm run build:single && npm run pw:smoke",
+    "smoke:hosted": "npm run build:hosted && npm run pw:smoke:hosted",
+    "test:all": "npm run check && npm run build && npm run pw:smoke && npm run pw:smoke:hosted",
+    "vr": "npm run build:single && playwright test -c tests/visual/playwright.config.ts",
+    "vr:hosted": "npm run build:hosted && playwright test -c tests/visual/playwright.hosted.config.ts",
+    "vr:update": "npm run build:single && playwright test -c tests/visual/playwright.config.ts --update-snapshots",
+    "vr:ui": "playwright test -c tests/visual/playwright.config.ts --ui",
+    "icons": "node build/make_icons.mjs",
+    "site": "node deploy/build_site.mjs",
+    "site:serve": "node deploy/build_site.mjs && node deploy/serve.mjs --open",
+    "deploy:preview": "node deploy/build_site.mjs && netlify deploy --dir=deploy/site",
+    "deploy": "node deploy/build_site.mjs && netlify deploy --prod --dir=deploy/site"
   },
   "dependencies": {
     "tsify": "^5.0.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "esbuild": "^0.21.5",
+    "netlify-cli": "^27.0.0",
     "vitest": "^2.0.0",
+    "webpack": "^5.107.2",
     "webpack-cli": "^7.0.3"
   }
 }

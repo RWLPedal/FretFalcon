@@ -87,7 +87,7 @@ Panels don't exist in isolation. Hook up panels to make configuration easy. A ba
 * **Everything is a panel** - Every tool is a draggable, resizable floating panel. Arrange them however you like - layouts save automatically, or you can download the one you created. Or, use a predefined layout for common tasks.
 * **Tidy up** - Position panels freely, or neatly align with snap-to-grid positioning. 
 *  **Themes** - Supports five distinct visual themes: warm bauhaus, mossy nature journal, faded tape deck, glassy modern, and synthwave.
-*  **Multi-platform** - Works on desktop or mobile (some features limited).
+*  **Multi-platform** - Works on desktop or mobile (some features limited). On a phone the hosted site can be added to the home screen: it opens like an app, works offline once visited, and keeps the screen on while a metronome, timer, backing track or schedule is running.
 *  **Zen** - Hide superfluous UI elements with zen mode.
 
 ---
@@ -104,19 +104,27 @@ No installation required - [try the live demo](https://html-preview.github.io/?u
 
 Worried the link might go down? You can simply download the `dist/index.html` to your hard drive, and open it in your browser.
 
-If you'd like to host or do local development:
+If you'd like to host or do local development, install once in both package roots (`npm install`, then `cd ts && npm install`), then from the repo root:
 
 ```bash
-cd ts
-npm install
-npm run start   # serves at localhost:4000
+npm run dev          # multi-file dev server with hot reload, localhost:5290
+npm run dev:single   # the single-file page, rebuilt in memory on every save, localhost:5293
 ```
 
-To build the single deployable file (`dist/index.html`):
+The same source builds two targets:
+
+| Target | Output | What it is |
+|---|---|---|
+| single | `dist/index.html` | Everything inlined into one self-contained file - the copy you download and open from disk. |
+| hosted | `dist-hosted/` | A small `index.html` plus content-hashed JS and CSS under `assets/`, for serving from a web server. A file's name changes whenever its contents do, so `assets/` can be cached forever and each release only re-downloads what changed. Also the installable one: it carries the web manifest, home-screen icons and a service worker (`sw.js`) for offline use. |
 
 ```bash
-node build_html
+npm run build          # both targets
+npm run build:single
+npm run build:hosted
 ```
+
+When hosting `dist-hosted/`, serve `assets/*` with `Cache-Control: public, max-age=31536000, immutable` and `index.html` and `sw.js` with `max-age=0, must-revalidate` (see `deploy/_headers`). Installing to a home screen, offline use and the screen wake lock all need HTTPS.
 
 **Build dependencies:** Node.js and npm. 
 

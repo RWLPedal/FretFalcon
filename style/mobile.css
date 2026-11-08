@@ -1,27 +1,36 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   mobile.css — Mobile layout using TabbedLayout strategy (≤768px).
-   Desktop chrome (sidebar, main-content) is hidden; #floating-view-area
-   becomes the full-screen tabbed container.
+   mobile.css — The tabbed (mobile) layout: TabbedLayout + TabBar + BottomSheet.
+
+   Which viewports get this layout is decided in ONE place — TABBED_MEDIA_QUERY
+   in ts/panels/layout/layout_mode.ts. PanelHost stamps the live strategy on
+   <html data-layout="tabbed|floating">; nothing here repeats the media query.
+
+   Nor does a panel's content ask the viewport how big it is: a tablet shows two
+   panes, each half the screen. TabbedLayout stamps what the stylesheet needs to
+   know, from the same layout_mode.ts rules the code uses:
+     .tabbed-content-area  data-panes="1|2"  data-split="rows|columns"
+     .tabbed-panel         data-pane="tall|short"   --pane-w / --pane-h (px)
+
+   Touch sizing: every control in the shell (top bar, tab bar, sheets) is at least
+   44px on its short side. Panel options are 36px — they trade a little target
+   size for screen, since everything they take comes off the fretboard. Form
+   controls use a 16px font (anything smaller makes iOS Safari zoom the page when
+   the control is focused).
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* ─── At mobile: hide desktop chrome ────────────────────────────────────── */
-@media (max-width: 768px) {
-  .side-bar-container,
-  .main-content-container {
-    display: none !important;
-  }
-
-  /* reference-layout is still our 100vh container; make sure it fits mobile */
-  .reference-layout {
-    height: 100vh;
-    height: 100dvh;
-  }
-
-  /* canvas is inline by default — block removes the ~4px baseline gap */
-  #floating-view-area canvas { display: block; }
+/* ─── Hide desktop chrome while the tabbed layout is live ────────────────── */
+:root[data-layout="tabbed"] .side-bar-container,
+:root[data-layout="tabbed"] .main-content-container {
+  display: none !important;
 }
 
-/* ─── Tabbed layout pointer-events (fires whenever TabbedLayout is mounted) */
+/* reference-layout is still the full-height container; dvh tracks the mobile
+   browser's collapsing toolbars. */
+:root[data-layout="tabbed"] .reference-layout {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Floating layout uses pointer-events:none so the backdrop is click-through;
    tabbed layout needs the whole area to capture events. */
 #floating-view-area.tabbed-layout-active {
@@ -31,6 +40,7 @@
 /* ─── TabbedLayout root ──────────────────────────────────────────────────── */
 
 .tabbed-layout {
+  position: relative;
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -39,7 +49,7 @@
   color: var(--text-primary);
 }
 
-/* ─── Top bar (hamburger + title + settings) ─────────────────────────────── */
+/* ─── Top bar (menu + title + active-panel actions) ──────────────────────── */
 
 .tabbed-top-bar {
   display: flex;
@@ -49,27 +59,37 @@
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
   background: var(--sidebar-bg);
-  padding: 0 4px;
+  padding: 0 2px;
 }
 
 .tabbed-top-bar-title {
   flex: 1;
-  text-align: center;
+  min-width: 0;
+  padding: 0 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-primary);
-  letter-spacing: 0.02em;
-  pointer-events: none;
+  letter-spacing: 0.01em;
+}
+
+.tabbed-top-bar-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .tabbed-top-bar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   background: none;
   border: none;
   cursor: pointer;
@@ -78,13 +98,24 @@
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s, color 0.12s;
 }
-.tabbed-top-bar-btn .material-icons { font-size: 22px; }
+.tabbed-top-bar-btn .material-icons { font-size: 24px; }
+.tabbed-top-bar-btn.is-on { color: var(--accent); }
 .tabbed-top-bar-btn:active {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   color: var(--accent);
 }
+.tabbed-top-bar-btn:focus-visible,
+.tabbed-tab:focus-visible,
+.tabbed-add-btn:focus-visible,
+.tabbed-link-connector:focus-visible,
+.tabbed-sheet-item:focus-visible,
+.tabbed-sheet-close:focus-visible,
+.tabbed-empty-add:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
 
-/* ─── Content area (fills above the tab bar) ─────────────────────────────── */
+/* ─── Content area (one panel fills it) ──────────────────────────────────── */
 
 .tabbed-content-area {
   flex: 1;
@@ -100,311 +131,1636 @@
 }
 
 .tabbed-panel-content {
+  box-sizing: border-box;
   width: 100%;
   height: 100%;
+  padding: 8px 12px;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
+}
+
+/* ─── Two panes (a tablet) ───────────────────────────────────────────────── */
+/* Where the screen has room, the active tab and its neighbour share it: stacked
+   down an upright screen, side by side on a wide one, with a divider between that
+   can be dragged. TabbedLayout sets the two tracks' sizes (--pane-a / --pane-b, in
+   fr) and orders the panes 0 and 2, leaving 1 for the divider. */
+.tabbed-content-area[data-panes="2"] {
+  display: grid;
+}
+.tabbed-content-area[data-panes="2"][data-split="rows"] {
+  grid-template: minmax(0, var(--pane-a, 1fr)) auto minmax(0, var(--pane-b, 1fr)) / minmax(0, 1fr);
+}
+.tabbed-content-area[data-panes="2"][data-split="columns"] {
+  grid-template: minmax(0, 1fr) / minmax(0, var(--pane-a, 1fr)) auto minmax(0, var(--pane-b, 1fr));
+}
+.tabbed-content-area[data-panes="2"] .tabbed-panel {
+  position: relative;
+  inset: auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The divider: a hairline with a grip, on a strip tall enough to take hold of. */
+.tabbed-pane-divider {
+  display: none;
+}
+.tabbed-content-area[data-panes="2"] .tabbed-pane-divider {
+  order: 1;
+  position: relative;
+  z-index: 2;
+  display: block;
+  background: var(--sidebar-bg);
+  touch-action: none; /* a drag moves the divider, not the page */
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbed-content-area[data-split="rows"] .tabbed-pane-divider {
+  height: 12px;
+  border-block: 1px solid var(--border);
+  cursor: row-resize;
+}
+.tabbed-content-area[data-split="columns"] .tabbed-pane-divider {
+  width: 12px;
+  border-inline: 1px solid var(--border);
+  cursor: col-resize;
+}
+/* The strip is 12px; a finger gets 12px more either side of it. */
+.tabbed-pane-divider::before {
+  content: '';
+  position: absolute;
+  inset: -12px 0;
+}
+.tabbed-content-area[data-split="columns"] .tabbed-pane-divider::before {
+  inset: 0 -12px;
+}
+.tabbed-pane-divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-muted) 55%, transparent);
+  transform: translate(-50%, -50%);
+  transition: background 0.12s;
+}
+.tabbed-content-area[data-split="columns"] .tabbed-pane-divider::after {
+  width: 4px;
+  height: 36px;
+}
+.tabbed-pane-divider.is-dragging::after,
+.tabbed-pane-divider:focus-visible::after {
+  background: var(--accent);
+}
+.tabbed-pane-divider:focus-visible {
+  outline: none;
+}
+
+/* The top bar's title and actions belong to the active pane: mark which it is. */
+.tabbed-content-area[data-panes="2"] .tabbed-panel.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  width: 3px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+/* A swipe between tabs: the arriving panel slides in from the side it came from. */
+.tabbed-panel--enter-next { animation: tabbed-panel-enter-next 0.16s ease-out; }
+.tabbed-panel--enter-previous { animation: tabbed-panel-enter-previous 0.16s ease-out; }
+@keyframes tabbed-panel-enter-next {
+  from { transform: translateX(28px); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+@keyframes tabbed-panel-enter-previous {
+  from { transform: translateX(-28px); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabbed-panel--enter-next,
+  .tabbed-panel--enter-previous { animation: none; }
 }
 
 /* Mirror .floating-view-content rule: layout math assumes main title is hidden */
 .tabbed-panel-content .feature-main-title {
   display: none !important;
 }
+/* CAGED draws its own heading above the fretboard. The top bar already shows the
+   same title, and the fit-to-height maths does not budget for a second one. */
+.tabbed-panel-content .caged-main-title {
+  display: none !important;
+}
+/* With its title hidden the row is empty, but its margin would still push the
+   fit-to-height fretboard 2px past the panel and raise a scrollbar. */
+.tabbed-panel-content .feature-title-row {
+  margin: 0;
+}
 
-/* ─── Tab bar ─────────────────────────────────────────────────────────────── */
+/* canvas is inline by default — block removes the ~4px baseline gap; auto margins
+   centre a fretboard that is narrower than the screen. */
+.tabbed-panel-content canvas {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* A row of several fretboards (Triad Shapes) wraps when they don't all fit. Centre
+   each line as a group; the auto margins above would instead spread the boards of
+   a full line apart and leave the wrapped one stranded on its own spacing. */
+.tabbed-panel-content .triad-quality-row > div {
+  justify-content: center;
+}
+.tabbed-panel-content .triad-quality-row canvas {
+  margin: 0;
+}
+
+/* ─── Empty state ────────────────────────────────────────────────────────── */
+
+.tabbed-empty-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  font-family: 'DM Sans', sans-serif;
+}
+.tabbed-empty-state[hidden] { display: none; }
+.tabbed-empty-state .material-icons { font-size: 44px; opacity: 0.55; }
+.tabbed-empty-state p { margin: 0; font-size: 0.95rem; }
+
+.tabbed-empty-add {
+  min-height: 48px;
+  padding: 0 22px;
+  margin-top: 6px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ─── Toast (link feedback, first-visit hint) ────────────────────────────── */
+
+.tabbed-toast {
+  position: absolute;
+  left: 50%;
+  bottom: calc(68px + env(safe-area-inset-bottom, 0px)); /* clear of the 56px tab bar */
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--text-primary);
+  color: var(--bg);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: center;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.28);
+  z-index: 2;
+  cursor: pointer;
+}
+.tabbed-toast[hidden] { display: none; }
+/* A toast that does something when tapped (the first-visit tip starts the tour). */
+.tabbed-toast.is-action {
+  border-radius: 18px; /* still a pill on one line; a tidy box when it wraps to two */
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--bg) 45%, transparent);
+  text-underline-offset: 3px;
+}
+
+/* ─── Onboarding (welcome card + tour) ───────────────────────────────────── */
+/* The same card and tips as the desktop, tightened for a phone and with buttons
+   a finger can hit. The tour's steps and copy for this layout are MOBILE_STEPS in
+   ts/onboarding/onboarding_tour.ts. */
+/* Border inside the box, so the ring sits exactly where the tour's pad puts it —
+   its targets here are against the screen's edges, with no room to overhang. */
+:root[data-layout="tabbed"] .onb-spot {
+  box-sizing: border-box;
+}
+:root[data-layout="tabbed"] .onb-card-hero {
+  padding: 20px 20px 16px;
+}
+:root[data-layout="tabbed"] .onb-brand {
+  margin-bottom: 12px;
+}
+/* The large lockup is wider than a phone's card: scale mark and wordmark together. */
+:root[data-layout="tabbed"] .onb-brand .brand--lg {
+  gap: 10px;
+}
+:root[data-layout="tabbed"] .onb-brand .brand--lg .brand-logo svg {
+  height: clamp(30px, 11vw, 46px);
+}
+:root[data-layout="tabbed"] .onb-brand .brand--lg .brand-name {
+  font-size: clamp(1.15rem, 6.2vw, 1.7rem);
+}
+:root[data-layout="tabbed"] .onb-headline {
+  font-size: 1.3rem;
+}
+:root[data-layout="tabbed"] .onb-feats {
+  padding: 0 20px;
+}
+:root[data-layout="tabbed"] .onb-feat {
+  padding: 11px 0;
+}
+:root[data-layout="tabbed"] .onb-actions {
+  padding: 14px 16px 16px;
+}
+:root[data-layout="tabbed"] .onb-actions > * {
+  min-height: 44px;
+}
+:root[data-layout="tabbed"] .onb-btn-primary {
+  flex: 1 1 100%;
+}
+:root[data-layout="tabbed"] .onb-tip-body {
+  font-size: 0.875rem;
+}
+:root[data-layout="tabbed"] .onb-nav-btn {
+  min-width: 64px;
+  min-height: 40px;
+}
+:root[data-layout="tabbed"] .onb-skip-btn {
+  min-height: 36px;
+  padding-left: 10px;
+}
+
+/* ─── Tab bar ────────────────────────────────────────────────────────────── */
 
 .tabbed-tab-bar {
   display: flex;
   flex-direction: row;
-  align-items: center;
-  height: 54px;
+  align-items: stretch;
+  height: 56px;
   flex-shrink: 0;
   border-top: 1px solid var(--border);
   background: var(--sidebar-bg);
+}
+
+/* The strip scrolls sideways; the add button beside it never scrolls away. */
+.tabbed-tab-strip {
+  position: relative; /* offsetParent for TabBar's scroll-into-view maths */
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 2px;
+  padding: 0 4px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  padding: 0 4px;
-  gap: 1px;
+  /* The strip pans sideways natively; a long-press drag takes over in TabBar. */
+  touch-action: pan-x;
 }
-.tabbed-tab-bar::-webkit-scrollbar { display: none; }
+.tabbed-tab-strip::-webkit-scrollbar { display: none; }
 
 .tabbed-tab {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 50px;
-  padding: 4px 5px;
-  border-radius: 8px;
+  min-width: 64px;
+  max-width: 116px;
+  height: 48px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 10px;
+  background: none;
   cursor: pointer;
   color: var(--text-muted);
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.6rem;
-  font-weight: 400;
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 500;
   white-space: nowrap;
   flex-shrink: 0;
-  position: relative;
   user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none; /* long press starts a reorder, not the OS callout */
   -webkit-tap-highlight-color: transparent;
   transition: background 0.12s, color 0.12s;
 }
 .tabbed-tab.is-active {
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 14%, transparent);
-  font-weight: 500;
+  font-weight: 600;
 }
 
-.tabbed-tab-icon { font-size: 18px !important; }
+/* On screen beside the active tab (a tablet shows two). */
+.tabbed-tab.is-visible {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.tabbed-tab-icon { font-size: 22px !important; }
 
 .tabbed-tab-title {
-  max-width: 76px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tabbed-tab-close {
+/* Marks a tab that follows a panel which is not its neighbour (so no connector
+   can show the link). */
+.tabbed-tab-link-badge {
+  display: none;
   position: absolute;
   top: 3px;
-  right: 3px;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--text-muted) 50%, transparent);
-  color: var(--sidebar-bg);
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.12s;
+  right: 6px;
+  font-size: 13px !important;
+  color: var(--accent);
 }
-.tabbed-tab-close .material-icons { font-size: 10px; }
-.tabbed-tab.is-active .tabbed-tab-close {
-  opacity: 1;
-  pointer-events: auto;
-}
+.tabbed-tab.has-distant-link .tabbed-tab-link-badge { display: block; }
 
 .tabbed-add-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 38px;
-  padding: 4px 5px;
-  border-radius: 8px;
-  cursor: pointer;
-  background: none;
-  border: 1px dashed color-mix(in srgb, var(--border) 80%, transparent);
-  color: var(--text-muted);
-  margin-left: 4px;
+  width: 52px;
   flex-shrink: 0;
+  border: none;
+  border-left: 1px solid var(--border);
+  background: none;
+  cursor: pointer;
+  color: var(--accent);
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s;
 }
-.tabbed-add-btn .material-icons { font-size: 18px; }
+.tabbed-add-btn .material-icons { font-size: 26px; }
 .tabbed-add-btn:active {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-/* ─── Add-panel bottom sheet ─────────────────────────────────────────────── */
-
-.tabbed-add-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 300;
-}
-
-.tabbed-add-sheet {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  max-height: 80vh;
-  max-height: 80dvh;
-  background: var(--sidebar-bg);
-  border-radius: 14px 14px 0 0;
-  z-index: 301;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.tabbed-add-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 16px 12px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  position: sticky;
-  top: 0;
-  background: var(--sidebar-bg);
-  z-index: 1;
-}
-
-.tabbed-add-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  border-radius: 4px;
-  -webkit-tap-highlight-color: transparent;
-}
-.tabbed-add-close .material-icons { font-size: 20px; }
-
-.tabbed-add-section {
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-}
-.tabbed-add-section:last-child { border-bottom: none; }
-
-.tabbed-add-section-title {
-  font-family: 'DM Mono', monospace;
-  font-size: 0.6rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  padding: 6px 16px 4px;
-  margin: 0;
-}
-
-.tabbed-add-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: 100%;
-  padding: 10px 16px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-primary);
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  text-align: left;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.1s;
-}
-.tabbed-add-item:active {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-}
-
-.tabbed-add-item-icon {
-  font-size: 18px !important;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-/* ─── Link connectors (between adjacent tabs in the tab bar) ─────────────── */
+/* ─── Link connectors (between adjacent, link-compatible tabs) ───────────── */
 
 .tabbed-link-connector {
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  width: 20px;
-  flex-shrink: 0;
-}
-
-.tabbed-link-line {
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-  transition: background 0.15s;
-}
-
-.tabbed-link-connector.is-linked .tabbed-link-line {
-  background: var(--accent);
-}
-
-/* Incompatible: faint dashed line, no link icon */
-.tabbed-link-connector.is-incompatible .tabbed-link-line {
-  background: repeating-linear-gradient(
-    to right,
-    color-mix(in srgb, var(--border) 50%, transparent) 0 3px,
-    transparent 3px 6px
-  );
-}
-
-.tabbed-link-btn {
-  display: flex;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: none;
-  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
-  cursor: pointer;
-  color: var(--text-muted);
+  width: 28px;
+  height: 48px;
+  flex-shrink: 0;
   padding: 0;
-  flex-shrink: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: color-mix(in srgb, var(--text-muted) 60%, transparent);
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s, color 0.12s, border-color 0.12s;
+  transition: color 0.12s;
 }
-
-.tabbed-link-btn .material-icons { font-size: 9px; }
-
-.tabbed-link-btn:active {
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-.tabbed-link-connector.is-linked .tabbed-link-btn {
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
-  border-color: var(--accent);
-}
-
-/* Incompatible: muted static dot, no button affordance */
-.tabbed-link-dot {
-  width: 6px;
-  height: 6px;
+.tabbed-link-connector .material-icons {
+  font-size: 18px;
+  width: 26px;
+  height: 26px;
+  line-height: 26px;
   border-radius: 50%;
-  background: color-mix(in srgb, var(--border) 60%, transparent);
-  flex-shrink: 0;
-  pointer-events: none;
+  border: 1px dashed color-mix(in srgb, var(--border) 90%, transparent);
+  box-sizing: border-box;
+}
+.tabbed-link-connector.is-linked { color: var(--accent); }
+.tabbed-link-connector.is-linked .material-icons {
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.tabbed-link-connector:active .material-icons {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
 }
 
 /* ─── Drag-to-reorder ────────────────────────────────────────────────────── */
 
 .tabbed-tab.is-dragging {
   opacity: 0.35;
-  cursor: grabbing;
 }
 
 /* Ghost clone that follows the pointer during drag */
 .tabbed-tab-ghost {
+  position: fixed;
+  z-index: var(--z-popover);
+  pointer-events: none;
   background: var(--sidebar-bg) !important;
   color: var(--text-primary) !important;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  opacity: 0.9;
-  cursor: grabbing;
-  border-radius: 8px;
+  opacity: 0.92;
 }
 
 /* Vertical accent bar showing the drop position */
 .tabbed-drop-indicator {
   width: 3px;
-  min-height: 40px;
+  height: 40px;
   border-radius: 2px;
   background: var(--accent);
   flex-shrink: 0;
   pointer-events: none;
+}
+
+/* ─── Bottom sheet (menu, add a tool, links) ─────────────────────────────── */
+
+.tabbed-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: var(--z-mobile-backdrop);
+}
+.tabbed-sheet-backdrop[hidden] { display: none; }
+
+.tabbed-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 82vh;
+  max-height: 82dvh;
+  background: var(--sidebar-bg);
+  color: var(--text-primary);
+  border-radius: 16px 16px 0 0;
+  z-index: var(--z-mobile-sheet);
+  display: flex;
+  flex-direction: column;
+  font-family: 'DM Sans', sans-serif;
+  animation: tabbed-sheet-in 0.18s ease-out;
+}
+.tabbed-sheet[hidden] { display: none; }
+
+@keyframes tabbed-sheet-in {
+  from { transform: translateY(24px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tabbed-sheet { animation: none; }
+}
+
+.tabbed-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 4px 4px 4px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabbed-sheet-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.tabbed-sheet-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  -webkit-tap-highlight-color: transparent;
+}
+.tabbed-sheet-close .material-icons { font-size: 22px; }
+
+.tabbed-sheet-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.tabbed-sheet-section {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.tabbed-sheet-section:last-child { border-bottom: none; }
+
+.tabbed-sheet-section-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  padding: 8px 18px 4px;
+  margin: 0;
+}
+
+.tabbed-sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 18px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1rem;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.1s;
+}
+.tabbed-sheet-item:active {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.tabbed-sheet-item-icon {
+  font-size: 22px !important;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ─── Safe areas (notch, rounded corners, home indicator) ────────────────── */
+/* index.html asks for viewport-fit=cover, so on a phone with a notch — and when the
+   app is opened from the home screen, with no browser bars at all — the page reaches
+   every edge of the glass. The two bars keep their backgrounds to the edge and move
+   their contents in; sheets and the toast stay clear of the home indicator. Every
+   inset is 0 in an ordinary browser window, where none of this changes anything.
+   (After the rules above on purpose: the top bar's own `padding` would reset it.) */
+.tabbed-layout {
+  box-sizing: border-box;
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.tabbed-top-bar {
+  box-sizing: content-box; /* the 48px is the bar; the inset is on top of it */
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.tabbed-tab-bar {
+  box-sizing: content-box;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.tabbed-sheet {
+  box-sizing: border-box;
+  padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* ─── A page that behaves like an app under a finger ─────────────────────── */
+/* The tabbed page never scrolls as a whole, so dragging on it should not rubber-band
+   the entire app (iOS) or pull-to-refresh it (Android). And taps in quick succession —
+   the tempo steppers, a strum slot — are taps: without `manipulation` iOS takes two of
+   them for a double-tap and zooms the page. Pinch-zoom still works. */
+:root[data-layout="tabbed"],
+:root[data-layout="tabbed"] body {
+  overscroll-behavior: none;
+}
+:root[data-layout="tabbed"] body {
+  touch-action: manipulation;
+}
+
+/* ─── Touch-sized panel controls ─────────────────────────────────────────── */
+/* The shared config row (editor.css .config-compact) is sized for a mouse:
+   26px selects, 22px buttons. In the tabbed layout a finger drives it. */
+
+/* The options are the panel's overhead: every pixel they take comes off the
+   fretboard below. So they pack tight — a small caption ABOVE each control (not
+   beside it, which costs a row per field on a narrow screen), selects side by
+   side, and a button group as ONE row that swipes sideways instead of wrapping. */
+
+.tabbed-panel-content .config-compact {
+  gap: 6px 10px;
+  align-items: flex-end;
+  padding: 0 0 6px;
+  margin-bottom: 6px;
+}
+/* Hidden is gone. The rule above outranks editor.css's own collapse, so without this
+   its padding stays, with a sliver of the option labels showing in it. */
+.tabbed-panel-content .config-compact.is-collapsed {
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+.tabbed-panel-content .config-compact .field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+}
+
+.tabbed-panel-content .config-compact .config-label {
+  font-size: 0.625rem;
+  line-height: 1.2;
+}
+
+.tabbed-panel-content .config-compact .control {
+  min-width: 0;
+}
+
+.tabbed-panel-content .config-compact .config-select-wrap,
+.tabbed-panel-content .config-compact .config-select-wrap select {
+  font-size: 16px;
+}
+.tabbed-panel-content .config-compact .config-select-wrap select {
+  height: 36px;
+  /* Room for the arrow: at this size the shared 1.5em leaves it touching the text. */
+  padding-right: 2em;
+  /* A select is as wide as its LONGEST option; uncapped, one long scale name pushes
+     the field beside it onto a row of its own on a narrow phone. */
+  max-width: 46vw;
+}
+
+/* A button group is a single swipeable row: the inline flex-wrap the form builder
+   sets is what made it stack into two or three rows. It sits beside the other
+   fields when the screen is wide enough (landscape) and otherwise takes a row of
+   its own, shrinking to the screen so the overflow scrolls instead of wrapping. */
+.tabbed-panel-content .config-compact .field:has(.toggle-buttons-wrap) {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+.tabbed-panel-content .config-compact .toggle-buttons-wrap {
+  flex: 1;
+  min-width: 0;
+  flex-wrap: nowrap !important;
+  gap: 6px !important;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.tabbed-panel-content .config-compact .toggle-buttons-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.tabbed-panel-content .config-compact .config-toggle-btn {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+}
+
+/* Capo's fret picker is the one reference-panel select outside .config-compact. */
+.tabbed-panel-content .capo-view-select {
+  font-size: 16px;
+  min-height: 40px;
+}
+
+/* ─── Settings ───────────────────────────────────────────────────────────── */
+/* "Show grid" is the floating workspace's graph paper and snap. A tab fills its
+   pane — there is nothing to align — so the switch would do nothing here. */
+:root[data-layout="tabbed"] .settings-row[data-row-key="show-grid"] {
+  display: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Practice tools — Metronome, Timer, Strum, Backing Track, Schedule.
+
+   These are read from a music stand, an arm's length away or further, with a
+   guitar in hand. So unlike the reference panels (which shrink their options to
+   give the fretboard the room) each one FILLS the screen: the thing you watch
+   while playing — the beat, the time, the pattern — takes whatever the controls
+   don't.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Form controls: nothing under 16px ──────────────────────────────────── */
+/* iOS Safari zooms the page when a focused control's text is smaller than 16px.
+   The floating panels size theirs for a mouse (0.6–0.8rem) through many
+   selectors; one rule here outranks them all rather than chasing each. */
+.tabbed-panel-content :is(select, textarea, input:not([type="range"], [type="checkbox"], [type="radio"], [type="color"], [type="file"])),
+.tabbed-panel-content .group-name {
+  font-size: 16px !important;
+}
+
+.tabbed-panel-content .select select {
+  height: 40px;
+}
+
+/* A slider is dragged with a thumb, not a pointer. */
+.tabbed-panel-content .value-slider {
+  height: 40px;
+  border-radius: 8px;
+}
+.tabbed-panel-content .value-slider__label {
+  font-size: 0.95rem;
+}
+
+/* ─── Metronome ──────────────────────────────────────────────────────────── */
+/* The beats are a grid of pads that takes all the height the controls leave. */
+
+.tabbed-panel-content .metronome-view {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  padding: 4px 0;
+}
+
+.tabbed-panel-content .metronome-beats-container {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  /* --beat-cols / --beat-count are set by MetronomeView: two rows that break on
+     a beat here, every beat in one row on a phone turned on its side (below). */
+  grid-template-columns: repeat(var(--beat-cols, 4), minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 10px;
+  margin: 0;
+  padding: 6px;
+}
+.tabbed-panel-content .metronome-beat,
+.tabbed-panel-content .metronome-beat:hover {
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  transform: none; /* a tap leaves :hover stuck on a touch screen */
+}
+/* Off-beats are inset, in proportion: ten pads on a small phone are ~40px wide. */
+.tabbed-panel-content .metronome-beat.beat-subdivision {
+  margin: 14px 12%;
+}
+.tabbed-panel-content .metronome-beat.beat-silent {
+  border-width: 3px;
+}
+.tabbed-panel-content .metronome-beat.beat-current {
+  opacity: 1;
+  transform: scale(1.05);
+  outline: 4px solid var(--accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.tabbed-panel-content .metronome-transport-row {
+  gap: 10px;
+  margin: 0;
+}
+.tabbed-panel-content .metronome-transport-row .select select {
+  height: 56px;
+  min-width: 88px;
+}
+.tabbed-panel-content .metronome-view .play-pause-btn {
+  flex: 1;
+  height: 56px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--text-on-accent);
+}
+.tabbed-panel-content .metronome-view .play-pause-btn .material-icons {
+  font-size: 36px;
+}
+.tabbed-panel-content .metronome-mute-btn,
+.tabbed-panel-content .metronome-tap-btn {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  flex-shrink: 0;
+}
+.tabbed-panel-content .metronome-mute-btn .material-icons,
+.tabbed-panel-content .metronome-tap-btn .material-icons {
+  font-size: 26px;
+}
+
+/* Tap + tempo share a line; the tempo ramp (± BPM every N seconds) wraps below. */
+.tabbed-panel-content .metronome-bpm-row {
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.tabbed-panel-content .metronome-bpm-slider {
+  flex: 1 1 calc(100% - 90px); /* beside the tap button, pushing the ramp down */
+  height: 56px;
+}
+.tabbed-panel-content .metronome-bpm-slider .value-slider__label {
+  font-size: 1.6rem;
+}
+.tabbed-panel-content .metronome-progression-input {
+  width: 72px;
+  height: 44px;
+  border-radius: 6px;
+}
+.tabbed-panel-content .metronome-progression-label {
+  font-size: 0.9rem;
+}
+
+/* ─── Timer ──────────────────────────────────────────────────────────────── */
+/* The time is as large as its pane is wide; the transport sits under it. */
+
+.tabbed-panel-content .timer-view {
+  height: auto;
+  min-height: 100%;
+  padding: 8px 4px 12px;
+  gap: 14px;
+}
+.tabbed-panel-content .timer-bar,
+.tabbed-panel-content .timer-seg {
+  height: 14px;
+  border-radius: 7px;
+}
+.tabbed-panel-content .timer-bar--segmented {
+  gap: 5px;
+}
+
+.tabbed-panel-content .timer-row {
+  flex: 1;
+  flex-direction: column-reverse;
+  justify-content: center;
+  gap: 28px;
+}
+.tabbed-panel-content .timer-display-wrap {
+  position: relative;
+  align-self: stretch;
+  justify-content: center;
+}
+.tabbed-panel-content .timer-display {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.27), calc(var(--pane-h, 100vh) * 0.4));
+  line-height: 1;
+  padding: 0 2px;
+  text-align: center;
+}
+.tabbed-panel-content .timer-display.timer-display--long {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.19), calc(var(--pane-h, 100vh) * 0.4)); /* H:MM:SS */
+}
+.tabbed-panel-content .timer-edit {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  padding: 10px;
+  font-size: 24px;
+}
+
+.tabbed-panel-content .timer-controls {
+  justify-content: center;
+  gap: 22px;
+}
+.tabbed-panel-content .timer-reset,
+.tabbed-panel-content .timer-settings-btn {
+  width: 60px;
+  height: 60px;
+}
+.tabbed-panel-content .timer-start-pause {
+  width: 78px;
+  height: 78px;
+}
+.tabbed-panel-content .timer-reset .material-icons,
+.tabbed-panel-content .timer-settings-btn .material-icons {
+  font-size: 28px;
+}
+.tabbed-panel-content .timer-start-pause .material-icons {
+  font-size: 44px;
+}
+.tabbed-panel-content .timer-settings-btn.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Settings open: the face gives up its share of the height (the panel scrolls
+   if the two do not fit together). */
+.tabbed-panel-content .timer-view--config-open .timer-row {
+  flex: 0 0 auto;
+  gap: 16px;
+}
+.tabbed-panel-content .timer-view--config-open .timer-display {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.2), calc(var(--pane-h, 100vh) * 0.25));
+}
+.tabbed-panel-content .timer-view--config-open .timer-display.timer-display--long {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.15), calc(var(--pane-h, 100vh) * 0.25));
+}
+.tabbed-panel-content .timer-view--config-open .timer-reset,
+.tabbed-panel-content .timer-view--config-open .timer-settings-btn {
+  width: 48px;
+  height: 48px;
+}
+.tabbed-panel-content .timer-view--config-open .timer-start-pause {
+  width: 60px;
+  height: 60px;
+}
+
+.tabbed-panel-content .timer-config {
+  gap: 12px;
+  padding-top: 14px;
+}
+.tabbed-panel-content .timer-settings-row {
+  gap: 10px;
+}
+.tabbed-panel-content .timer-config .config-label {
+  min-width: 4.4rem;
+  font-size: 0.7rem;
+}
+.tabbed-panel-content .timer-config-controls.config-compact {
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  margin: 0;
+}
+.tabbed-panel-content .timer-config .timer-config-controls .config-toggle-btn {
+  flex: 1;
+  height: 40px;
+  padding: 0 10px;
+  font-size: 0.95rem;
+  border-radius: 6px;
+}
+.tabbed-panel-content .timer-steppers {
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+.tabbed-panel-content .timer-stepper {
+  gap: 6px;
+}
+.tabbed-panel-content .timer-config .timer-config-controls .timer-step-btn.config-toggle-btn {
+  flex: none;
+  width: 40px;
+  min-width: 40px;
+  font-size: 1.3rem;
+}
+.tabbed-panel-content .timer-step-val {
+  font-size: 1rem;
+}
+.tabbed-panel-content .timer-step-unit {
+  font-size: 0.68rem;
+}
+
+/* ─── Strum ──────────────────────────────────────────────────────────────── */
+/* The pattern fills the width; when a bar has too many slots for one row it
+   wraps whole beats (StrumView publishes --sv-beats-per-row for the width). */
+
+.tabbed-panel-content .sv-root {
+  box-sizing: border-box;
+  height: 100%;
+  padding: 4px 0;
+  gap: 12px;
+}
+
+.tabbed-panel-content .sv-header {
+  gap: 8px;
+}
+.tabbed-panel-content .sv-play-large {
+  width: 56px;
+  min-width: 56px;
+}
+.tabbed-panel-content .sv-play-large .material-icons {
+  font-size: 32px;
+}
+.tabbed-panel-content .sv-controls-rows {
+  min-width: 0;
+  gap: 8px;
+}
+.tabbed-panel-content .sv-controls-row {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+.tabbed-panel-content .sv-label {
+  display: none; /* the select's own placeholder says what it is */
+}
+.tabbed-panel-content .sv-subdiv-btn {
+  height: 40px !important;
+  padding: 0 12px !important;
+  font-size: 0.9rem !important;
+}
+.tabbed-panel-content .sv-bpm-slider {
+  max-width: none;
+  min-width: 0;
+}
+.tabbed-panel-content .sv-preset-wrap {
+  max-width: none;
+  min-width: 0;
+  flex-shrink: 1;
+}
+.tabbed-panel-content .sv-icon-btn {
+  width: 44px;
+  height: 40px !important;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.tabbed-panel-content .sv-icon-btn .material-icons {
+  font-size: 22px;
+}
+
+.tabbed-panel-content .sv-grid-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  padding: 0 3px 4px; /* room for the playhead outline */
+}
+.tabbed-panel-content .sv-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(var(--sv-beats-per-row, 4), minmax(0, 1fr));
+  /* Rows grow to share the height, up to a pad that is still pad-shaped. */
+  grid-auto-rows: minmax(84px, 190px);
+  align-content: start;
+  gap: 14px 8px;
+  width: auto;
+}
+.tabbed-panel-content .sv-col {
+  gap: 4px;
+}
+.tabbed-panel-content .sv-beat-label {
+  height: 20px;
+  line-height: 20px;
+  font-size: 0.85rem;
+}
+.tabbed-panel-content .sv-slot {
+  flex: 1;
+  height: auto;
   margin: 0 1px;
+  border-radius: 10px;
+}
+.tabbed-panel-content .sv-slot:hover {
+  transform: none;
+}
+.tabbed-panel-content .sv-slot-indicator {
+  font-size: 1.9rem;
+}
+.tabbed-panel-content .sv-slot--current {
+  outline-width: 3px;
+}
+
+/* ─── Backing Track ──────────────────────────────────────────────────────── */
+/* The controls pack into three full-width lines; the step grid takes the rest
+   of the screen, its cells as large as the width and height allow. */
+
+.tabbed-panel-content .drum-machine-view {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 4px 0;
+  gap: 10px;
+}
+
+/* The header's row wrappers dissolve so every control sits on one 12-column
+   grid:  play · preset · save · load  /  root · mode · voice  /  bpm · swing · bars */
+.tabbed-panel-content .dm-header {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+.tabbed-panel-content .dm-controls-rows,
+.tabbed-panel-content .dm-controls-row {
+  display: contents;
+}
+.tabbed-panel-content .dm-label {
+  display: none;
+}
+.tabbed-panel-content .dm-play-large {
+  grid-column: span 2;
+  width: auto;
+  min-width: 0;
+}
+.tabbed-panel-content .dm-play-large .button {
+  min-height: 40px;
+}
+.tabbed-panel-content .dm-play-large .material-icons {
+  font-size: 28px;
+}
+.tabbed-panel-content .dm-header .select {
+  min-width: 0;
+}
+.tabbed-panel-content .dm-header .select select {
+  width: 100%;
+}
+.tabbed-panel-content .dm-preset-select-wrap { grid-column: span 6; }
+.tabbed-panel-content .dm-icon-btn           { grid-column: span 2; }
+.tabbed-panel-content .dm-root-select-wrap   { grid-column: span 3; }
+.tabbed-panel-content .dm-mode-select-wrap   { grid-column: span 5; }
+.tabbed-panel-content .dm-voice-select-wrap  { grid-column: span 4; }
+.tabbed-panel-content .dm-bpm-slider,
+.tabbed-panel-content .dm-swing-slider,
+.tabbed-panel-content .dm-bars-toggle        { grid-column: span 4; min-width: 0; }
+.tabbed-panel-content .dm-icon-btn .material-icons {
+  font-size: 22px;
+}
+.tabbed-panel-content .dm-bars-toggle {
+  border-radius: 8px;
+}
+.tabbed-panel-content .dm-bars-btn {
+  flex: 1;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+/* Vertical grid (a phone held upright): columns share the width, rows the height. */
+.tabbed-panel-content .dm-grid.dm-grid--vertical {
+  flex: 1;
+  grid-template-columns:
+    minmax(52px, 1.3fr) 22px
+    repeat(var(--dm-tracks, 5), minmax(0, 1fr)) minmax(0, 1fr);
+  grid-template-rows: 36px;
+  grid-auto-rows: minmax(26px, 1fr);
+  gap: 3px;
+}
+.tabbed-panel-content .dm-v-hdr {
+  font-size: 0.75rem;
+}
+.tabbed-panel-content .dm-v-cell {
+  width: auto;
+  height: auto;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+.tabbed-panel-content .dm-v-beat-num {
+  height: auto;
+  font-size: 0.8rem;
+}
+.tabbed-panel-content .dm-v-measure-cell {
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.tabbed-panel-content .dm-v-cell:hover,
+.tabbed-panel-content .dm-cell:hover {
+  transform: none;
+}
+
+/* Horizontal grid (tablet, or a phone on its side): 16 steps across, fluid. */
+.tabbed-panel-content .dm-cell,
+.tabbed-panel-content .dm-step-num {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+.tabbed-panel-content .dm-cell,
+.tabbed-panel-content .dm-measure-cell {
+  height: 34px;
+  border-radius: 6px;
+}
+.tabbed-panel-content .dm-cell {
+  font-size: 0.8rem;
+}
+/* Equal flex shares still line the bars up with the steps: both rows spend the
+   same total on gaps and beat margins (see .dm-measure-cell in views.css). */
+.tabbed-panel-content .dm-measure-cell {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+.tabbed-panel-content .dm-track-header-wrap select {
+  height: 34px;
+}
+
+/* ─── Schedule editor ────────────────────────────────────────────────────── */
+/* A phone has no room for the list and the inspector side by side, so they take
+   turns: the list fills the panel; tapping a row swaps in its inspector, whose
+   back button returns (ScheduleEditor toggles .is-detail-open on the body). */
+
+.tabbed-panel-content.schedule-floating-view {
+  padding: 0;
+  overflow: hidden;
+}
+.tabbed-panel-content .sfv-edit-section {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Name and stats take a line each; the transition setting shares the third with
+   the file actions. */
+.tabbed-panel-content .editor-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 8px;
+  padding: 8px 12px;
+}
+.tabbed-panel-content .editor-header-left {
+  display: contents;
+}
+.tabbed-panel-content .schedule-name-display,
+.tabbed-panel-content .schedule-stats {
+  grid-column: 1 / -1;
+}
+.tabbed-panel-content .schedule-name-display {
+  padding: 2px 0;
+  font-size: 1.2rem;
+}
+/* A tap renames the schedule here (a double-click on the desktop): say so. */
+.tabbed-panel-content .schedule-name-display:not(.is-editing)::after {
+  content: 'edit';
+  margin-left: 8px;
+  font-family: 'Material Icons';
+  font-size: 16px;
+  font-weight: normal;
+  color: var(--text-muted);
+  vertical-align: -2px;
+}
+.tabbed-panel-content .schedule-stats {
+  padding: 0 0 4px;
+  font-size: 0.8rem;
+}
+.tabbed-panel-content .schedule-stats:empty {
+  display: none;
+}
+.tabbed-panel-content .schedule-transition-control {
+  padding: 0;
+  gap: 6px;
+  font-size: 0.8rem;
+}
+.tabbed-panel-content .schedule-transition-input {
+  width: 3.2em;
+  height: 36px;
+  text-align: center;
+}
+.tabbed-panel-content .editor-header-actions {
+  padding: 0;
+}
+.tabbed-panel-content .editor-btn {
+  height: 36px;
+  font-size: 0.875rem;
+}
+/* The inspector is open: its fields need the height the header was using. */
+.tabbed-panel-content .editor-root:has(.editor-body.is-detail-open) .editor-header {
+  display: none;
+}
+
+.tabbed-panel-content .editor-body {
+  display: flex;
+}
+.tabbed-panel-content .editor-resize-handle {
+  display: none;
+}
+.tabbed-panel-content .editor-sidebar,
+.tabbed-panel-content .editor-inspector {
+  flex: 1;
+  min-width: 0;
+}
+.tabbed-panel-content .editor-sidebar {
+  border-right: none;
+}
+.tabbed-panel-content .editor-inspector,
+.tabbed-panel-content .editor-body.is-detail-open .editor-sidebar {
+  display: none;
+}
+.tabbed-panel-content .editor-body.is-detail-open .editor-inspector {
+  display: block;
+}
+
+/* Rows: tall enough to tap, with the delete button always on show (a touch
+   screen has no hover to reveal it). */
+.tabbed-panel-content .sidebar-interval-row {
+  min-height: 52px;
+  margin: 2px 8px;
+  padding: 4px 2px 4px 10px;
+  gap: 10px;
+}
+.tabbed-panel-content .interval-duration-badge {
+  min-width: 40px;
+  font-size: 0.9rem;
+}
+.tabbed-panel-content .interval-feature-icon {
+  width: 22px;
+  font-size: 20px;
+}
+.tabbed-panel-content .interval-task-name {
+  font-size: 1rem;
+}
+.tabbed-panel-content .interval-subtext {
+  font-size: 0.8rem;
+}
+/* The handle is what a finger drags to reorder (DragDropManager): give it a
+   target, and enough presence to be found. */
+.tabbed-panel-content .drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  width: 32px;
+  min-height: 44px;
+  margin-left: -6px;
+  font-size: 1.15rem;
+  opacity: 0.6;
+}
+.tabbed-panel-content .schedule-row.dragging {
+  opacity: 0.45;
+  background: var(--input-bg);
+}
+.tabbed-panel-content .row-delete-btn {
+  width: 40px;
+  height: 40px;
+  color: var(--text-muted);
+  font-size: 1.35rem;
+}
+.tabbed-panel-content .sidebar-group-row {
+  min-height: 48px;
+  margin: 4px 8px;
+  padding: 2px 2px 2px 0;
+  gap: 6px;
+}
+.tabbed-panel-content .group-collapse-btn {
+  width: 36px;
+  height: 40px;
+  font-size: 1rem;
+}
+.tabbed-panel-content .group-color-swatch-btn {
+  width: 22px;
+  height: 22px;
+}
+.tabbed-panel-content .group-stats-badge {
+  font-size: 0.8rem;
+}
+.tabbed-panel-content .group-add-btn {
+  width: 40px;
+  height: 40px;
+  font-size: 1.4rem;
+}
+
+/* Inspector */
+.tabbed-panel-content .inspector-back-btn {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel-bg);
+  color: var(--accent);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.tabbed-panel-content .inspector-content {
+  padding: 14px 14px 24px;
+  gap: 16px;
+}
+.tabbed-panel-content .inspector-header-label,
+.tabbed-panel-content .inspector-field-label,
+.tabbed-panel-content .inspector-args-section .feature-arg-wrapper label {
+  font-size: 0.72rem;
+}
+.tabbed-panel-content .inspector-task-input {
+  min-height: 64px;
+}
+.tabbed-panel-content .duration-control {
+  gap: 8px;
+}
+.tabbed-panel-content .dur-btn {
+  width: 48px;
+  height: 48px;
+  font-size: 1.4rem;
+  border-radius: 8px;
+}
+.tabbed-panel-content .dur-input {
+  width: 108px;
+  height: 48px;
+}
+.tabbed-panel-content .inspector-feature-icon {
+  font-size: 24px;
+  width: 28px;
+}
+.tabbed-panel-content .inspector-feature-select,
+.tabbed-panel-content .inspector-group-name-input {
+  height: 48px;
+}
+.tabbed-panel-content .inspector-args-section .feature-args-inner-container {
+  gap: 12px;
+}
+.tabbed-panel-content .inspector-args-section .feature-arg-wrapper {
+  gap: 4px;
+  align-self: stretch;
+}
+.tabbed-panel-content .feature-arg-inputs-container {
+  gap: 6px;
+}
+.tabbed-panel-content .feature-arg-inputs-container .select.is-small select,
+.tabbed-panel-content .feature-arg-inputs-container .input.is-small {
+  height: 44px;
+}
+.tabbed-panel-content .feature-arg-inputs-container .input.is-small {
+  padding: 0 10px;
+}
+.tabbed-panel-content .variadic-input-wrapper .select {
+  max-width: none;
+}
+.tabbed-panel-content .numeral-toggle-btn.button,
+.tabbed-panel-content .add-variadic-btn.button,
+.tabbed-panel-content .remove-variadic-arg-btn,
+.tabbed-panel-content .add-variadic-group-btn {
+  height: 40px !important;
+  min-width: 40px;
+  padding: 0 12px !important;
+  font-size: 0.95rem !important;
+}
+.tabbed-panel-content .color-swatch-item {
+  width: 36px;
+  height: 36px;
+}
+.tabbed-panel-content .inspector-swatch-row {
+  gap: 10px;
+}
+
+.tabbed-panel-content .editor-footer {
+  gap: 4px;
+  padding: 8px 12px;
+}
+.tabbed-panel-content .editor-footer .editor-btn {
+  height: 44px;
+}
+.tabbed-panel-content .editor-footer .editor-btn.btn-apply {
+  padding: 0 22px;
+  font-size: 1rem;
+}
+
+/* Code mode */
+.tabbed-panel-content .code-mode-header {
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+.tabbed-panel-content .code-mode-subtitle {
+  order: 3;
+  flex-basis: 100%;
+}
+.tabbed-panel-content .code-mode-header .editor-btn {
+  margin-left: auto;
+  height: 36px;
+  font-size: 0.875rem;
+}
+
+/* ─── Schedule playback ──────────────────────────────────────────────────── */
+/* The remaining time of the current interval is the thing read from the stand. */
+
+.tabbed-panel-content .sfv-play-section {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.tabbed-panel-content .schedule-playback-view {
+  gap: 12px;
+  padding: 6px 4px 14px;
+}
+.tabbed-panel-content .playback-time-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 2px;
+}
+.tabbed-panel-content .playback-time-display {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.24), calc(var(--pane-h, 100vh) * 0.3));
+}
+.tabbed-panel-content .playback-task-name {
+  flex: none;
+  align-self: stretch;
+  font-size: 1.25rem;
+  text-align: center;
+  white-space: normal;
+}
+.tabbed-panel-content .playback-group-name {
+  font-size: 0.95rem;
+}
+.tabbed-panel-content .playback-session-bar-wrapper {
+  height: 10px;
+  border-radius: 5px;
+}
+.tabbed-panel-content .playback-total-timer {
+  font-size: 0.85rem;
+}
+
+/* Transport centred on its own line; Edit and the interval count on the next. */
+.tabbed-panel-content .playback-controls {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 14px;
+}
+.tabbed-panel-content .playback-controls::after {
+  content: '';
+  order: 1;
+  flex-basis: 100%;
+}
+.tabbed-panel-content .playback-ctrl-btn {
+  min-width: 52px;
+  height: 52px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 1.3rem;
+}
+.tabbed-panel-content .playback-pause-btn {
+  width: 68px;
+  height: 68px;
+}
+.tabbed-panel-content .playback-pause-btn .material-icons {
+  font-size: 40px;
+}
+.tabbed-panel-content .playback-edit-btn {
+  order: 2;
+  height: 40px;
+  font-size: 0.95rem;
+}
+.tabbed-panel-content .playback-interval-counter {
+  order: 2;
+  font-size: 0.9rem;
+}
+.tabbed-panel-content .playback-upcoming-item {
+  padding: 10px 12px;
+}
+.tabbed-panel-content .playback-upcoming-name {
+  font-size: 1rem;
+}
+.tabbed-panel-content .playback-upcoming-duration {
+  font-size: 0.85rem;
+}
+.tabbed-panel-content .playback-upcoming-icon {
+  font-size: 18px;
+  width: 20px;
+}
+
+/* ─── Practice tools in a short pane (a phone turned on its side) ────────── */
+/* Height is the scarce axis here, so each tool trades its stacked layout for a
+   wide one. TabbedLayout marks the pane (SHORT_PANE_PX in layout_mode.ts). */
+/* Metronome: every beat in one row; transport and tempo side by side below. */
+.tabbed-panel[data-pane="short"] .metronome-view {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 10px 14px;
+}
+.tabbed-panel[data-pane="short"] .metronome-beats-container {
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(var(--beat-count, 8), minmax(0, 1fr));
+}
+.tabbed-panel[data-pane="short"] .metronome-beat.beat-subdivision {
+  margin: 10px 12%;
+}
+.tabbed-panel[data-pane="short"] .metronome-view .play-pause-btn {
+  flex: none;
+  width: 96px;
+}
+.tabbed-panel[data-pane="short"] .metronome-bpm-row {
+  flex-wrap: nowrap;
+}
+.tabbed-panel[data-pane="short"] .metronome-bpm-slider {
+  flex: 1 1 0;
+}
+
+/* Timer: transport beside the time. */
+.tabbed-panel[data-pane="short"] .timer-row {
+  flex-direction: row;
+  justify-content: space-evenly;
+  gap: 16px;
+}
+.tabbed-panel[data-pane="short"] .timer-display-wrap {
+  align-self: center;
+}
+.tabbed-panel[data-pane="short"] .timer-display {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.22), calc(var(--pane-h, 100vh) * 0.62));
+}
+.tabbed-panel[data-pane="short"] .timer-display.timer-display--long {
+  font-size: min(calc(var(--pane-w, 100vw) * 0.15), calc(var(--pane-h, 100vh) * 0.62));
+}
+.tabbed-panel[data-pane="short"] .timer-edit {
+  position: static;
+  padding: 6px;
+}
+.tabbed-panel[data-pane="short"] .timer-controls {
+  gap: 14px;
+}
+
+/* Strum: the two control rows share one line; shorter pads still fit a row. */
+.tabbed-panel[data-pane="short"] .sv-controls-rows {
+  flex-direction: row;
+}
+.tabbed-panel[data-pane="short"] .sv-controls-row {
+  flex: 1 1 0;
+  min-width: 0;
+}
+.tabbed-panel[data-pane="short"] .sv-grid {
+  grid-auto-rows: minmax(64px, 190px);
+}
+
+/* Schedule editor: the whole header on one line, leaving the list the height. */
+.tabbed-panel[data-pane="short"] .editor-header {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 2px 14px;
+  padding: 6px 12px;
+}
+.tabbed-panel[data-pane="short"] .schedule-name-display,
+.tabbed-panel[data-pane="short"] .schedule-stats {
+  grid-column: auto;
+  padding: 0;
+}
+.tabbed-panel[data-pane="short"] .editor-footer {
+  padding: 6px 12px;
+}
+
+/* Backing Track: the controls fit two lines. */
+.tabbed-panel[data-pane="short"] .dm-header {
+  grid-template-columns: repeat(24, minmax(0, 1fr));
+}
+.tabbed-panel[data-pane="short"] .dm-bpm-slider,
+.tabbed-panel[data-pane="short"] .dm-swing-slider {
+  grid-column: span 9;
+}
+.tabbed-panel[data-pane="short"] .dm-bars-toggle {
+  grid-column: span 6;
+}
+
+/* Schedule playback: time and task side by side. */
+.tabbed-panel[data-pane="short"] .playback-time-row {
+  flex-direction: row;
+  justify-content: center;
+  gap: 20px;
+}
+.tabbed-panel[data-pane="short"] .playback-task-name {
+  flex: 0 1 auto;
+  align-self: center;
+  text-align: left;
 }

@@ -1,0 +1,39 @@
+# Netlify header rules. Copied to the site root by build_site.mjs, and also
+# honoured by deploy/serve.mjs so caching can be checked locally.
+
+# The app's JS, CSS, favicon, web manifest and icons. build_html.js puts a content
+# hash in every filename under /assets/, so a changed file is a changed URL and these
+# can be cached forever. Nothing unhashed may ever be added to this directory.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Astro fingerprints these filenames too.
+/info/_astro/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Images are stable but not fingerprinted — a day is a safe compromise.
+/images/*
+  Cache-Control: public, max-age=86400
+/info/images/*
+  Cache-Control: public, max-age=86400
+
+# The two HTML entry points must revalidate, or a deploy won't reach anyone.
+# The app's index.html is only a few KB that name the current hashed assets, so
+# this revalidation is the whole cost of checking for an update.
+/
+  Cache-Control: public, max-age=0, must-revalidate
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+/info/
+  Cache-Control: public, max-age=0, must-revalidate
+
+# The service worker. Its URL never changes, so it must revalidate too: a browser
+# only learns there has been a deploy by finding this file changed.
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+# The single-file build of the app, offered as a download. Its URL is stable, so
+# it revalidates like the entry points do.
+/download/*
+  Cache-Control: public, max-age=0, must-revalidate
+  Content-Disposition: attachment; filename="FretFalcon.html"

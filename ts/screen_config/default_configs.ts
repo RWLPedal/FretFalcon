@@ -552,9 +552,10 @@ export const VOICE_LEADING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
         // Timer — below drum machine (left column)
         "fv-6": { col: 1, row: 23, colSpan: 21, rowSpan: 8, zIndex: 137 },
         // MultiLayerFretboard — left column, below timer
-        "fv-5": { col: 1, row: 34, colSpan: 57, rowSpan: 21, zIndex: 134 },
-        // Nearby Triads — right, full-height
-        "fv-2": { col: 60, row: 0, colSpan: 36, rowSpan: 57, zIndex: 138 },
+        "fv-5": { col: 1, row: 34, colSpan: 54, rowSpan: 21, zIndex: 134 },
+        // Nearby Triads — right, full-height. colSpan matches its 40-col min width so
+        // it never inflates + X-clamps left into the fretboard at the MIN_CELL_PX floor.
+        "fv-2": { col: 56, row: 0, colSpan: 40, rowSpan: 57, zIndex: 138 },
       },
     },
   },
@@ -704,6 +705,60 @@ export const STRUMMING_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
   },
 });
 
+/** What a first-time phone visitor opens into (see PanelHost.restoreViewsFromState):
+ *  one tab per tool, look-things-up first. The Scale drives the Chords tab beside it,
+ *  so changing key in one follows through to the other. Also loadable anywhere via
+ *  ?layout=mobile_starter, hence the floating geometry. */
+export const MOBILE_STARTER_KEY = "mobile_starter";
+export const MOBILE_STARTER_LAYOUT: Readonly<CurrentPayload> = Object.freeze({
+  instances: {
+    "fv-1": {
+      instanceId: "fv-1",
+      viewId: "instrument_scale",
+      viewState: { featureTypeName: "Scale", config: ["Major", "G"] },
+    },
+    "fv-2": {
+      instanceId: "fv-2",
+      viewId: "instrument_chord",
+      viewState: {
+        featureTypeName: "Chord",
+        config: ["G", "Major"],
+        isMoveable: true,
+        configCollapsed: true,
+      },
+    },
+    "fv-3": {
+      instanceId: "fv-3",
+      viewId: "instrument_floating_metronome",
+    },
+  },
+  links: [
+    {
+      id: "link-1",
+      sourceInstanceId: "fv-1",
+      sourceHandle: "right" as const,
+      targetInstanceId: "fv-2",
+      targetHandle: "left" as const,
+    },
+  ],
+  layout: {
+    floating: {
+      gridCols: GRID_COLS,
+      rowPx: ROW_PX,
+      nextZIndex: 104,
+      perInstance: {
+        // Scale fretboard — top-left
+        "fv-1": { col: 1, row: 1, colSpan: 57, rowSpan: 24, zIndex: 101 },
+        // Metronome — below the Scale
+        "fv-3": { col: 1, row: 27, colSpan: 22, rowSpan: 10, zIndex: 103 },
+        // Chord diagrams — right column
+        "fv-2": { col: 60, row: 1, colSpan: 32, rowSpan: 28, zIndex: 102 },
+      },
+    },
+    tabbed: { order: ["fv-1", "fv-2", "fv-3"], activeId: "fv-1" },
+  },
+});
+
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export interface DefaultConfigEntry {
@@ -722,10 +777,11 @@ export const DEFAULT_CONFIGS: Readonly<Record<string, DefaultConfigEntry>> =
     practice_advanced: { default: PRACTICE_ADVANCED_LAYOUT },
     harmony_explorer: { default: HARMONY_EXPLORER_LAYOUT },
     strumming: { default: STRUMMING_LAYOUT },
+    [MOBILE_STARTER_KEY]: { default: MOBILE_STARTER_LAYOUT },
   });
 
-/** Ordered list of presets to show in UI pickers. "empty" is intentionally
- *  omitted — it is a programmatic fallback, not a user-facing choice. */
+/** Ordered list of presets to show in UI pickers. "empty" doubles as the
+ *  programmatic fallback and the user-facing "Clear" choice. */
 export const DEFAULT_CONFIG_OPTIONS: ReadonlyArray<{
   key: string;
   label: string;
@@ -737,4 +793,5 @@ export const DEFAULT_CONFIG_OPTIONS: ReadonlyArray<{
   { key: "practice_advanced", label: "Practice — Advanced" },
   { key: "harmony_explorer", label: "Harmony Explorer" },
   { key: "strumming", label: "Strumming" },
+  { key: "empty", label: "Clear" },
 ];

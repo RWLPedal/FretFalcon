@@ -38,6 +38,10 @@ export interface FretboardFloatingViewDescriptor extends FloatingViewDescriptor 
   supportsRotate: boolean;
   /** When true, a zoom toggle button is shown in the title bar. */
   supportsZoom: boolean;
+  /** True when the panel draws several fretboards at once. The tabbed (mobile)
+   *  layout orients those across the screen — see tabbedDefaultOrientation. A
+   *  function when it depends on the panel's settings; it is given the view state. */
+  multiBoard?: boolean | ((viewState: unknown) => boolean);
 }
 
 /** Returns true (and narrows the type) when a descriptor is a fretboard view. */

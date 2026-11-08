@@ -5,10 +5,13 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..');
-const PORT = process.env.PORT || 4000;
+// Part of the F:\Programming local-dev port scheme: 5200 + 10 * alphabetical
+// index across all web projects, +1 for a companion service (see PROJECTS.md).
+const PORT = process.env.PORT || 5291;
 const TYPES = {
   '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
   '.json': 'application/json', '.wav': 'audio/wav', '.svg': 'image/svg+xml',
+  '.webmanifest': 'application/manifest+json',
   '.png': 'image/png', '.jpg': 'image/jpeg', '.ico': 'image/x-icon',
   '.woff': 'font/woff', '.woff2': 'font/woff2', '.ttf': 'font/ttf',
 };

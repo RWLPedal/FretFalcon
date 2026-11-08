@@ -236,4 +236,18 @@ describe('resolveConfig', () => {
     state.next.set('root', 'Dm');
     expect(resolveConfig(dc, state)).toEqual({ root: 'Dm', type: 'Major' });
   });
+
+  it('a driven field still waiting for its source keeps the value it last had', () => {
+    const dc: DrivenConfig<ChordConfig> = { root: driven, type: literal('Minor') };
+    const last: ChordConfig = { root: 'G', type: 'Major' };
+    // The literal change (Major → Minor) goes through; only the waiting field falls back.
+    expect(resolveConfig(dc, emptyDrivenState(), last)).toEqual({ root: 'G', type: 'Minor' });
+  });
+
+  it('a signalled value beats the fallback', () => {
+    const dc: DrivenConfig<ChordConfig> = { root: driven, type: literal('Major') };
+    const state = emptyDrivenState();
+    state.current.set('root', 'Am');
+    expect(resolveConfig(dc, state, { root: 'G', type: 'Major' })).toEqual({ root: 'Am', type: 'Major' });
+  });
 });

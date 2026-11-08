@@ -1,0 +1,7 @@
+# Netlify redirect rules. Copied to the site root by build_site.mjs, and also
+# honoured by deploy/serve.mjs so local preview matches production.
+
+# The info page lived at /welcome.html until it moved under /info/. That URL is
+# in the submitted sitemap and in the wild, so keep it working. The trailing '!'
+# forces the rule even when a file of that name exists.
+/welcome.html    /info/    301!
